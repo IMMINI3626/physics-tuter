@@ -48,47 +48,43 @@ const HomeScreen = {
     const list = document.getElementById('recent-list');
     if (!list) return;
 
-    const iconColors = ['blue', 'purple', 'green', 'blue', 'purple'];
-    const icons = ['⚡', '🔭', '🌊', '🔥', '🧲'];
-
     let sessions = [];
 
     if (AppState.isLoggedIn && AppState.user) {
       try {
         sessions = await LearningService.fetchRecentSessions(AppState.user.uid, 5);
       } catch (e) {
-        console.warn('Firestore 조회 실패, 더미 데이터 사용:', e);
+        console.warn('Firestore 조회 실패:', e);
       }
     }
 
-    // 비로그인 또는 데이터 없으면 더미
     if (!sessions.length) {
-      sessions = [
-        { unit: '뉴턴의 운동 법칙', createdAt: null, score: 87 },
-        { unit: '관성과 외력',      createdAt: null, score: 62 },
-        { unit: '파동과 에너지',    createdAt: null, score: 94 },
-      ];
+      list.innerHTML = `
+        <div style="text-align:center;padding:32px 20px;color:var(--text3);font-size:13px">
+          📚 아직 학습 기록이 없어요.<br>사진을 업로드해서 첫 학습을 시작해보세요!
+        </div>`;
+      return;
     }
 
+    const icons = ['⚡','🔭','🌊','🔥','🧲'];
+    const colors = ['blue','purple','green','blue','purple'];
     list.innerHTML = sessions.map((item, i) => {
-      const dateStr = item.createdAt?.toDate
-        ? item.createdAt.toDate().toLocaleDateString('ko-KR')
-        : '최근';
       const score = item.score ?? 0;
       const badgeClass = score >= 80 ? 'badge-green' : score >= 60 ? 'badge-amber' : 'badge-red';
-
+      const dateStr = item.createdAt?.toDate
+        ? item.createdAt.toDate().toLocaleDateString('ko-KR') : '';
       return `
-        <div class="recent-card" onclick="HomeScreen.goToSession('${item.unit}')">
-          <div class="recent-icon ${iconColors[i % iconColors.length]}">${icons[i % icons.length]}</div>
+        <div class="recent-card">
+          <div class="recent-icon ${colors[i % colors.length]}">${icons[i % icons.length]}</div>
           <div class="recent-info">
             <div class="recent-unit">${item.unit}</div>
             <div class="recent-meta">${dateStr} · 5문제</div>
           </div>
-          <span class="badge ${badgeClass}">${score}%</span>
-        </div>
-      `;
+          <span class="badge ${badgeClass}">${score}점</span>
+        </div>`;
     }).join('');
   },
+
 
   goToSession(unit) {
     Toast.show(`"${unit}" 다시 학습하기`);
