@@ -1,0 +1,185 @@
+/* ============================================================
+   PhysiClinic — Home Screen
+   ============================================================ */
+
+/* ── Hero ── */
+.home-hero {
+  padding: 28px 20px 20px;
+}
+.home-greeting {
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 7px;
+  font-weight: 300;
+  letter-spacing: 0.6px;
+}
+.home-title {
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+.home-title em {
+  color: var(--accent2);
+  font-style: normal;
+}
+.home-sub {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+/* ── Upload Zone ── */
+.upload-zone {
+  margin: 4px 20px 0;
+  background: var(--surface);
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r-lg);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.22s, background 0.22s;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% -10%, rgba(108,99,255,0.09) 0%, transparent 68%);
+  pointer-events: none;
+}
+.upload-zone:hover {
+  border-color: var(--accent);
+  background: rgba(108,99,255,0.05);
+}
+
+.upload-icon-wrap {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(108,99,255,0.18), rgba(56,189,248,0.12));
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.upload-icon-wrap svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--accent2);
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.upload-zone h3 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.upload-zone p {
+  font-size: 13px;
+  color: var(--text3);
+  line-height: 1.55;
+}
+.upload-divider {
+  font-size: 12px;
+  color: var(--text3);
+  margin: 12px 0;
+}
+
+.upload-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 0.5px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text1);
+  font-family: var(--font);
+  transition: all 0.18s;
+}
+.upload-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+.upload-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.upload-btn.primary-small {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.upload-btn.primary-small:hover {
+  background: var(--accent-h);
+}
+
+/* ── Recent List ── */
+.recent-list {
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.recent-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+.recent-card:hover {
+  border-color: var(--border2);
+  background: var(--surface2);
+}
+
+.recent-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.recent-icon.blue   { background: rgba(56,189,248,0.11); }
+.recent-icon.purple { background: rgba(167,139,250,0.11); }
+.recent-icon.green  { background: rgba(52,211,153,0.11); }
+
+.recent-info { flex: 1; min-width: 0; }
+.recent-unit {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-meta {
+  font-size: 12px;
+  color: var(--text3);
+}

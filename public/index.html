@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="물리 교과서 사진으로 오개념을 진단하고 교정하는 AI 학습 플랫폼">
+  <title>PhysiClinic</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/keyword.css">
+  <link rel="stylesheet" href="css/quiz.css">
+  <link rel="stylesheet" href="css/feedback.css">
+
+  <!-- Hidden file inputs -->
+  <input type="file" id="file-input"   accept="image/*"                    style="display:none">
+  <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
+</head>
+<body>
+
+<!-- ============================================================
+     SCREEN 1: HOME
+     ============================================================ -->
+<div id="screen-home" class="screen active">
+  <header class="topbar">
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div class="topbar-actions">
+      <div class="icon-btn" id="btn-open-login" onclick="Modal.open('login-modal')" aria-label="로그인">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <section class="home-hero">
+    <p class="home-greeting">안녕하세요 👋</p>
+    <h1 class="home-title">물리 개념, <em>AI</em>가<br>직접 진단해드려요</h1>
+    <p class="home-sub">교과서나 필기 사진을 찍으면<br>오개념을 찾아 맞춤형 문제를 드려요.</p>
+  </section>
+
+  <div class="upload-zone" id="upload-zone">
+    <div class="upload-icon-wrap">
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <path d="m21 15-5-5L5 21"/>
+      </svg>
+    </div>
+    <h3>사진을 업로드하세요</h3>
+    <p>교과서, 필기, 참고서 사진을<br>AI가 분석해 오개념을 찾아드려요</p>
+    <div class="upload-divider">또는</div>
+    <div class="upload-btns">
+      <button class="upload-btn" id="btn-camera">
+        <svg viewBox="0 0 24 24">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        카메라
+      </button>
+      <button class="upload-btn primary-small" id="btn-gallery">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        갤러리
+      </button>
+    </div>
+  </div>
+</div><!-- /screen-home -->
+
+
+<!-- ============================================================
+     SCREEN 2: QUIZ LIBRARY (문제풀기 탭 기본 화면 — 나만의 학습 보관함)
+     ============================================================ -->
+<div id="screen-quiz-library" class="screen">
+  <header class="topbar">
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div class="topbar-actions">
+      <div class="icon-btn" onclick="Modal.open('login-modal')" aria-label="로그인">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <section class="home-hero" style="padding-bottom:8px">
+    <h1 class="home-title" style="font-size:22px">나만의 학습 보관함</h1>
+    <p class="home-sub">사진을 업로드하면 학습 기록이 여기에 쌓여요.</p>
+  </section>
+
+  <!-- 비로그인 안내 -->
+  <div id="library-login-banner" style="display:none;margin:0 20px 16px;padding:14px 16px;background:rgba(108,99,255,0.06);border:0.5px solid rgba(108,99,255,0.2);border-radius:var(--r-md);font-size:13px;color:var(--text2);line-height:1.6">
+    🔒 <strong style="color:var(--accent2)">로그인</strong>하고 내 학습 기록을 모아보세요!<br>
+    <span style="font-size:12px;color:var(--text3)">비로그인은 문제 3회까지 체험 가능해요.</span>
+    <br><br>
+    <button onclick="Modal.open('login-modal')" style="padding:8px 18px;background:var(--accent);border:none;border-radius:100px;color:#fff;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer">
+      로그인하기
+    </button>
+  </div>
+
+  <!-- 새 학습 시작 버튼 -->
+  <button class="primary-btn" onclick="Router.go('home')" style="margin-bottom:4px">
+    <svg viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <path d="m21 15-5-5L5 21"/>
+    </svg>
+    새 사진으로 학습 시작
+  </button>
+
+  <div class="section-label">최근 학습</div>
+  <div class="recent-list" id="recent-list">
+    <!-- JS 렌더링 -->
+  </div>
+</div><!-- /screen-quiz-library -->
+
+
+<!-- ============================================================
+     SCREEN 3: KEYWORD EXTRACTION
+     ============================================================ -->
+<div id="screen-keyword" class="screen">
+  <header class="topbar">
+    <button class="back-btn" onclick="Router.go('home')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      홈으로
+    </button>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <!-- 로딩 -->
+  <div id="kw-loading" class="keyword-loading">
+    <div class="loading-orb">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2a10 10 0 1 0 10 10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+    </div>
+    <p class="loading-title">AI가 개념 분석 중...</p>
+    <p class="loading-sub">이미지에서 물리 키워드를 찾고 있어요</p>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- 결과 -->
+  <div id="kw-result" style="display:none">
+    <div class="preview-image">
+      <img id="preview-img" style="display:none" alt="업로드된 사진">
+      <div class="preview-placeholder" id="preview-placeholder">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="m21 15-5-5L5 21"/>
+        </svg>
+        <p>업로드된 사진</p>
+      </div>
+    </div>
+
+    <div class="keyword-result">
+      <div class="unit-chip">
+        <span>📚</span>
+        <span class="label-text">단원: <strong id="kw-unit-name">분석 중...</strong></span>
+      </div>
+      <div class="section-label" style="padding:0 0 9px">추출된 키워드</div>
+      <div class="keyword-tags" id="kw-tags"></div>
+      <div class="section-label" style="padding:10px 0 9px">진단된 오개념</div>
+      <div id="kw-misconceptions"></div>
+    </div>
+
+    <button class="primary-btn" id="btn-start-quiz" onclick="KeywordScreen.startQuiz()">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      문제 풀기 시작
+    </button>
+  </div>
+</div><!-- /screen-keyword -->
+
+
+<!-- ============================================================
+     SCREEN 4: STEP 1 — 틀린 문장 선택
+     ============================================================ -->
+<div id="screen-step1" class="screen">
+  <header class="topbar">
+    <button class="back-btn" onclick="Router.go('keyword')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      분석 결과
+    </button>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <div class="progress-bar">
+    <div class="progress-info">
+      <span class="progress-info-label">STEP 1 / 2</span>
+      <span class="progress-info-step">틀린 문장 찾기</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:50%"></div>
+    </div>
+  </div>
+
+  <div class="question-header">
+    <div class="question-unit" id="q-unit-label">⚡ 단원명</div>
+    <h2 class="question-title">다음 문장 중 <strong>틀린 것</strong>을 모두 선택하세요</h2>
+  </div>
+
+  <div class="guide-banner">
+    💡 체크박스를 선택하면 서술형 입력란이 펼쳐져요. 왜 틀렸는지도 생각해보세요!
+  </div>
+
+  <!-- 비로그인 제한 바 -->
+  <div class="guest-bar" id="guest-bar">
+    <p>남은 무료 문제: <strong id="guest-count-text">3회</strong></p>
+    <button class="guest-bar-btn" onclick="Modal.open('login-modal')">로그인</button>
+  </div>
+
+  <div class="statements" id="statements-list"></div>
+
+  <div class="hint-row">
+    <button class="hint-btn" id="hint-btn-1" onclick="QuizScreen.useHint(1)">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      1차 힌트
+    </button>
+    <button class="hint-btn" id="hint-btn-2" onclick="QuizScreen.useHint(2)" disabled>
+      <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      2차 힌트
+    </button>
+  </div>
+
+  <div class="hint-result" id="hint-result">
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span id="hint-result-text"></span>
+  </div>
+
+  <button class="primary-btn" style="margin-top:20px" onclick="QuizScreen.goToStep2()">
+    다음: 틀린 이유 서술하기
+    <svg viewBox="0 0 24 24">
+      <line x1="5" y1="12" x2="19" y2="12"/>
+      <polyline points="12 5 19 12 12 19"/>
+    </svg>
+  </button>
+</div><!-- /screen-step1 -->
+
+
+<!-- ============================================================
+     SCREEN 5: STEP 2 — 서술형 입력
+     ============================================================ -->
+<div id="screen-step2" class="screen">
+  <header class="topbar">
+    <button class="back-btn" onclick="Router.go('step1')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      STEP 1
+    </button>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <div class="progress-bar">
+    <div class="progress-info">
+      <span class="progress-info-label">STEP 2 / 2</span>
+      <span class="progress-info-step">개념 서술하기</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" style="width:100%"></div>
+    </div>
+  </div>
+
+  <div class="step2-header">
+    <h2 class="step2-title">왜 틀렸는지 설명해보세요</h2>
+    <p class="step2-sub">선택한 문장의 틀린 이유와 올바른 물리 법칙을 적어주세요.<br>AI가 채점해드려요.</p>
+  </div>
+
+  <div class="step2-list" id="step2-list"></div>
+
+  <button class="primary-btn" id="btn-submit" onclick="QuizScreen.submitStep2()">
+    제출하고 채점받기
+    <svg viewBox="0 0 24 24">
+      <polyline points="9 11 12 14 22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  </button>
+</div><!-- /screen-step2 -->
+
+
+<!-- ============================================================
+     SCREEN 6: FEEDBACK
+     ============================================================ -->
+<div id="screen-feedback" class="screen">
+  <header class="topbar">
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div class="topbar-actions">
+      <div class="icon-btn" onclick="Router.go('home')" aria-label="홈으로">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <section class="score-hero">
+    <div class="score-ring-wrap">
+      <svg viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#6c63ff"/>
+            <stop offset="100%" stop-color="#38bdf8"/>
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+        <circle id="score-circle" cx="60" cy="60" r="52"
+          fill="none" stroke="url(#scoreGrad)" stroke-width="8"
+          stroke-dasharray="326.7" stroke-dashoffset="326.7"
+          stroke-linecap="round"
+          style="transition: stroke-dashoffset 1s ease"/>
+      </svg>
+      <div class="score-ring-text">
+        <span class="score-num" id="score-num">0</span>
+        <span class="score-unit">점</span>
+      </div>
+    </div>
+    <h2 class="score-title" id="score-title">학습 완료!</h2>
+    <p class="score-sub" id="score-subtitle"></p>
+  </section>
+
+  <div class="mis-tag-area">
+    <div class="mis-tag-title">진단된 오개념</div>
+    <div class="mis-tags" id="mis-tags"></div>
+  </div>
+
+  <div class="section-label" style="padding:4px 20px 10px">문제별 피드백</div>
+  <div class="feedback-list" id="feedback-list"></div>
+
+  <button class="primary-btn green-btn" onclick="FeedbackScreen.continueNext()">
+    <svg viewBox="0 0 24 24">
+      <polyline points="17 1 21 5 17 9"/>
+      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      <polyline points="7 23 3 19 7 15"/>
+      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+    </svg>
+    다음 학습 계속하기
+  </button>
+</div><!-- /screen-feedback -->
+
+
+<!-- ============================================================
+     SCREEN 7: MYPAGE
+     ============================================================ -->
+<div id="screen-mypage" class="screen">
+  <header class="topbar">
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div class="topbar-actions">
+      <div class="icon-btn" id="btn-logout" aria-label="로그아웃">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div class="mypage-profile">
+    <div class="avatar" id="mp-avatar">?</div>
+    <div class="profile-info">
+      <h2 id="mp-name">로그인 필요</h2>
+      <p id="mp-email">로그인 후 이용해주세요</p>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-val" id="mp-total">—</div>
+      <div class="stat-lbl">총 세션</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="mp-avgscore">—</div>
+      <div class="stat-lbl">평균 점수</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="mp-corrected">—</div>
+      <div class="stat-lbl">교정된 오개념</div>
+    </div>
+  </div>
+
+  <div class="weak-section">
+    <p class="section-subtitle">취약 오개념 분석</p>
+    <div id="weak-list">
+      <div class="weak-row">
+        <span class="weak-name">관성의 법칙</span>
+        <div class="weak-track"><div class="weak-fill" style="width:72%;background:var(--red)"></div></div>
+        <span class="weak-pct">72%</span>
+      </div>
+      <div class="weak-row">
+        <span class="weak-name">등가속도 운동</span>
+        <div class="weak-track"><div class="weak-fill" style="width:55%;background:var(--amber)"></div></div>
+        <span class="weak-pct">55%</span>
+      </div>
+      <div class="weak-row">
+        <span class="weak-name">파동의 중첩</span>
+        <div class="weak-track"><div class="weak-fill" style="width:40%;background:var(--amber)"></div></div>
+        <span class="weak-pct">40%</span>
+      </div>
+      <div class="weak-row">
+        <span class="weak-name">작용·반작용</span>
+        <div class="weak-track"><div class="weak-fill" style="width:20%;background:var(--green)"></div></div>
+        <span class="weak-pct">20%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-section">
+    <p class="section-subtitle">학습 이력</p>
+    <div id="history-list">
+      <div class="history-item">
+        <div class="history-icon">⚡</div>
+        <div class="history-info">
+          <div class="history-unit">뉴턴의 운동 법칙</div>
+          <div class="history-date">2025.04.03</div>
+        </div>
+        <span class="history-score good">87점</span>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">🔭</div>
+        <div class="history-info">
+          <div class="history-unit">관성과 외력</div>
+          <div class="history-date">2025.04.01</div>
+        </div>
+        <span class="history-score mid">62점</span>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">🌊</div>
+        <div class="history-info">
+          <div class="history-unit">파동과 에너지</div>
+          <div class="history-date">2025.03.28</div>
+        </div>
+        <span class="history-score good">94점</span>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">🔥</div>
+        <div class="history-info">
+          <div class="history-unit">열역학 기초</div>
+          <div class="history-date">2025.03.25</div>
+        </div>
+        <span class="history-score mid">58점</span>
+      </div>
+    </div>
+  </div>
+</div><!-- /screen-mypage -->
+
+
+<!-- ============================================================
+     BOTTOM NAV
+     ============================================================ -->
+<nav class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="Router.go('home')">
+    <svg viewBox="0 0 24 24">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span>홈</span>
+  </div>
+  <div class="nav-item" id="nav-quiz" onclick="Router.go('quiz-library')">
+    <svg viewBox="0 0 24 24">
+      <path d="M9 11l3 3L22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+    <span>문제풀기</span>
+  </div>
+  <div class="nav-item" id="nav-mypage" onclick="Router.go('mypage'); MypageScreen.init()">
+    <svg viewBox="0 0 24 24">
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6"  y1="20" x2="6"  y2="14"/>
+    </svg>
+    <span>마이페이지</span>
+  </div>
+</nav>
+
+
+<!-- ============================================================
+     LOGIN MODAL
+     ============================================================ -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-sheet">
+    <h3>로그인이 필요해요</h3>
+    <p>피드백 확인, 학습 기록 저장, 마이페이지는<br>로그인 후 이용하실 수 있어요.<br><br>비로그인으로는 <strong>문제 3회</strong>까지 무료 체험 가능해요!</p>
+    <div class="modal-btns">
+      <button class="modal-btn google" id="btn-login-google">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Google로 로그인
+      </button>
+      <div class="modal-divider">또는</div>
+      <button class="modal-btn email" id="btn-login-email">이메일로 로그인</button>
+      <button class="modal-btn later" onclick="Modal.close('login-modal')">나중에 하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     JS: 순서 중요
+     ============================================================ -->
+<script src="js/app.js"></script>
+<script src="js/home.js"></script>
+<script src="js/keyword.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/feedback.js"></script>
+<script src="js/mypage.js"></script>
+
+<!-- Firebase 모듈 (window.X 브릿지 포함) -->
+<script type="module">
+  import { AuthService }    from './firebase/auth.js';
+  import { LearningService } from './firebase/firestore.js';
+  import { ApiService }      from './firebase/api.js';
+
+  // 전역으로 노출 (JS 모듈 → 일반 스크립트 브릿지)
+  window.AuthService     = AuthService;
+  window.LearningService = LearningService;
+  window.ApiService      = ApiService;  
+</script>
+
+</body>
+</html>

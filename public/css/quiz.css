@@ -1,0 +1,321 @@
+/* ============================================================
+   PhysiClinic — Quiz Screens (STEP 1 & STEP 2)
+   ============================================================ */
+
+/* ── Question Header ── */
+.question-header {
+  padding: 4px 20px 14px;
+}
+.question-unit {
+  font-size: 11px;
+  color: var(--accent3);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.question-title {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.question-title strong { color: var(--red); font-weight: 700; }
+
+/* ── Guide Banner ── */
+.guide-banner {
+  margin: 0 20px 14px;
+  padding: 11px 15px;
+  background: rgba(251,191,36,0.05);
+  border: 0.5px solid rgba(251,191,36,0.18);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--amber);
+  line-height: 1.5;
+}
+
+/* ── Guest Bar ── */
+.guest-bar {
+  margin: 0 20px 14px;
+  padding: 11px 15px;
+  background: rgba(167,139,250,0.05);
+  border: 0.5px solid rgba(167,139,250,0.18);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.guest-bar p {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+.guest-bar p strong { color: var(--accent2); }
+.guest-bar-btn {
+  padding: 6px 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 100px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s;
+  flex-shrink: 0;
+}
+.guest-bar-btn:hover { background: var(--accent-h); }
+
+/* ── Statement List ── */
+.statements {
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.statement-item {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color 0.22s, background 0.22s;
+}
+.statement-item.checked {
+  border-color: rgba(248,113,113,0.38);
+  background: rgba(248,113,113,0.03);
+}
+.statement-item.hint-highlight {
+  border-color: rgba(251,191,36,0.45);
+}
+
+.statement-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 15px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stmt-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+  margin-top: 2px;
+  min-width: 16px;
+}
+
+.stmt-text {
+  font-size: 14px;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.stmt-checkbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border2);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s, border-color 0.18s;
+  margin-top: 1px;
+}
+.stmt-checkbox.checked {
+  background: var(--red);
+  border-color: var(--red);
+}
+.stmt-checkbox svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.stmt-checkbox.checked svg { opacity: 1; }
+
+/* ── Expand Area (step2 preview) ── */
+.stmt-expand {
+  padding: 0 15px 12px 42px;
+  display: none;
+}
+.stmt-expand.open {
+  display: block;
+  animation: expandIn 0.2s ease;
+}
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stmt-expand-note {
+  font-size: 12px;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Hint Area ── */
+.hint-row {
+  display: flex;
+  gap: 9px;
+  padding: 16px 20px 0;
+}
+.hint-btn {
+  flex: 1;
+  padding: 11px;
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--r-sm);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.hint-btn:hover:not(:disabled) {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.hint-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.hint-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hint-result {
+  display: none;
+  margin: 10px 20px 0;
+  padding: 10px 14px;
+  background: rgba(251,191,36,0.05);
+  border: 0.5px solid rgba(251,191,36,0.18);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--amber);
+  display: none;
+  align-items: center;
+  gap: 7px;
+}
+.hint-result.visible {
+  display: flex;
+}
+.hint-result svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ── STEP 2 Header ── */
+.step2-header {
+  padding: 6px 20px 16px;
+}
+.step2-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.step2-sub {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* ── STEP 2 Items ── */
+.step2-list {
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.step2-item {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.step2-stmt-row {
+  padding: 13px 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: rgba(248,113,113,0.04);
+  border-bottom: 0.5px solid var(--border);
+}
+.step2-stmt-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--red);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.step2-stmt-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(248,113,113,0.85);
+}
+
+.step2-fields {
+  padding: 14px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.field-label {
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.field-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text1);
+  font-size: 14px;
+  font-family: var(--font);
+  resize: none;
+  line-height: 1.55;
+  transition: border-color 0.18s;
+  min-height: 68px;
+}
+.field-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.field-textarea::placeholder { color: var(--text3); }

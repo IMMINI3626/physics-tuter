@@ -1,0 +1,48 @@
+/* ============================================================
+   PhysiClinic — Design Tokens
+   모든 색상, 폰트, 간격은 여기서 관리
+   ============================================================ */
+
+:root {
+  /* ── Background ── */
+  --bg:       #ffffff;
+  --surface:  #f8f7ff;
+  --surface2: #f0effe;
+  --surface3: #e8e6fd;
+
+  /* ── Border ── */
+  --border:   rgba(0, 0, 0, 0.07);
+  --border2:  rgba(0, 0, 0, 0.13);
+  --border3:  rgba(0, 0, 0, 0.22);
+
+  /* ── Accent ──  */
+  --accent:   #6c63ff;
+  --accent-h: #7c74ff;
+  --accent2:  #6c63ff;  
+  --accent3:  #0ea5e9;
+
+  /* ── Semantic ── */
+  --green:  #059669;
+  --red:    #ef4444;
+  --amber:  #d97706;
+
+  /* ── Text ── */
+  --text1: #111018;   /* 거의 검정 */
+  --text2: #4b4869;   /* 중간 회보라 */
+  --text3: #9896b0;   /* 흐린 회보라 */
+
+
+  /* ── Radius ── */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  /* ── Font ── */
+  --font:      'Noto Sans KR', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  /* ── Shadow ── */
+  --shadow-accent: 0 8px 28px rgba(108, 99, 255, 0.28);
+  --shadow-green:  0 8px 28px rgba(52, 211, 153, 0.25);
+}
