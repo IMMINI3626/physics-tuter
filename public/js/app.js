@@ -35,6 +35,9 @@ const AppState = {
 const Router = {
   current: 'home',
 
+  // 로그인이 필수인 화면 ID들을 배열로 정의
+  authRequired: ['mypage', 'step1', 'step2', 'feedback'],
+
   // 화면 ID → nav 아이템 ID 매핑
   navMap: {
     home:     'nav-home',
@@ -46,6 +49,11 @@ const Router = {
   },
 
   go(screenId) {
+    if (this.authRequired.includes(screenId) && !AppState.isLoggedIn) {
+    Toast.show('로그인 후 이용할 수 있어요');
+    Modal.open('login-modal');
+    return;
+  }
     const prev = document.getElementById(`screen-${this.current}`);
     const next = document.getElementById(`screen-${screenId}`);
     if (!next) return console.warn(`Screen not found: ${screenId}`);
