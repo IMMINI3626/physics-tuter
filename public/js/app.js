@@ -35,8 +35,7 @@ const AppState = {
 const Router = {
   current: 'home',
 
-  // 로그인이 필수인 화면 ID들을 배열로 정의
-  authRequired: ['mypage', 'step1', 'step2', 'feedback'],
+  
 
   // 화면 ID → nav 아이템 ID 매핑
   navMap: {
@@ -47,6 +46,8 @@ const Router = {
     feedback: 'nav-quiz',
     mypage:   'nav-mypage',
   },
+
+  authRequired: ['quiz-library', 'mypage'],
 
   go(screenId) {
     if (this.authRequired.includes(screenId) && !AppState.isLoggedIn) {
