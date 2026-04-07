@@ -47,35 +47,89 @@ const FeedbackScreen = {
     const container = document.getElementById('feedback-list');
     if (!container || !items) return;
 
-    container.innerHTML = items.map(item => {
-      const statusClass = item.isWrong
-        ? (item.isCorrectAnswer ? 'correct' : 'wrong')
-        : 'correct';
+    // userReason이 있으면 체크한 것으로 판단
+    const checkedItems = items.filter(i => i.userReason !== undefined && i.userReason !== null);
+    const missedItems  = items.filter(i => (i.userReason === undefined || i.userReason === null) && i.isWrong);
 
-      const checkIcon = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
-      const xIcon     = `<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-      const icon = (item.isWrong && !item.isCorrectAnswer) ? xIcon : checkIcon;
+    // 🔑 내가 체크한 항목을 3가지 그룹으로 명확히 분류합니다.
+    const perfectItems = checkedItems.filter(i => i.isWrong && i.isCorrectAnswer);   // 케이스 A: 완벽 이해
+    const halfItems    = checkedItems.filter(i => i.isWrong && !i.isCorrectAnswer);  // 케이스 B: 이유 틀림
+    const wrongGuess   = checkedItems.filter(i => !i.isWrong);                       // 케이스 C: 헛다리 짚음
 
-      // 틀린 문장이고 사용자가 선택한 경우만 설명 표시
-      const showExplanation = item.isWrong && item.userReason !== undefined;
+    let html = '';
 
-      return `
+    // ── 그룹 1: 완벽하게 이해한 문장 ──
+    if (perfectItems.length) {
+      html += `<div class="fb-section-title">정답</div>`;
+      html += perfectItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
-            <div class="fb-status ${statusClass}">${icon}</div>
-            <span class="fb-stmt ${statusClass}">${item.text}</span>
+            <span class="fb-stmt" style="text-decoration:line-through;color:var(--text3)">${item.text}</span>
           </div>
-          ${showExplanation ? `
-            <div class="fb-explanation">
-              <div class="fb-exp-label user">📝 내 답변</div>
-              <div class="fb-user-ans">${item.userReason || '(미입력)'}</div>
-              <div class="fb-exp-label ideal">✅ 올바른 해설</div>
-              <div class="fb-correct-ans">${item.explanation}</div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
+          <div class="fb-explanation">
+            <div class="fb-exp-label user">📝 내 답변</div>
+            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-exp-label ideal">✅ 피드백</div>
+            <div class="fb-correct-ans">${item.explanation}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── 그룹 2: 오개념은 찾았지만, 이유가 틀린 문장 ──
+    if (halfItems.length) {
+      html += `<div class="fb-section-title" style="margin-top:24px">📖 다시 한 번 확인이 필요한 문장</div>`;
+      html += halfItems.map(item => `
+        <div class="feedback-card">
+          <div class="fb-card-header">
+            <span class="fb-stmt">${item.text}</span>
+          </div>
+          <div class="fb-explanation">
+            <div class="fb-exp-label user">📝 내 답변</div>
+            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-exp-label ideal">💡 올바른 피드백</div>
+            <div class="fb-correct-ans">${item.explanation}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── 그룹 3: 올바른 문장인데 오개념으로 착각한 문장 ──
+    if (wrongGuess.length) {
+      html += `<div class="fb-section-title" style="margin-top:24px">맞는 개념인데 틀렸다고 체크한 문장</div>`;
+      html += wrongGuess.map(item => `
+        <div class="feedback-card">
+          <div class="fb-card-header">
+            <span class="fb-stmt">${item.text}</span>
+          </div>
+          <div class="fb-explanation">
+            <div class="fb-exp-label user">📝 내 답변</div>
+            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-exp-label ideal">💡 올바른 피드백</div>
+            <div class="fb-correct-ans">${item.explanation}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── 그룹 4: 아예 놓쳐버린 오개념 ──
+    if (missedItems.length) {
+      html += `<div class="fb-section-title" style="margin-top:24px">체크하지 못한 틀린 문장</div>`;
+      html += missedItems.map(item => `
+        <div class="feedback-card">
+          <div class="fb-card-header">
+            <span class="fb-stmt">${item.text}</span>
+          </div>
+          <div class="fb-explanation">
+            <div class="fb-exp-label ideal">💡 왜 틀렸을까요?</div>
+            <div class="fb-correct-ans">${item.explanation}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    // 아무것도 없을 때 (퍼펙트 클리어)
+    if (!checkedItems.length && !missedItems.length) {
+      html = `<div style="text-align:center;padding:30px;color:var(--text3);font-size:14px">모든 문장을 정확히 판단했어요! 🎉</div>`;
+    }
+
+    container.innerHTML = html;
   },
 
   /* 다음 학습 */
