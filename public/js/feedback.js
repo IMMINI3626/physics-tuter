@@ -5,7 +5,6 @@
 const FeedbackScreen = {
   render(data) {
     this._renderScore(data.score, data.title, data.subtitle);
-    this._renderMisconceptions(data.misconceptions);
     this._renderFeedbackList(data.items);
 
     // 로그인 상태면 Firestore에 저장

@@ -160,11 +160,13 @@ ${mcText}
 - 문장들을 무작위 순서로 섞어주세요
 - 자연스러운 한국어로, 고등학생이 이해할 수 있는 수준
 
+[필수 규칙 - 어투]
+- 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말, "~해"체 절대 금지)
+
 JSON만 출력하세요 (다른 텍스트 금지):
 [
   { "id": 1, "text": "문장 내용", "isWrong": true  },
-  { "id": 2, "text": "문장 내용", "isWrong": false },
-  ...
+  { "id": 2, "text": "문장 내용", "isWrong": false }
 ]
 `;
 
@@ -173,7 +175,6 @@ JSON만 출력하세요 (다른 텍스트 금지):
     const text   = result.response.text();
     const parsed = parseJSON(text);
 
-    // 유효성 검사: 5개, isWrong 2개
     if (!Array.isArray(parsed) || parsed.length !== 5) {
       throw new Error('문장 수가 올바르지 않습니다');
     }
@@ -198,21 +199,30 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   const genAI = getGemini();
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  // 채점 대상만 추출 (사용자가 체크한 문장)
-  const answerText = answers.map((a, i) => `
-[문장 ${i + 1}] "${a.questionText}"
+  // 🔑 수정 포인트 1: 질문 전체 목록을 AI에게 제공하여 모든 피드백을 받아냅니다.
+  const questionListText = questions.map(q => `[문장 ${q.id}] ${q.text}`).join('\n');
+  
+  const answerText = answers.map(a => `
+[문장 ${a.questionId}]
 - 학생의 틀린 이유: "${a.reason}"
 - 학생이 쓴 올바른 법칙: "${a.correctLaw}"
-`).join('\n');
+`).join('\n') || "제출한 서술형 답변이 없습니다.";
 
   const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
 
-학생이 다음 틀린 문장들에 대해 설명을 작성했습니다.
-각 답변을 채점하고 피드백을 주세요.
+전체 문제 목록:
+${questionListText}
 
+학생이 제출한 답변 (일부 문장에만 답변했을 수 있음):
 ${answerText}
+
+학생의 답변을 채점하고, **학생이 답변하지 않은 문장을 포함하여 전체 5개 문장 모두**에 대한 피드백을 작성하세요.
+
+[필수 규칙]
+1. 어투: 모든 설명(explanation)은 반드시 "~습니다", "~합니다" 형태의 경어체를 사용하세요. 반말 금지.
+2. 피드백 상세화: "올바른 물리 개념입니다" 또는 "해당 문장은 틀린 개념입니다" 같은 단순 단답형을 절대 금지합니다. 문장의 정답 여부나 답변 여부와 상관없이, 관련된 물리 법칙을 근거로 2~3문장 이상 상세하게 해설하세요.
 
 JSON만 출력하세요 (다른 텍스트 금지):
 {
@@ -220,17 +230,12 @@ JSON만 출력하세요 (다른 텍스트 금지):
   "items": [
     {
       "questionId": 번호(정수),
-      "isCorrectAnswer": true/false,  // 학생 답변이 핵심 개념을 포함하면 true
-      "score": 0~50 사이 이 문항 점수,
-      "explanation": "올바른 물리 해설 (2~3문장)"
+      "isCorrectAnswer": true/false,
+      "score": 0~50 사이 이 문항 점수 (미답변이면 0),
+      "explanation": "해당 문장에 대한 상세한 물리 해설 (경어체, 최소 2문장 이상)"
     }
   ]
 }
-
-채점 기준:
-- 핵심 물리 키워드 포함 여부 (뉴턴 제1법칙, 관성, 등속직선운동 등)
-- 개념의 방향성이 맞는지 (완전하지 않아도 방향이 맞으면 부분 점수)
-- 아예 관련 없는 답변이면 0점
 `;
 
   try {
@@ -238,7 +243,6 @@ JSON만 출력하세요 (다른 텍스트 금지):
     const text   = result.response.text();
     const graded = parseJSON(text);
 
-    // 전체 피드백 구성
     const feedbackItems = questions.map(q => {
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
@@ -249,11 +253,11 @@ JSON만 출력하세요 (다른 텍스트 금지):
         isWrong:         q.isWrong,
         isCorrectAnswer: gradedItem?.isCorrectAnswer ?? !q.isWrong,
         userReason:      answered?.reason,
-        explanation:     gradedItem?.explanation || (q.isWrong ? '해당 문장은 틀린 개념입니다.' : '올바른 물리 개념입니다.'),
+        // 🔑 수정 포인트 2: 하드코딩된 문구를 제거하고 AI의 상세 설명을 무조건 사용하도록 변경
+        explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
       };
     });
 
-    // 오개념 태그 생성
     const wrongAnswered = feedbackItems.filter(i => i.isWrong && !i.isCorrectAnswer);
     const correctAnswered = feedbackItems.filter(i => i.isWrong && i.isCorrectAnswer);
 

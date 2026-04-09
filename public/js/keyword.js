@@ -49,15 +49,6 @@ const KeywordScreen = {
     tagsEl.innerHTML = data.keywords.map((kw, i) =>
       `<span class="keyword-tag ${i < 4 ? 'active' : ''}">${kw}</span>`
     ).join('');
-
-    // 오개념 카드
-    const misEl = document.getElementById('kw-misconceptions');
-    misEl.innerHTML = data.misconceptions.map(mc => `
-      <div class="misconception-card">
-        <div class="mc-label">⚠ 오개념 #${mc.id}</div>
-        <p>${mc.description}</p>
-      </div>
-    `).join('');
   },
 
   /* 문제 풀기 버튼 */
