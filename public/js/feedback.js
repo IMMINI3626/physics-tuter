@@ -1,15 +1,43 @@
 /* ============================================================
    PhysiClinic — Feedback Screen Logic
    ============================================================ */
-
 const FeedbackScreen = {
-  render(data) {
+  // isHistory 파라미터 추가
+  render(data, isHistory = false) {
     this._renderScore(data.score, data.title, data.subtitle);
     this._renderFeedbackList(data.items);
 
-    // 로그인 상태면 Firestore에 저장
-    if (AppState.isLoggedIn && AppState.user) {
-      LearningService.saveSession(data).catch(console.error);
+    // isHistory가 아닐 때(방금 막 푼 새 문제일 때)만 DB에 저장
+    if (!isHistory && window.AppState.isLoggedIn && window.AppState.user) {
+      window.LearningService.saveSession(data).catch(console.error);
+    }
+
+    // 과거 기록을 보는 중이라면 하단 버튼을 '다음 학습' 대신 '목록으로 돌아가기'
+    const nextBtn = document.getElementById('btn-feedback-next');
+    if (nextBtn) {
+      if (isHistory) {
+        // 과거 기록 뷰: 마이페이지(목록)로 돌아가기
+        nextBtn.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          목록으로 돌아가기
+        `;
+        nextBtn.onclick = () => window.Router.go('mypage');
+      } else {
+        // 일반 학습 완료 뷰: 다음 학습 계속하기
+        nextBtn.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <polyline points="17 1 21 5 17 9"/>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          다음 학습 계속하기
+        `;
+        nextBtn.onclick = () => this.continueNext();
+      }
     }
   },
 

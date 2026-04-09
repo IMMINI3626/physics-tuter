@@ -42,7 +42,6 @@ function parseJSON(text) {
 
 /* ────────────────────────────────────────
    오개념 키워드 매핑 테이블
-   (Firestore에서 로드하거나 인라인으로 관리)
 ──────────────────────────────────────── */
 const MISCONCEPTION_TABLE = {
   '뉴턴 법칙': [
@@ -65,7 +64,6 @@ const MISCONCEPTION_TABLE = {
 
 /* ────────────────────────────────────────
    Function 1: extractKeywords
-   이미지 → 물리 키워드 + 단원 + 오개념 추출
 ──────────────────────────────────────── */
 exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
   const { imageBase64 } = request.data;
@@ -80,7 +78,7 @@ JSON 외 다른 텍스트는 절대 출력하지 마세요.
 
 {
   "unit": "단원명 (예: 뉴턴의 운동 법칙, 파동과 에너지 등)",
-  "keywords": ["키워드1", "키워드2", ...],  // 주요 물리 개념 키워드 5~10개
+  "keywords": ["키워드1", "키워드2", ...],
   "misconceptions": [
     {
       "id": "오개념ID (예: M-001)",
@@ -89,13 +87,7 @@ JSON 외 다른 텍스트는 절대 출력하지 마세요.
   ]
 }
 
-단원 분류 기준:
-- 역학: 뉴턴 법칙, 운동, 힘, 에너지, 운동량
-- 전자기학: 전기, 자기, 전류, 전압
-- 파동: 파동, 소리, 빛, 진동
-- 열역학: 열, 온도, 엔트로피
-- 현대물리: 양자, 원자, 핵
-
+단원 분류 기준: 역학, 전자기학, 파동, 열역학, 현대물리 등
 오개념은 2~3개, 해당 단원의 학생들이 자주 틀리는 개념으로 선정하세요.
 `;
 
@@ -113,7 +105,6 @@ JSON 외 다른 텍스트는 절대 출력하지 마세요.
     const text = result.response.text();
     const parsed = parseJSON(text);
 
-    // 키워드로 오개념 보강 (테이블 매핑)
     if (!parsed.misconceptions || parsed.misconceptions.length === 0) {
       for (const kw of (parsed.keywords || [])) {
         const mapped = MISCONCEPTION_TABLE[kw];
@@ -133,7 +124,7 @@ JSON 외 다른 텍스트는 절대 출력하지 마세요.
 
 /* ────────────────────────────────────────
    Function 2: generateQuestions
-   오개념 → 혼합형 5문장 생성
+   (수정됨: 틀린 문장 1~2개 랜덤 출제)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
   const { misconceptions, unit } = request.data;
@@ -148,6 +139,10 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     .map((mc, i) => `${i + 1}. ${mc.description}`)
     .join('\n');
 
+  // 🔑 랜덤 로직: 오개념 문장을 1개 또는 2개로 설정 (총합은 5개)
+  const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
+  const rightCount = 5 - wrongCount; // 4 or 3
+
   const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
@@ -155,13 +150,13 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
 ${mcText}
 
 위 오개념을 진단하기 위한 문장 5개를 만드세요.
-- 오개념이 담긴 틀린 문장: 2개 (isWrong: true)
-- 올바른 물리 개념 문장: 3개 (isWrong: false)
+- 오개념이 담긴 틀린 문장: ${wrongCount}개 (isWrong: true)
+- 올바른 물리 개념 문장: ${rightCount}개 (isWrong: false)
 - 문장들을 무작위 순서로 섞어주세요
 - 자연스러운 한국어로, 고등학생이 이해할 수 있는 수준
 
 [필수 규칙 - 어투]
-- 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말, "~해"체 절대 금지)
+- 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말 금지)
 
 JSON만 출력하세요 (다른 텍스트 금지):
 [
@@ -188,7 +183,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
 
 /* ────────────────────────────────────────
    Function 3: gradeAnswers
-   서술형 답변 자동 채점
+   (수정됨: 입력칸 통합, 피드백 말투, 유동적 배점, 5점 단위 채점)
 ──────────────────────────────────────── */
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   const { answers, questions, unit } = request.data;
@@ -199,14 +194,18 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   const genAI = getGemini();
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  // 🔑 수정 포인트 1: 질문 전체 목록을 AI에게 제공하여 모든 피드백을 받아냅니다.
   const questionListText = questions.map(q => `[문장 ${q.id}] ${q.text}`).join('\n');
   
+  // 🔑 1. 입력 통합: 프론트에서 reason 하나만 보내도 되도록 처리
   const answerText = answers.map(a => `
 [문장 ${a.questionId}]
-- 학생의 틀린 이유: "${a.reason}"
-- 학생이 쓴 올바른 법칙: "${a.correctLaw}"
+- 학생의 답변: "${a.reason || a.answer || ''}" 
 `).join('\n') || "제출한 서술형 답변이 없습니다.";
+
+  // 🔑 2. 유동적 배점 계산: 실제 출제된 틀린 문장 수(1개 or 2개)를 파악
+  const targetWrongCount = questions.filter(q => q.isWrong).length || 1; 
+  const maxScorePerItem = Math.round(100 / targetWrongCount); // 1개면 100점, 2개면 50점
+  const partialScoreRange = targetWrongCount === 1 ? '20~60점' : '10~30점';
 
   const prompt = `
 당신은 고등학교 물리 교사입니다.
@@ -218,21 +217,26 @@ ${questionListText}
 학생이 제출한 답변 (일부 문장에만 답변했을 수 있음):
 ${answerText}
 
-학생의 답변을 채점하고, **학생이 답변하지 않은 문장을 포함하여 전체 5개 문장 모두**에 대한 피드백을 작성하세요.
+학생의 답변을 채점하고, 학생이 답변하지 않은 문장을 포함하여 전체 5개 문장 모두에 대한 피드백을 작성하세요.
 
 [필수 규칙]
-1. 어투: 모든 설명(explanation)은 반드시 "~습니다", "~합니다" 형태의 경어체를 사용하세요. 반말 금지.
-2. 피드백 상세화: "올바른 물리 개념입니다" 또는 "해당 문장은 틀린 개념입니다" 같은 단순 단답형을 절대 금지합니다. 문장의 정답 여부나 답변 여부와 상관없이, 관련된 물리 법칙을 근거로 2~3문장 이상 상세하게 해설하세요.
+1. 어투: 모든 설명(explanation)은 반드시 "~습니다", "~합니다" 형태의 경어체를 사용하세요.
+2. 피드백 구조화 (매우 중요): 'explanation'을 작성할 때, **무조건 학생이 작성한 답변을 먼저 언급하며 칭찬하거나 교정**해 주세요. (예: "학생이 작성한 '...'라는 답변처럼 핵심을 정확히 짚었습니다.", "학생의 답변대로 ...입니다.") 그 후, 심화 물리 법칙을 자연스럽게 보충 설명하세요. 단순히 "이 문장은 틀린 진술입니다"로 시작하는 기계적인 답변을 절대 금지합니다.
+3. 유연한 채점 (핵심): 학생의 답변이 완벽하지 않더라도 오개념을 지적하는 핵심 논리를 포함했다면 \`isCorrectAnswer\`를 \`true\`로 평가하세요.
+4. 보충 설명 분리: 학생이 핵심을 맞췄다면 정답 처리하고, 부족한 부가 설명은 explanation 텍스트에만 부드럽게 덧붙이세요.
+5. 명확한 배점 기준 (학생이 찾아야 할 오개념 문장은 총 ${targetWrongCount}개이며, 문항당 최대 배점은 ${maxScorePerItem}점입니다):
+   - 만점 (${maxScorePerItem}점): 핵심을 올바르게 지적한 답변 (\`isCorrectAnswer: true\`)
+   - 부분 점수 (${partialScoreRange}): 오개념 문장으로 골랐으나, 작성한 이유가 틀린 경우 (\`isCorrectAnswer: false\`)
+   - 0점: 답변을 아예 작성하지 않은 경우
 
 JSON만 출력하세요 (다른 텍스트 금지):
 {
-  "totalScore": 0~100 사이 점수 (정수),
   "items": [
     {
       "questionId": 번호(정수),
       "isCorrectAnswer": true/false,
-      "score": 0~50 사이 이 문항 점수 (미답변이면 0),
-      "explanation": "해당 문장에 대한 상세한 물리 해설 (경어체, 최소 2문장 이상)"
+      "score": 0~${maxScorePerItem} 사이 이 문항 점수 (미답변이면 0),
+      "explanation": "학생 답변에 대한 직접적인 코멘트 + 상세한 물리 해설 (최소 2~3문장 이상)"
     }
   ]
 }
@@ -243,17 +247,23 @@ JSON만 출력하세요 (다른 텍스트 금지):
     const text   = result.response.text();
     const graded = parseJSON(text);
 
+    let rawTotalScore = 0;
+
     const feedbackItems = questions.map(q => {
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
+
+      // 오개념 문장에 대해서만 점수를 합산 (맞는 문장을 골랐을 때 점수 올라가는 것 방지)
+      if (q.isWrong) {
+        rawTotalScore += (gradedItem?.score || 0);
+      }
 
       return {
         id:              q.id,
         text:            q.text,
         isWrong:         q.isWrong,
         isCorrectAnswer: gradedItem?.isCorrectAnswer ?? !q.isWrong,
-        userReason:      answered?.reason,
-        // 🔑 수정 포인트 2: 하드코딩된 문구를 제거하고 AI의 상세 설명을 무조건 사용하도록 변경
+        userReason:      answered?.reason || answered?.answer,
         explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
       };
     });
@@ -272,12 +282,15 @@ JSON만 출력하세요 (다른 텍스트 금지):
       })),
     ].slice(0, 4);
 
-    const score = graded.totalScore ?? 0;
+    // 🔑 3. 점수 정제 (100점 상한 및 5점 단위 반올림)
+    rawTotalScore = Math.min(rawTotalScore, 100);
+    const finalScore = Math.round(rawTotalScore / 5) * 5; 
 
     return {
-      score,
-      title:    score >= 80 ? '훌륭해요! 🎉' : score >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
-      subtitle: `${wrongAnswered.length + correctAnswered.length}개 오개념 중 ${correctAnswered.length}개 이해`,
+      score: finalScore,
+      title:    finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
+      // 서브타이틀도 동적으로 변경 (예: 1개 오개념 중 1개 이해)
+      subtitle: `${targetWrongCount}개 오개념 중 ${correctAnswered.length}개 이해`,
       misconceptions: misconceptionTags,
       items: feedbackItems,
     };

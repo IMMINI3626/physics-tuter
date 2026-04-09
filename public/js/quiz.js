@@ -116,12 +116,12 @@ const QuizScreen = {
     Router.go('step2');
   },
 
-  /* STEP 2 렌더링 */
+  /* STEP 2 렌더링 (통합 텍스트 박스) */
   _renderStep2() {
     const container = document.getElementById('step2-list');
     if (!container) return;
 
-    const checked  = AppState.session.checkedStatements;
+    const checked   = AppState.session.checkedStatements;
     const questions = AppState.session.questions;
     const nums = ['①', '②', '③', '④', '⑤'];
 
@@ -137,21 +137,12 @@ const QuizScreen = {
           </div>
           <div class="step2-fields">
             <div>
-              <div class="field-label">틀린 이유</div>
+              <div class="field-label">답변 작성</div>
               <textarea
                 class="field-textarea"
                 id="reason-${q.id}"
-                rows="2"
-                placeholder="이 문장이 왜 틀렸는지 설명해보세요..."
-              ></textarea>
-            </div>
-            <div>
-              <div class="field-label">올바른 물리 법칙</div>
-              <textarea
-                class="field-textarea"
-                id="law-${q.id}"
-                rows="2"
-                placeholder="올바른 개념이나 법칙을 써주세요..."
+                rows="3"
+                placeholder="해당 문장이 틀린 이유나 올바른 물리 개념을 자유롭게 적어보세요..."
               ></textarea>
             </div>
           </div>
@@ -160,22 +151,21 @@ const QuizScreen = {
     }).join('');
   },
 
-  /* STEP 2 제출 → 채점 */
+  /* STEP 2 제출 → 채점 (데이터 수집 통합) */
   async submitStep2() {
     const checked = AppState.session.checkedStatements;
     const questions = AppState.session.questions;
     const checkedQuestions = questions.filter(q => checked.has(q.id));
 
-    // 답변 수집
+    // 🔑 답변 수집: 통합된 reason 값만 수집합니다.
     const answers = checkedQuestions.map(q => ({
       questionId: q.id,
       questionText: q.text,
       reason: document.getElementById(`reason-${q.id}`)?.value.trim() || '',
-      correctLaw: document.getElementById(`law-${q.id}`)?.value.trim() || '',
     }));
 
-    // 최소 하나는 입력 체크
-    const hasInput = answers.some(a => a.reason || a.correctLaw);
+    // 입력 여부 체크
+    const hasInput = answers.some(a => a.reason);
     if (!hasInput) {
       Toast.show('최소 하나의 답변을 입력해주세요');
       return;
@@ -235,7 +225,7 @@ const QuizScreen = {
           isWrong: true,
           isCorrectAnswer: false,
           userReason: '힘이 없으면 멈춘다고 생각했어요',
-          explanation: '뉴턴 제1법칙(관성의 법칙): 외력이 작용하지 않으면 정지한 물체는 정지, 운동하는 물체는 등속직선운동을 유지합니다.',
+          explanation: '학생의 답변처럼 생각할 수 있지만, 뉴턴 제1법칙(관성의 법칙)에 따르면 외력이 작용하지 않을 때 운동하던 물체는 계속 등속직선운동을 유지합니다.',
         },
         {
           id: 2,
@@ -243,7 +233,7 @@ const QuizScreen = {
           isWrong: true,
           isCorrectAnswer: true,
           userReason: '서로 다른 물체에 작용한다고 했어요',
-          explanation: '뉴턴 제3법칙: 작용·반작용은 항상 서로 다른 두 물체 사이에서 작용해요.',
+          explanation: '학생의 답변이 정확합니다! 작용·반작용은 항상 서로 다른 두 물체 사이에서 상호작용하는 힘이므로 하나의 물체에 합력을 구할 수 없습니다.',
         },
         { id: 3, text: '알짜힘이 0이면 물체는 등속직선운동을 유지한다.', isWrong: false },
         { id: 4, text: '힘이 클수록 가속도가 크고, 질량이 클수록 가속도는 작다.', isWrong: false },

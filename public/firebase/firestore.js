@@ -32,6 +32,8 @@ const LearningService = {
       userSelected:    sessionData.checkedStatements.has(item.id),
       isCorrectAnswer: item.isCorrectAnswer ?? !item.isWrong,
       userReason:      item.userReason || null,
+      // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
+      explanation:     item.explanation || null, 
       createdAt:       serverTimestamp(),
     }));
 
@@ -83,6 +85,27 @@ const LearningService = {
       name: id,
       pct: Math.min(100, Math.round(cnt / snap.docs.length * 100)),
     }));
+  },
+
+  async fetchSessionLogs(uid, sessionId) {
+    const q = query(
+      collection(db, 'users', uid, 'sessions', sessionId, 'logs'),
+      orderBy('createdAt', 'asc')
+    );
+    const snap = await getDocs(q);
+    
+    // 💡 수정된 부분: DB에 저장된 이름표를 UI가 읽을 수 있는 이름표로 변환해서 넘겨줍니다!
+    return snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: data.questionId,
+        text: data.questionText,               // DB의 questionText -> UI의 text
+        isWrong: data.isWrongQ,                // DB의 isWrongQ -> UI의 isWrong
+        isCorrectAnswer: data.isCorrectAnswer,
+        userReason: data.userReason,
+        explanation: data.explanation || '과거 데이터라 해설이 저장되지 않았습니다.', 
+      };
+    });
   },
 };
 
