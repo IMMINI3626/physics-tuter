@@ -77,7 +77,7 @@ const FeedbackScreen = {
 
     // ── 그룹 2: 오개념은 찾았지만, 이유가 틀린 문장 ──
     if (halfItems.length) {
-      html += `<div class="fb-section-title" style="margin-top:24px">📖 다시 한 번 확인이 필요한 문장</div>`;
+      html += `<div class="fb-section-title" style="margin-top:24px">다시 한 번 확인이 필요한 문장</div>`;
       html += halfItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
