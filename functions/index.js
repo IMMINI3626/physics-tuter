@@ -268,8 +268,13 @@ JSON만 출력하세요 (다른 텍스트 금지):
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
 
+      // 1. 점수 계산 로직 변경: 맞춘 건 더하고, 엄한 걸 잡으면 감점!
       if (q.isWrong) {
+        // 진짜 오개념을 찾은 경우: AI가 채점한 점수 합산
         rawTotalScore += (gradedItem?.score || 0);
+      } else if (!q.isWrong && answered) {
+        // 맞는 문장인데 오개념이라고 억울하게 고른 경우: 무지성 체크 방지용 감점
+        rawTotalScore -= 20; // 문항당 20점 감점
       }
 
       return {
@@ -296,7 +301,8 @@ JSON만 출력하세요 (다른 텍스트 금지):
       })),
     ].slice(0, 4);
 
-    rawTotalScore = Math.min(rawTotalScore, 100);
+    // 2. 점수 정제 로직 변경: 마이너스 점수가 나오지 않도록 하한선(0점) 추가
+    rawTotalScore = Math.max(0, Math.min(rawTotalScore, 100)); // 0점 ~ 100점 사이로 고정
     const finalScore = Math.round(rawTotalScore / 5) * 5; 
 
     return {
