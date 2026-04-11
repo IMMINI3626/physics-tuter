@@ -2,16 +2,21 @@
    PhysiClinic — Firebase Cloud Functions
    Node.js 18 / Firebase Functions v2
    
-   Gemini API를 서버에서 안전하게 호출 (API 키 노출 방지)
-   
-   배포: firebase deploy --only functions
+   Gemini API 서버 사이드 안전 호출 & Firestore RAG 연동
    ============================================================ */
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret }       = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-/* Gemini API 키를 Firebase Secret으로 관리 */
+// 🔑 DB 접근을 위한 Admin SDK 초기화
+const admin = require('firebase-admin');
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+const db = admin.firestore();
+
+/* Gemini API 키 Secret 관리 */
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
 /* 함수 공통 옵션 */
@@ -21,77 +26,97 @@ const FUNC_OPTIONS = {
   timeoutSeconds: 60,
 };
 
-/* ────────────────────────────────────────
-   유틸: Gemini 클라이언트 초기화
-──────────────────────────────────────── */
-function getGemini() {
-  return new GoogleGenerativeAI(GEMINI_API_KEY.value());
+/* ------------------------------------------------------------
+   유틸리티 함수 모음
+   ------------------------------------------------------------ */
+
+/**
+ * 설정된 API 키를 사용하여 Gemini 모델 인스턴스를 반환합니다.
+ */
+function getGeminiModel() {
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 }
 
-/* ────────────────────────────────────────
-   유틸: JSON 응답 파싱 (마크다운 펜스 제거)
-──────────────────────────────────────── */
+/**
+ * 마크다운 찌꺼기나 불필요한 텍스트를 제거하고 안전하게 JSON을 파싱합니다.
+ */
 function parseJSON(text) {
-  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   try {
+    const cleaned = text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+    // JSON 시작과 끝 괄호만 정확히 추출 (부가적인 텍스트가 섞여 있을 경우 대비)
+    const startIndex = cleaned.search(/[\{\[]/);
+    const endIndex = cleaned.search(/[\}\]][^}\]]*$/);
+    
+    if (startIndex !== -1 && endIndex !== -1) {
+      return JSON.parse(cleaned.substring(startIndex, endIndex + 1));
+    }
     return JSON.parse(cleaned);
   } catch (e) {
-    throw new Error(`JSON 파싱 실패: ${cleaned.slice(0, 200)}`);
+    throw new Error(`JSON 파싱 실패: ${text.slice(0, 200)}`);
   }
 }
 
 /* ────────────────────────────────────────
-   오개념 키워드 매핑 테이블
+   보조 오개념 마스터 (FCI가 커버하지 못하는 비역학 등)
 ──────────────────────────────────────── */
-const MISCONCEPTION_TABLE = {
-  '뉴턴 법칙': [
-    { id: 'M-001', description: '힘이 없으면 물체가 반드시 정지한다는 오개념 (뉴턴 제1법칙)' },
-    { id: 'M-002', description: '무거운 물체가 가벼운 물체보다 빨리 떨어진다는 오개념' },
-  ],
-  '관성': [
-    { id: 'M-003', description: '관성은 무게에 비례한다는 오개념' },
-  ],
-  '작용·반작용': [
-    { id: 'M-007', description: '작용·반작용이 같은 물체에 작용한다는 오개념 (뉴턴 제3법칙)' },
-  ],
-  '등속운동': [
-    { id: 'M-004', description: '등속운동을 유지하려면 힘이 필요하다는 오개념' },
-  ],
-  '파동': [
-    { id: 'M-010', description: '파동이 전파될 때 매질이 함께 이동한다는 오개념' },
-  ],
-};
+const SUPPLEMENTAL_MISCONCEPTIONS = [
+  { id: 'M-W01', description: '파동이 전파될 때 매질이 함께 이동한다는 오개념' },
+  { id: 'M-E01', description: '전류가 전구를 지나면서 소모된다는 오개념' },
+  { id: 'M-T01', description: '온도와 열을 같은 개념으로 혼동하는 오개념' },
+  // 필요하다면 자네가 여기에 파동, 현대물리 오개념을 더 추가해도 좋네!
+];
 
 /* ────────────────────────────────────────
-   Function 1: extractKeywords
+   Function 1: extractKeywords (하이브리드 DB 연동 버전)
 ──────────────────────────────────────── */
 exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
   const { imageBase64 } = request.data;
   if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
 
-  const genAI = getGemini();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  try {
+    // 1. 메인 DB (FCI 역학 오개념) 불러오기
+    const misRef = await db.collection('misconceptions').get();
+    const dbMisconceptions = misRef.docs.map(doc => ({
+      id: doc.data().id,
+      description: doc.data().description
+    }));
 
-  const prompt = `
+    const model = getGeminiModel();
+    
+    // 2. 하이브리드 프롬프트 + 소단원명 강제 지시
+    const prompt = `
 다음 물리 교과서/필기 이미지를 분석하여 아래 JSON 형식으로 응답하세요.
 JSON 외 다른 텍스트는 절대 출력하지 마세요.
 
+[제1기준: FCI/FMCE 물리 오개념 (역학 중심)]
+${JSON.stringify(dbMisconceptions)}
+
+[제2기준: 보조 물리 오개념 (비역학 중심)]
+${JSON.stringify(SUPPLEMENTAL_MISCONCEPTIONS)}
+
 {
-  "unit": "단원명 (예: 뉴턴의 운동 법칙, 파동과 에너지 등)",
-  "keywords": ["키워드1", "키워드2", ...],
+  "unit": "고등학교 물리 소단원명 (예: '물체의 운동', '열역학 법칙', '파동의 간섭' 등 반드시 구체적인 소단원명만 출력하세요. '1단원'이나 '역학과 에너지' 같은 대분류는 절대 적지 마십시오.)",
+  "keywords": ["키워드1", "키워드2", "키워드3"],
   "misconceptions": [
     {
-      "id": "오개념ID (예: M-001)",
-      "description": "이 이미지 내용과 관련된 흔한 오개념 설명"
+      "id": "오개념 id",
+      "description": "선택한 오개념의 설명"
     }
   ]
 }
 
-단원 분류 기준: 역학, 전자기학, 파동, 열역학, 현대물리 등
-오개념은 2~3개, 해당 단원의 학생들이 자주 틀리는 개념으로 선정하세요.
+[고등학교 물리 소단원 분류 리스트]
+- 역학: 물체의 운동, 뉴턴 운동 법칙, 운동량과 충격량, 역학적 에너지 보존, 열역학 법칙, 특수 상대성 이론
+- 전자기: 원자 모형과 전기력, 에너지 띠와 반도체, 전류의 자기 작용, 전자기 유도
+- 파동: 파동의 진동과 굴절, 파동의 간섭, 빛의 이중성, 물질의 이중성
+
+[오개념 매핑 지시사항]
+1. 역학 관련 이미지라면 반드시 [제1기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
+2. 파동, 전자기학, 열역학 등 역학이 아니라면 [제2기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
+3. [제1기준], [제2기준] 두 곳 모두에 도저히 일치하는 내용이 없다면 id에 "ETC"라고 작성하세요.
 `;
 
-  try {
     const result = await model.generateContent([
       prompt,
       {
@@ -102,29 +127,15 @@ JSON 외 다른 텍스트는 절대 출력하지 마세요.
       },
     ]);
 
-    const text = result.response.text();
-    const parsed = parseJSON(text);
-
-    if (!parsed.misconceptions || parsed.misconceptions.length === 0) {
-      for (const kw of (parsed.keywords || [])) {
-        const mapped = MISCONCEPTION_TABLE[kw];
-        if (mapped) {
-          parsed.misconceptions = mapped.slice(0, 2);
-          break;
-        }
-      }
-    }
-
-    return parsed;
+    return parseJSON(result.response.text());
   } catch (err) {
-    console.error('extractKeywords error:', err);
+    console.error('[extractKeywords] Error:', err);
     throw new HttpsError('internal', `키워드 추출 실패: ${err.message}`);
   }
 });
 
 /* ────────────────────────────────────────
-   Function 2: generateQuestions
-   (수정됨: 틀린 문장 1~2개 랜덤 출제)
+   Function 2: generateQuestions (DB 참고 문장 활용)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
   const { misconceptions, unit } = request.data;
@@ -132,24 +143,37 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
   }
 
-  const genAI = getGemini();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  try {
+    // 🔑 속도 최적화: for문 대신 Promise.all을 사용하여 병렬로 DB 조회
+    const validMisconceptions = misconceptions.filter(mc => mc.id);
+    const dbQueries = validMisconceptions.map(mc => 
+      db.collection('misconception_sentences').where('misconceptionId', '==', mc.id).get()
+    );
+    
+    const querySnapshots = await Promise.all(dbQueries);
+    const contextSentences = querySnapshots.flatMap(snap => snap.docs.map(doc => doc.data()));
 
-  const mcText = misconceptions
-    .map((mc, i) => `${i + 1}. ${mc.description}`)
-    .join('\n');
+    // 틀린 문장과 옳은 문장을 분류
+    const wrongExamples = contextSentences.filter(s => s.isWrong).map(s => s.sentence).join(' / ');
+    const correctExamples = contextSentences.filter(s => !s.isWrong).map(s => s.sentence).join(' / ');
 
-  // 🔑 랜덤 로직: 오개념 문장을 1개 또는 2개로 설정 (총합은 5개)
-  const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
-  const rightCount = 5 - wrongCount; // 4 or 3
+    const mcText = misconceptions.map((mc, i) => `${i + 1}. ${mc.description}`).join('\n');
 
-  const prompt = `
+    const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
+    const rightCount = 5 - wrongCount; // 4 or 3
+
+    const model = getGeminiModel();
+    const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
 
-위 오개념을 진단하기 위한 문장 5개를 만드세요.
+[학술적 참고 자료 (FCI/FMCE 기반)]
+- 학생들이 흔히 하는 틀린 생각 예시: ${wrongExamples || '관련 자료 없음'}
+- 올바른 물리 개념 예시: ${correctExamples || '관련 자료 없음'}
+
+위 오개념과 학술적 참고 자료의 논리를 바탕으로, 이를 진단하기 위한 문장 5개를 만드세요.
 - 오개념이 담긴 틀린 문장: ${wrongCount}개 (isWrong: true)
 - 올바른 물리 개념 문장: ${rightCount}개 (isWrong: false)
 - 문장들을 무작위 순서로 섞어주세요
@@ -165,25 +189,22 @@ JSON만 출력하세요 (다른 텍스트 금지):
 ]
 `;
 
-  try {
     const result = await model.generateContent(prompt);
-    const text   = result.response.text();
-    const parsed = parseJSON(text);
+    const parsed = parseJSON(result.response.text());
 
     if (!Array.isArray(parsed) || parsed.length !== 5) {
-      throw new Error('문장 수가 올바르지 않습니다');
+      throw new Error('문장 수가 올바르지 않거나 배열 형태가 아닙니다.');
     }
 
     return parsed;
   } catch (err) {
-    console.error('generateQuestions error:', err);
+    console.error('[generateQuestions] Error:', err);
     throw new HttpsError('internal', `문제 생성 실패: ${err.message}`);
   }
 });
 
 /* ────────────────────────────────────────
-   Function 3: gradeAnswers
-   (수정됨: 입력칸 통합, 피드백 말투, 유동적 배점, 5점 단위 채점)
+   Function 3: gradeAnswers 
 ──────────────────────────────────────── */
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   const { answers, questions, unit } = request.data;
@@ -191,23 +212,19 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
     throw new HttpsError('invalid-argument', '답변 또는 문제 정보가 없습니다');
   }
 
-  const genAI = getGemini();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-  const questionListText = questions.map(q => `[문장 ${q.id}] ${q.text}`).join('\n');
-  
-  // 🔑 1. 입력 통합: 프론트에서 reason 하나만 보내도 되도록 처리
-  const answerText = answers.map(a => `
+  try {
+    const questionListText = questions.map(q => `[문장 ${q.id}] ${q.text}`).join('\n');
+    const answerText = answers.map(a => `
 [문장 ${a.questionId}]
 - 학생의 답변: "${a.reason || a.answer || ''}" 
 `).join('\n') || "제출한 서술형 답변이 없습니다.";
 
-  // 🔑 2. 유동적 배점 계산: 실제 출제된 틀린 문장 수(1개 or 2개)를 파악
-  const targetWrongCount = questions.filter(q => q.isWrong).length || 1; 
-  const maxScorePerItem = Math.round(100 / targetWrongCount); // 1개면 100점, 2개면 50점
-  const partialScoreRange = targetWrongCount === 1 ? '20~60점' : '10~30점';
+    const targetWrongCount = questions.filter(q => q.isWrong).length || 1; 
+    const maxScorePerItem = Math.round(100 / targetWrongCount); 
+    const partialScoreRange = targetWrongCount === 1 ? '20~60점' : '10~30점';
 
-  const prompt = `
+    const model = getGeminiModel();
+    const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
 
@@ -242,10 +259,8 @@ JSON만 출력하세요 (다른 텍스트 금지):
 }
 `;
 
-  try {
     const result = await model.generateContent(prompt);
-    const text   = result.response.text();
-    const graded = parseJSON(text);
+    const graded = parseJSON(result.response.text());
 
     let rawTotalScore = 0;
 
@@ -253,7 +268,6 @@ JSON만 출력하세요 (다른 텍스트 금지):
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
 
-      // 오개념 문장에 대해서만 점수를 합산 (맞는 문장을 골랐을 때 점수 올라가는 것 방지)
       if (q.isWrong) {
         rawTotalScore += (gradedItem?.score || 0);
       }
@@ -282,20 +296,18 @@ JSON만 출력하세요 (다른 텍스트 금지):
       })),
     ].slice(0, 4);
 
-    // 🔑 3. 점수 정제 (100점 상한 및 5점 단위 반올림)
     rawTotalScore = Math.min(rawTotalScore, 100);
     const finalScore = Math.round(rawTotalScore / 5) * 5; 
 
     return {
       score: finalScore,
-      title:    finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
-      // 서브타이틀도 동적으로 변경 (예: 1개 오개념 중 1개 이해)
+      title: finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
       subtitle: `${targetWrongCount}개 오개념 중 ${correctAnswered.length}개 이해`,
       misconceptions: misconceptionTags,
       items: feedbackItems,
     };
   } catch (err) {
-    console.error('gradeAnswers error:', err);
+    console.error('[gradeAnswers] Error:', err);
     throw new HttpsError('internal', `채점 실패: ${err.message}`);
   }
 });
