@@ -9,7 +9,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret }       = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// 🔑 DB 접근을 위한 Admin SDK 초기화
+// DB 접근을 위한 Admin SDK 초기화
 const admin = require('firebase-admin');
 if (!admin.apps.length) {
   admin.initializeApp();
