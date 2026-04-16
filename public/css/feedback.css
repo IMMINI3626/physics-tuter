@@ -276,7 +276,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text3);
-  width: 30px;
+  /* width: 30px; */
   text-align: right;
 }
 

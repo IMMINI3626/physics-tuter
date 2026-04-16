@@ -78,7 +78,7 @@ const FeedbackScreen = {
     const checkedItems = items.filter(i => i.userReason !== undefined && i.userReason !== null);
     const missedItems  = items.filter(i => (i.userReason === undefined || i.userReason === null) && i.isWrong);
 
-    // 🔑 내가 체크한 항목을 3가지 그룹으로 명확히 분류합니다.
+    // 내가 체크한 항목을 3가지 그룹으로 명확히 분류합니다.
     const perfectItems = checkedItems.filter(i => i.isWrong && i.isCorrectAnswer);   // 케이스 A: 완벽 이해
     const halfItems    = checkedItems.filter(i => i.isWrong && !i.isCorrectAnswer);  // 케이스 B: 이유 틀림
     const wrongGuess   = checkedItems.filter(i => !i.isWrong);                       // 케이스 C: 헛다리 짚음
@@ -104,7 +104,7 @@ const FeedbackScreen = {
 
     // ── 그룹 2: 오개념은 찾았지만, 이유가 틀린 문장 ──
     if (halfItems.length) {
-      html += `<div class="fb-section-title" style="margin-top:24px">다시 한 번 확인이 필요한 문장</div>`;
+      html += `<div class="fb-section-title" style="margin-top:24px">이유가 틀린 문항</div>`;
       html += halfItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
@@ -121,7 +121,7 @@ const FeedbackScreen = {
 
     // ── 그룹 3: 올바른 문장인데 오개념으로 착각한 문장 ──
     if (wrongGuess.length) {
-      html += `<div class="fb-section-title" style="margin-top:24px">맞는 개념인데 틀렸다고 체크한 문장</div>`;
+      html += `<div class="fb-section-title" style="margin-top:24px">오답 체크</div>`;
       html += wrongGuess.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
@@ -138,14 +138,14 @@ const FeedbackScreen = {
 
     // ── 그룹 4: 아예 놓쳐버린 오개념 ──
     if (missedItems.length) {
-      html += `<div class="fb-section-title" style="margin-top:24px">체크하지 못한 틀린 문장</div>`;
+      html += `<div class="fb-section-title" style="margin-top:24px">선택하지 않은 정답 문항</div>`;
       html += missedItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
             <span class="fb-stmt">${item.text}</span>
           </div>
           <div class="fb-explanation">
-            <div class="fb-exp-label ideal">💡 왜 틀렸을까요?</div>
+            <div class="fb-exp-label ideal">💡 틀린 이유</div>
             <div class="fb-correct-ans">${item.explanation}</div>
           </div>
         </div>`).join('');
