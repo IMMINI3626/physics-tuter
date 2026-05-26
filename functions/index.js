@@ -35,7 +35,14 @@ const FUNC_OPTIONS = {
  */
 function getGeminiModel() {
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  return genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash', 
+
+    generationConfig: {
+      temperature: 0, // AI의 창의성을 0으로 만들어 매번 동일한 결과(가장 확률이 높은 정답)만 내뱉게 고정합니다.
+      responseMimeType: "application/json" // (보너스 팁) AI가 무조건 완벽한 JSON 형태로만 답변하도록 강제합니다.
+    }
+  });
 }
 
 /**
@@ -86,36 +93,36 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
     
     // 2. 하이브리드 프롬프트 + 소단원명 강제 지시
     const prompt = `
-다음 물리 교과서/필기 이미지를 분석하여 아래 JSON 형식으로 응답하세요.
-JSON 외 다른 텍스트는 절대 출력하지 마세요.
+      다음 물리 교과서/필기 이미지를 분석하여 아래 JSON 형식으로 응답하세요.
+      JSON 외 다른 텍스트는 절대 출력하지 마세요.
 
-[제1기준: FCI/FMCE 물리 오개념 (역학 중심)]
-${JSON.stringify(dbMisconceptions)}
+      [제1기준: FCI/FMCE 물리 오개념 (역학 중심)]
+      ${JSON.stringify(dbMisconceptions)}
 
-[제2기준: 보조 물리 오개념 (비역학 중심)]
-${JSON.stringify(SUPPLEMENTAL_MISCONCEPTIONS)}
+      [제2기준: 보조 물리 오개념 (비역학 중심)]
+      ${JSON.stringify(SUPPLEMENTAL_MISCONCEPTIONS)}
 
-{
-  "unit": "고등학교 물리 소단원명 (예: '물체의 운동', '열역학 법칙', '파동의 간섭' 등 반드시 구체적인 소단원명만 출력하세요. '1단원'이나 '역학과 에너지' 같은 대분류는 절대 적지 마십시오.)",
-  "keywords": ["키워드1", "키워드2", "키워드3"],
-  "misconceptions": [
-    {
-      "id": "오개념 id",
-      "description": "선택한 오개념의 설명"
-    }
-  ]
-}
+      {
+        "unit": "고등학교 물리 소단원명 (예: '물체의 운동', '열역학 법칙', '파동의 간섭' 등 반드시 구체적인 소단원명만 출력하세요. '1단원'이나 '역학과 에너지' 같은 대분류는 절대 적지 마십시오.)",
+        "keywords": ["키워드1", "키워드2", "키워드3"],
+        "misconceptions": [
+          {
+            "id": "오개념 id",
+            "description": "선택한 오개념의 설명"
+          }
+        ]
+      }
 
-[고등학교 물리 소단원 분류 리스트]
-- 역학: 물체의 운동, 뉴턴 운동 법칙, 운동량과 충격량, 역학적 에너지 보존, 열역학 법칙, 특수 상대성 이론
-- 전자기: 원자 모형과 전기력, 에너지 띠와 반도체, 전류의 자기 작용, 전자기 유도
-- 파동: 파동의 진동과 굴절, 파동의 간섭, 빛의 이중성, 물질의 이중성
+      [고등학교 물리 소단원 분류 리스트]
+      - 역학: 물체의 운동, 뉴턴 운동 법칙, 운동량과 충격량, 역학적 에너지 보존, 열역학 법칙, 특수 상대성 이론
+      - 전자기: 원자 모형과 전기력, 에너지 띠와 반도체, 전류의 자기 작용, 전자기 유도
+      - 파동: 파동의 진동과 굴절, 파동의 간섭, 빛의 이중성, 물질의 이중성
 
-[오개념 매핑 지시사항]
-1. 역학 관련 이미지라면 반드시 [제1기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
-2. 파동, 전자기학, 열역학 등 역학이 아니라면 [제2기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
-3. [제1기준], [제2기준] 두 곳 모두에 도저히 일치하는 내용이 없다면 id에 "ETC"라고 작성하세요.
-`;
+      [오개념 매핑 지시사항]
+      1. 역학 관련 이미지라면 반드시 [제1기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
+      2. 파동, 전자기학, 열역학 등 역학이 아니라면 [제2기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
+      3. [제1기준], [제2기준] 두 곳 모두에 도저히 일치하는 내용이 없다면 id에 "ETC"라고 작성하세요.
+    `;
 
     const result = await model.generateContent([
       prompt,
