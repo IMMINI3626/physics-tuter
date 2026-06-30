@@ -121,8 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('file-input')?.addEventListener('change', function () {
     if (this.files[0]) HomeScreen.handleFileSelect(this.files[0]);
+    this.value = '';
   });
   document.getElementById('camera-input')?.addEventListener('change', function () {
     if (this.files[0]) HomeScreen.handleFileSelect(this.files[0]);
+    this.value = '';
   });
 });
