@@ -129,16 +129,6 @@ const GuestGuard = {
           `남은 무료 문제: ${Math.max(0, remaining)}회`;
       }
     }
-
-    // 🔒 홈 화면 업로드존: 제한 도달 시 시각적으로만 표시 (클릭은 home.js에서 안내 처리)
-    const zone = document.getElementById('upload-zone');
-    if (zone) {
-      if (this.isLimitReached()) {
-        zone.classList.add('limit-reached');
-      } else {
-        zone.classList.remove('limit-reached');
-      }
-    }
   },
 };
 

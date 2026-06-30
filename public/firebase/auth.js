@@ -77,9 +77,9 @@ const AuthService = {
     if (nameEl)   nameEl.textContent   = user.displayName || '사용자';
     if (emailEl)  emailEl.textContent  = user.email || '';
 
-    // 🔑 상단 버튼 → 로그인된 아바타로 교체
-    const loginBtn = document.getElementById('btn-open-login');
-    if (loginBtn) {
+    // 🔑 상단 버튼들(화면마다 따로 존재) → 전부 로그인된 아바타로 교체
+    const loginBtns = document.querySelectorAll('.login-icon-btn');
+    loginBtns.forEach(loginBtn => {
       loginBtn.onclick = () => AuthService.logout();
       loginBtn.setAttribute('aria-label', '로그아웃');
       loginBtn.innerHTML = `
@@ -88,19 +88,18 @@ const AuthService = {
           justify-content:center;">
           ${(user.displayName || '?')[0].toUpperCase()}
         </div>`;
-    }
+    });
 
     document.getElementById('guest-bar')?.style.setProperty('display', 'none');
     window.Modal.close('login-modal');
-    window.GuestGuard._updateUI();
   },
 
   _onLogout() {
     document.getElementById('guest-bar')?.style.removeProperty('display');
 
-    // 🔑 상단 버튼 → 로그인 아이콘으로 복원
-    const loginBtn = document.getElementById('btn-open-login');
-    if (loginBtn) {
+    // 🔑 상단 버튼들 → 전부 로그인 아이콘으로 복원
+    const loginBtns = document.querySelectorAll('.login-icon-btn');
+    loginBtns.forEach(loginBtn => {
       loginBtn.onclick = () => window.Modal.open('login-modal');
       loginBtn.setAttribute('aria-label', '로그인');
       loginBtn.innerHTML = `
@@ -108,7 +107,7 @@ const AuthService = {
           <circle cx="12" cy="8" r="4"/>
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
         </svg>`;
-    }
+    });
   },
 };
 
