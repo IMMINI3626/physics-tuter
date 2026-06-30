@@ -9,9 +9,9 @@ const ApiService = {
     return data;
   },
 
-  async generateQuestions(misconceptions, unit) {
+  async generateQuestions(misconceptions, unit, level = 1) {
     const fn = httpsCallable(functions, 'generateQuestions');
-    const { data } = await fn({ misconceptions, unit });
+    const { data } = await fn({ misconceptions, unit, level });
     return data;
   },
 

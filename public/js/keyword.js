@@ -8,6 +8,10 @@ const KeywordScreen = {
     Router.go('keyword');
     this._showLoading();
 
+    // 🆕 새 사진 = 새 소단원이므로 레벨/카운터 초기화
+    AppState.session.currentLevel = 1;
+    AppState.session.correctCount = 0;
+
     // 미리보기 이미지 표시
     const preview = document.getElementById('preview-img');
     if (preview && imageBase64) {
@@ -63,7 +67,8 @@ const KeywordScreen = {
       // Firebase Function 호출 → Gemini API (2차: 문제 생성)
       const questions = await ApiService.generateQuestions(
         AppState.session.misconceptions,
-        AppState.session.detectedUnit
+        AppState.session.detectedUnit,
+        AppState.session.currentLevel
       );
       AppState.session.questions = questions;
       QuizScreen.init(questions);

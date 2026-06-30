@@ -107,6 +107,59 @@ const LearningService = {
       };
     });
   },
+
+  /* ────────────────────────────────────────
+     🆕 레벨 시스템 — 승급 카운터 & 진행 상태
+  ──────────────────────────────────────── */
+
+  /**
+   * 같은 소단원 내 새 문제 정답 시 누적 카운터 +1
+   * 5회 도달 시 overcome: true로 표시하고 isPromoted: true를 반환
+   */
+  async incrementCorrectCount(uid, unitName, misconceptionId) {
+    const docId = `${unitName}_${misconceptionId}`;
+    const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
+    const snap = await getDoc(ref);
+
+    const prevCount = snap.exists() ? (snap.data().count || 0) : 0;
+    const newCount = prevCount + 1;
+    const overcome = newCount >= 5;
+
+    await setDoc(ref, {
+      unit: unitName,
+      misconceptionId,
+      count: newCount,
+      overcome,
+      lastUpdated: serverTimestamp(),
+    }, { merge: true });
+
+    return { count: newCount, isPromoted: overcome && prevCount < 5 };
+  },
+
+  /**
+   * 소단원의 현재 레벨/완료 상태 조회 (없으면 기본값 level 1 반환)
+   */
+  async getUnitProgress(uid, unitName) {
+    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      return { level: 1, completed: false, chapter: window.getChapter?.(unitName) || null };
+    }
+    return snap.data();
+  },
+
+  /**
+   * 소단원 레벨 갱신 (승급 시 호출)
+   */
+  async setUnitLevel(uid, unitName, level, completed = false) {
+    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
+    await setDoc(ref, {
+      level,
+      completed,
+      chapter: window.getChapter?.(unitName) || null,
+      lastStudied: serverTimestamp(),
+    }, { merge: true });
+  },
 };
 
 const MisconceptionDB = {
