@@ -54,6 +54,7 @@ const FeedbackScreen = {
 
     if (isLoggedIn && session.detectedUnit) {
       // 맞춘 문항 수만큼 카운터 증가 (오개념 1개당 +1, 한 세션에 여러 개면 여러 번 +1)
+      let latestCount = session.correctCount || 0;
       for (const item of correctWrongItems) {
         const misconceptionId = this._guessMisconceptionId(item, session.misconceptions);
         try {
@@ -62,11 +63,13 @@ const FeedbackScreen = {
             session.detectedUnit,
             misconceptionId
           );
+          latestCount = result.count; // 🆕 서버에서 받은 최신 카운트 반영
           if (result.isPromoted) isPromoted = true;
         } catch (e) {
           console.error('카운터 증가 실패:', e);
         }
       }
+      session.correctCount = latestCount; // 🆕 세션 상태에 동기화
 
       if (isPromoted) {
         promotedTo = session.currentLevel + 1;
@@ -96,12 +99,12 @@ const FeedbackScreen = {
         다음 학습 계속하기
       `;
       nextBtn.onclick = () => this.continueNext();
-    } else if (isLoggedIn && correctWrongItems.length > 0) {
-      // 정답은 맞췄지만 5회 미달: 교정 루프 버튼 표시
+    } else if (isLoggedIn) {
+      // 점수와 무관하게 로그인 상태면 항상 교정 루프 버튼 표시
       nextBtn.style.display = 'none';
       this._renderCorrectionLoop();
     } else {
-      // 비로그인 또는 전부 오답: 기존처럼 다음 학습 버튼만
+      // 비로그인: 기존처럼 다음 학습 버튼만
       nextBtn.style.display = '';
       nextBtn.innerHTML = `
         <svg viewBox="0 0 24 24">
