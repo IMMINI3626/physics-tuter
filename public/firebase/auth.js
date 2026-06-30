@@ -92,6 +92,7 @@ const AuthService = {
 
     document.getElementById('guest-bar')?.style.setProperty('display', 'none');
     window.Modal.close('login-modal');
+    window.GuestGuard._updateUI();
   },
 
   _onLogout() {

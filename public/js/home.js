@@ -3,6 +3,7 @@ const HomeScreen = {
     this._bindUploadZone();
     this._bindUploadButtons();
     this._renderRecentList();
+    GuestGuard._updateUI();
   },
 
   _bindUploadZone() {
@@ -31,10 +32,23 @@ const HomeScreen = {
   },
 
   handleFileSelect(file) {
+    // 🔒 게스트 제한 체크: 비로그인 + 3회 소진 시 업로드 자체를 차단
+    if (GuestGuard.isLimitReached()) {
+      Toast.show('무료 체험 횟수를 모두 사용했어요');
+      Modal.open('login-modal');
+      return;
+    }
+
     if (!file || !file.type.startsWith('image/')) {
       Toast.show('이미지 파일을 선택해주세요');
       return;
     }
+
+    // 🔑 비로그인 사용자는 여기서 카운트 증가 (업로드 시점 = 1회 소모)
+    if (!AppState.isLoggedIn) {
+      GuestGuard.increment();
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       AppState.session.uploadedImageBase64 = e.target.result;

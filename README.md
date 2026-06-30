@@ -182,3 +182,15 @@ firebase emulators:start
 - `firebase/config.js`의 API 키는 절대 Git에 커밋하지 마세요. `.gitignore`에 추가하거나 환경변수로 관리하세요.
 - Gemini API 키는 반드시 Firebase Secret으로 관리 (`functions:secrets:set`)
 - Functions는 Blaze(종량제) 요금제 필요 (월 무료 한도 내에서 개인 프로젝트 운영 가능)
+
+###
+git add .
+git commit -m "커밋 내용"
+git push
+
+feat: 새로운 기능 추가 (Feature)
+refactor: 기능 변경 없는 코드 리팩토링 (가독성 향상, 구조 개선 등)
+fix: 버그 수정docs: 문서 수정 (README.md, 주석 등)
+style: 코드 포맷팅 (들여쓰기 등 기능에 영향 없는 수정)
+chore: 빌드 업무 수정, 패키지 매니저 설정 등
+###
