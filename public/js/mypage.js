@@ -106,7 +106,7 @@ const MypageScreen = {
 };
 
 /* 변경점 3: 이력 클릭 시 과거 문제 풀이 로그를 불러오는 글로벌 함수 */
-window.viewSessionLog = async function(sessionId, unitName, score) {
+window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'mypage') {
   try {
     // window.Toast -> Toast 로 변경
     Toast.show('과거 기록을 불러오는 중...');
@@ -123,7 +123,7 @@ window.viewSessionLog = async function(sessionId, unitName, score) {
     };
 
     // window.FeedbackScreen -> FeedbackScreen 로 변경
-    FeedbackScreen.render(historyData, true);
+    FeedbackScreen.render(historyData, true, returnTo);
     
     // window.Router -> Router 로 변경
     Router.go('feedback');

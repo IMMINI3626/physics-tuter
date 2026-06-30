@@ -130,15 +130,13 @@ const GuestGuard = {
       }
     }
 
-    // 🔒 홈 화면 업로드존: 제한 도달 시 비활성화 표시
+    // 🔒 홈 화면 업로드존: 제한 도달 시 시각적으로만 표시 (클릭은 home.js에서 안내 처리)
     const zone = document.getElementById('upload-zone');
     if (zone) {
       if (this.isLimitReached()) {
-        zone.style.opacity = '0.5';
-        zone.style.pointerEvents = 'none';
+        zone.classList.add('limit-reached');
       } else {
-        zone.style.opacity = '';
-        zone.style.pointerEvents = '';
+        zone.classList.remove('limit-reached');
       }
     }
   },
