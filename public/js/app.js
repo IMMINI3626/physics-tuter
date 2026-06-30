@@ -120,14 +120,27 @@ const GuestGuard = {
 
   _updateUI() {
     const bar = document.getElementById('guest-bar');
-    if (!bar) return;
-    if (AppState.isLoggedIn) {
-      bar.style.display = 'none';
-      return;
+    if (bar) {
+      if (AppState.isLoggedIn) {
+        bar.style.display = 'none';
+      } else {
+        const remaining = AppState.GUEST_LIMIT - AppState.guestCount;
+        bar.querySelector('#guest-count-text').textContent =
+          `남은 무료 문제: ${Math.max(0, remaining)}회`;
+      }
     }
-    const remaining = AppState.GUEST_LIMIT - AppState.guestCount;
-    bar.querySelector('#guest-count-text').textContent =
-      `남은 무료 문제: ${Math.max(0, remaining)}회`;
+
+    // 🔒 홈 화면 업로드존: 제한 도달 시 비활성화 표시
+    const zone = document.getElementById('upload-zone');
+    if (zone) {
+      if (this.isLimitReached()) {
+        zone.style.opacity = '0.5';
+        zone.style.pointerEvents = 'none';
+      } else {
+        zone.style.opacity = '';
+        zone.style.pointerEvents = '';
+      }
+    }
   },
 };
 
