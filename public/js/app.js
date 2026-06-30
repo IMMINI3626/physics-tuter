@@ -3,6 +3,36 @@
    ============================================================ */
 
 /* ────────────────────────────────────────
+   소단원 ↔ 대단원 매핑 (레벨 시스템용)
+──────────────────────────────────────── */
+const UNIT_MAP = {
+  '힘과 운동': {
+    chapterId: '1',
+    subUnits: ['물체의 운동', '뉴턴 운동 법칙', '운동량과 충격량']
+  },
+  '에너지': {
+    chapterId: '2',
+    subUnits: ['역학적 에너지 보존', '열역학 법칙']
+  },
+  '전기와 자기': {
+    chapterId: '3',
+    subUnits: ['원자 모형과 전기력', '에너지 띠와 반도체', '전류의 자기 작용', '전자기 유도']
+  },
+  '파동': {
+    chapterId: '4',
+    subUnits: ['파동의 진동과 굴절', '파동의 간섭', '빛의 이중성', '물질의 이중성']
+  },
+};
+
+// 소단원명 → 대단원명 찾기
+function getChapter(unitName) {
+  for (const [chapter, data] of Object.entries(UNIT_MAP)) {
+    if (data.subUnits.includes(unitName)) return chapter;
+  }
+  return null;
+}
+
+/* ────────────────────────────────────────
    Global App State
 ──────────────────────────────────────── */
 const AppState = {
@@ -22,6 +52,10 @@ const AppState = {
     hintUsed: 0,
     score: null,
     feedbackData: null,
+
+    // 🆕 레벨 시스템
+    currentLevel: 1,         // 현재 풀고 있는 레벨 (1/2/3)
+    correctCount: 0,         // 같은 소단원 내 누적 정답 수 (5회 달성 시 승급)
   },
 
   // 비로그인 시 문제 풀이 횟수
@@ -154,3 +188,5 @@ window.Router     = Router;
 window.Toast      = Toast;
 window.Modal      = Modal;
 window.GuestGuard = GuestGuard;
+window.UNIT_MAP    = UNIT_MAP;
+window.getChapter  = getChapter;

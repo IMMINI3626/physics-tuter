@@ -177,7 +177,7 @@ const QuizScreen = {
       );
       AppState.session.score = result.score;
       AppState.session.feedbackData = result;
-      FeedbackScreen.render(result);
+      await FeedbackScreen.render(result);
       Router.go('feedback');
     } catch (err) {
       console.error('Grading failed:', err);

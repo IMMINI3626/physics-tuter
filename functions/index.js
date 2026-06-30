@@ -141,10 +141,10 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
 });
 
 /* ────────────────────────────────────────
-   Function 2: generateQuestions (DB 참고 문장 활용)
+   Function 2: generateQuestions (DB 참고 문장 활용 + 레벨 분기)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
-  const { misconceptions, unit } = request.data;
+  const { misconceptions, unit, level = 1 } = request.data;
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
   }
@@ -169,6 +169,26 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     const rightCount = 5 - wrongCount; // 4 or 3
 
     const model = getGeminiModel();
+
+    // 🆕 Level 1: 정성적 문장 + 공식 판별 문장 혼합 출제 지시
+    const level1FormulaInstruction = `
+[Level 1 추가 규칙 - 공식 판별 문장 혼합]
+생성하는 5개의 문장 중 일부는 "공식이 맞는지 틀린지 판별하는 문장"으로 구성해야 합니다.
+아래 두 가지 조합 중 하나를 랜덤으로 선택하여 생성하세요:
+  - 조합 A: 계산 없이 개념의 옳고 그름을 판단할 수 있는 문장 3개 + 공식이 맞는지 틀린지 판별하는 문장 2개로 총 5개
+  - 조합 B: 계산 없이 개념의 옳고 그름을 판단할 수 있는 문장 4개 + 공식이 맞는지 틀린지 판별하는 문장 1개로 총 5개
+
+공식 판별 문장 예시:
+  - "일의 양을 구하는 공식은 W = mv² 입니다" (틀림, 올바른 공식은 W = Fs)
+  - "F = ma 에서 가속도는 a = m/F 입니다" (틀림, 올바른 식은 a = F/m)
+  - "운동량의 단위는 kg·m/s 입니다" (맞음)
+
+공식 판별 문장도 일반 문장과 동일하게 isWrong: true/false로 표시하고, 같은 5문항 배열 안에 섞어서 출력하세요.
+계산을 직접 수행해야 하는 문제는 절대 포함하지 마세요. (Level 1은 계산 없이 옳고 그름만 판별하는 단계입니다)
+`;
+
+    const levelInstruction = level === 1 ? level1FormulaInstruction : '';
+
     const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
@@ -184,6 +204,7 @@ ${mcText}
 - 올바른 물리 개념 문장: ${rightCount}개 (isWrong: false)
 - 문장들을 무작위 순서로 섞어주세요
 - 자연스러운 한국어로, 고등학생이 이해할 수 있는 수준
+${levelInstruction}
 
 [필수 규칙 - 어투]
 - 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말 금지)
