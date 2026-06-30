@@ -58,9 +58,9 @@ const QuizLibraryScreen = {
       </div>`;
   },
 
-  /* 클릭 시 과거 피드백 재생 (mypage.js의 viewSessionLog와 동일 로직) */
+  /* 클릭 시 과거 피드백 재생 (mypage.js의 viewSessionLog와 동일 로직, 복귀처는 quiz-library) */
   async openSession(sessionId, unitName, score) {
-    await window.viewSessionLog(sessionId, unitName, score);
+    await window.viewSessionLog(sessionId, unitName, score, 'quiz-library');
   },
 };
 

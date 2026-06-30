@@ -2,8 +2,8 @@
    PhysiClinic — Feedback Screen Logic
    ============================================================ */
 const FeedbackScreen = {
-  // isHistory 파라미터 추가
-  render(data, isHistory = false) {
+  // isHistory 파라미터 추가, returnTo로 돌아갈 화면 지정 (기본값: mypage)
+  render(data, isHistory = false, returnTo = 'mypage') {
     this._renderScore(data.score, data.title, data.subtitle);
     this._renderFeedbackList(data.items);
 
@@ -16,15 +16,21 @@ const FeedbackScreen = {
     const nextBtn = document.getElementById('btn-feedback-next');
     if (nextBtn) {
       if (isHistory) {
-        // 과거 기록 뷰: 마이페이지(목록)로 돌아가기
+        // 과거 기록 뷰: 들어온 곳(마이페이지 or 문제풀기 탭)으로 돌아가기
+        const label = returnTo === 'quiz-library' ? '문제풀기로 돌아가기' : '목록으로 돌아가기';
         nextBtn.innerHTML = `
           <svg viewBox="0 0 24 24">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          목록으로 돌아가기
+          ${label}
         `;
-        nextBtn.onclick = () => window.Router.go('mypage');
+        nextBtn.onclick = () => {
+          window.Router.go(returnTo);
+          if (returnTo === 'quiz-library' && window.QuizLibraryScreen) {
+            window.QuizLibraryScreen.init();
+          }
+        };
       } else {
         // 일반 학습 완료 뷰: 다음 학습 계속하기
         nextBtn.innerHTML = `
