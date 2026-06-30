@@ -32,14 +32,15 @@ const FUNC_OPTIONS = {
 
 /**
  * 설정된 API 키를 사용하여 Gemini 모델 인스턴스를 반환합니다.
+ * @param {number} temperature - 기본 0(결정적). 문제 생성처럼 다양성이 필요한 곳은 높여서 호출.
  */
-function getGeminiModel() {
+function getGeminiModel(temperature = 0) {
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
   return genAI.getGenerativeModel({
     model: 'gemini-2.5-flash', 
 
     generationConfig: {
-      temperature: 0, // AI의 창의성을 0으로 만들어 매번 동일한 결과(가장 확률이 높은 정답)만 내뱉게 고정합니다.
+      temperature, // 채점(extractKeywords, gradeAnswers)은 0 유지, 문제 생성은 다양성을 위해 올림
       responseMimeType: "application/json" // (보너스 팁) AI가 무조건 완벽한 JSON 형태로만 답변하도록 강제합니다.
     }
   });
@@ -168,7 +169,20 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
     const rightCount = 5 - wrongCount; // 4 or 3
 
-    const model = getGeminiModel();
+    // 🆕 매번 다른 관점/상황으로 출제하도록 랜덤 컨텍스트 주입 (문제 다양성 확보)
+    const ANGLES = [
+      '일상생활 속 예시(스포츠, 교통수단, 놀이기구 등)를 활용한 상황 설정으로',
+      '실험실에서 진행하는 실험 상황을 가정하여',
+      '두 물체 또는 두 상황을 서로 비교하는 형태로',
+      '시간에 따른 변화 과정을 서술하는 형태로',
+      '특정 순간의 물리량 관계를 설명하는 형태로',
+      '학생들이 흔히 떠올릴 법한 직관적 생각을 그대로 문장화하는 형태로',
+    ];
+    const randomAngle = ANGLES[Math.floor(Math.random() * ANGLES.length)];
+    // 매 호출마다 고유한 시드값을 줘서 같은 입력이어도 다른 결과를 유도
+    const varietySeed = Math.random().toString(36).slice(2, 8);
+
+    const model = getGeminiModel(0.8); // 🆕 문제 생성은 다양성을 위해 temperature 상향 (0 → 0.8)
 
     // 🆕 Level 1: 정성적 문장 + 공식 판별 문장 혼합 출제 지시
     const level1FormulaInstruction = `
@@ -198,6 +212,12 @@ ${mcText}
 [학술적 참고 자료 (FCI/FMCE 기반)]
 - 학생들이 흔히 하는 틀린 생각 예시: ${wrongExamples || '관련 자료 없음'}
 - 올바른 물리 개념 예시: ${correctExamples || '관련 자료 없음'}
+
+[출제 다양성 지시 - 매우 중요]
+이번 출제는 ${randomAngle} 문장을 구성하세요.
+이전에 동일한 오개념으로 여러 번 출제되었을 수 있습니다. 단순히 어미나 단어만 바꾸는 것이 아니라,
+완전히 다른 소재·상황·문장 구조를 사용해서 같은 오개념을 다른 각도에서 진단하는 문제를 만드세요.
+(출제 다양성 참조 시드: ${varietySeed} - 이 값은 매번 다른 문제를 만들기 위한 내부 참고용이며 출력에 포함하지 마세요)
 
 위 오개념과 학술적 참고 자료의 논리를 바탕으로, 이를 진단하기 위한 문장 5개를 만드세요.
 - 오개념이 담긴 틀린 문장: ${wrongCount}개 (isWrong: true)
