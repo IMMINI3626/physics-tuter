@@ -56,6 +56,7 @@ const AppState = {
     // 🆕 레벨 시스템
     currentLevel: 1,         // 현재 풀고 있는 레벨 (1/2/3)
     correctCount: 0,         // 같은 소단원 내 누적 정답 수 (5회 달성 시 승급)
+    isRetry: false,          // 다시 풀어보기(같은 문제 재시도) 여부 — true면 카운터 증가 안 함
   },
 
   // 비로그인 시 문제 풀이 횟수

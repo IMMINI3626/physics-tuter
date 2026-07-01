@@ -40,71 +40,52 @@ const FeedbackScreen = {
     await this._handleLevelProgress(data);
   },
 
-  /* 🆕 레벨 승급 카운터 처리 + 화면 분기 */
+  /* 레벨 승급 카운터 처리 + 화면 분기 */
   async _handleLevelProgress(data) {
     const nextBtn = document.getElementById('btn-feedback-next');
     const session = window.AppState.session;
     const isLoggedIn = window.AppState.isLoggedIn && window.AppState.user;
-
-    // 정답으로 인정된(오개념을 맞춘) 문항 수 계산
-    const correctWrongItems = (data.items || []).filter(i => i.isWrong && i.isCorrectAnswer);
+    const isPerfect = data.score === 100;
+    const isNewProblem = !session.isRetry;
 
     let isPromoted = false;
     let promotedTo = null;
 
-    if (isLoggedIn && session.detectedUnit) {
-      // 맞춘 문항 수만큼 카운터 증가 (오개념 1개당 +1, 한 세션에 여러 개면 여러 번 +1)
-      let latestCount = session.correctCount || 0;
-      for (const item of correctWrongItems) {
-        const misconceptionId = this._guessMisconceptionId(item, session.misconceptions);
-        try {
-          const result = await window.LearningService.incrementCorrectCount(
-            window.AppState.user.uid,
-            session.detectedUnit,
-            misconceptionId
+    // 100점 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
+    if (isLoggedIn && session.detectedUnit && isPerfect && isNewProblem) {
+      const misconceptionId = session.misconceptions?.[0]?.id || 'ETC';
+      try {
+        const result = await window.LearningService.incrementCorrectCount(
+          window.AppState.user.uid,
+          session.detectedUnit,
+          misconceptionId
+        );
+        session.correctCount = result.count;
+        if (result.isPromoted) {
+          isPromoted = true;
+          promotedTo = session.currentLevel + 1;
+          session.currentLevel = promotedTo;
+          session.correctCount = 0;
+          await window.LearningService.setUnitLevel(
+            window.AppState.user.uid, session.detectedUnit, promotedTo
           );
-          latestCount = result.count; // 🆕 서버에서 받은 최신 카운트 반영
-          if (result.isPromoted) isPromoted = true;
-        } catch (e) {
-          console.error('카운터 증가 실패:', e);
         }
-      }
-      session.correctCount = latestCount; // 🆕 세션 상태에 동기화
-
-      if (isPromoted) {
-        promotedTo = session.currentLevel + 1;
-        session.currentLevel = promotedTo;
-        session.correctCount = 0;
-        try {
-          await window.LearningService.setUnitLevel(window.AppState.user.uid, session.detectedUnit, promotedTo);
-        } catch (e) {
-          console.error('레벨 갱신 실패:', e);
-        }
+      } catch (e) {
+        console.error('카운터 증가 실패:', e);
       }
     }
 
     if (!nextBtn) return;
 
     if (isPromoted) {
-      // 승급 성공: 안내 + 다음 학습 버튼만 표시
       this._showPromotionBanner(promotedTo);
-      nextBtn.style.display = '';
-      nextBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <polyline points="17 1 21 5 17 9"/>
-          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-          <polyline points="7 23 3 19 7 15"/>
-          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-        </svg>
-        다음 학습 계속하기
-      `;
-      nextBtn.onclick = () => this.continueNext();
-    } else if (isLoggedIn) {
-      // 점수와 무관하게 로그인 상태면 항상 교정 루프 버튼 표시
       nextBtn.style.display = 'none';
-      this._renderCorrectionLoop();
+      this._renderPromotionActions(promotedTo);
+    } else if (isLoggedIn) {
+      nextBtn.style.display = 'none';
+      this._renderCorrectionLoop(isPerfect);
     } else {
-      // 비로그인: 기존처럼 다음 학습 버튼만
+      // 비로그인
       nextBtn.style.display = '';
       nextBtn.innerHTML = `
         <svg viewBox="0 0 24 24">
@@ -141,23 +122,56 @@ const FeedbackScreen = {
     `;
   },
 
-  /* 🆕 교정 루프 UI: 다시 풀어보기 / 유사 문제 풀기 */
-  _renderCorrectionLoop() {
+  /* 승급 후 액션 버튼 */
+  _renderPromotionActions(newLevel) {
+    const area = document.getElementById('level-progress-area');
+    if (!area) return;
+    const existing = area.querySelector('.promotion-actions');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.className = 'promotion-actions';
+    div.style.cssText = 'display:flex;gap:10px;margin:0 20px 20px;';
+    div.innerHTML = `
+      <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
+        홈으로 나가기
+      </button>
+      <button class="primary-btn green-btn" style="margin:0;flex:1" onclick="FeedbackScreen.retrySimilar(this)">
+        Level ${newLevel} 시작하기
+      </button>
+    `;
+    area.appendChild(div);
+  },
+
+  /* 교정 루프 UI */
+  _renderCorrectionLoop(isPerfect) {
     const area = document.getElementById('level-progress-area');
     if (!area) return;
 
     const count = window.AppState.session.correctCount || 0;
+    const level = window.AppState.session.currentLevel;
+
+    // 100점이면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
+    const retryBtn = isPerfect ? '' : `
+      <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.retrySame()">
+        다시 풀어보기
+      </button>
+    `;
+
     area.style.display = 'block';
     area.innerHTML = `
       <div style="margin:0 20px 12px;padding:12px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-md);text-align:center;font-size:13px;color:var(--text2)">
-        현재 Level ${window.AppState.session.currentLevel} · 누적 정답 <strong style="color:var(--accent2)">${count} / 5</strong>
+        현재 Level ${level} · 누적 정답 <strong style="color:var(--accent2)">${count} / 5</strong>
       </div>
-      <div style="display:flex;gap:10px;margin:0 20px 20px;">
-        <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.retrySame()">
-          다시 풀어보기
+      <div style="display:flex;gap:10px;margin:0 20px 12px;">
+        ${retryBtn}
+        <button id="btn-next-problem" class="primary-btn" style="margin:0;flex:1" onclick="FeedbackScreen.retrySimilar(this)">
+          다음 문제 풀기
         </button>
-        <button class="primary-btn" style="margin:0;flex:1" onclick="FeedbackScreen.retrySimilar()">
-          유사 문제 풀기
+      </div>
+      <div style="margin:0 20px 20px;">
+        <button class="primary-btn" style="margin:0;width:100%;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
+          홈으로 나가기
         </button>
       </div>
     `;
@@ -168,31 +182,41 @@ const FeedbackScreen = {
     if (area) { area.style.display = 'none'; area.innerHTML = ''; }
   },
 
-  /* 다시 풀어보기: 기존 문제 재사용, API 호출 없음 */
+  /* 다시 풀어보기: 기존 문제 재사용, 카운터 증가 없음 */
   retrySame() {
+    AppState.session.isRetry = true;
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
     QuizScreen.init(AppState.session.questions);
     Router.go('step1');
   },
 
-  /* 유사 문제 풀기: 같은 소단원/오개념/레벨로 새 문제만 생성 */
-  async retrySimilar() {
-    Toast.show('새 문제를 생성하고 있어요...');
+  /* 다음 문제 풀기: 같은 소단원/오개념/레벨로 새 문제 생성 */
+  async retrySimilar(btnEl) {
+    // 연속 클릭 방지
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.textContent = '문제 생성 중...';
+    }
     try {
       const questions = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
         AppState.session.currentLevel
       );
+      AppState.session.isRetry = false;
       AppState.session.questions = questions;
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
       QuizScreen.init(questions);
       Router.go('step1');
     } catch (err) {
-      console.error('유사 문제 생성 실패:', err);
+      console.error('문제 생성 실패:', err);
       Toast.show('문제 생성에 실패했어요. 다시 시도해주세요.');
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = '다음 문제 풀기';
+      }
     }
   },
 
@@ -316,7 +340,6 @@ const FeedbackScreen = {
 
   /* 다음 학습 */
   continueNext() {
-    // 세션 초기화
     AppState.session = {
       uploadedImageBase64: null,
       extractedKeywords: [],
@@ -330,6 +353,7 @@ const FeedbackScreen = {
       feedbackData: null,
       currentLevel: 1,
       correctCount: 0,
+      isRetry: false,
     };
     this._clearLevelArea();
     Router.go('home');
