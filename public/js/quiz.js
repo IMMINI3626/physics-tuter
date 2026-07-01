@@ -187,6 +187,99 @@ const QuizScreen = {
     }
   },
 
+  /* ── Level 2 Mode B: 계산 단답형 화면 ── */
+
+  initCalc(calcQuestion) {
+    document.getElementById('calc-unit-label').textContent = AppState.session.detectedUnit || '';
+    document.getElementById('calc-question-text').textContent = calcQuestion.text;
+
+    // 단위 드롭다운
+    const select = document.getElementById('calc-unit-select');
+    select.innerHTML = calcQuestion.unitOptions.map(u =>
+      `<option value="${u}">${u}</option>`
+    ).join('');
+
+    // 힌트 초기화
+    document.getElementById('calc-hint-btn-1').disabled = false;
+    document.getElementById('calc-hint-btn-2').disabled = true;
+    const hintResult = document.getElementById('calc-hint-result');
+    if (hintResult) hintResult.classList.remove('visible');
+
+    // 입력값 초기화
+    const input = document.getElementById('calc-answer-input');
+    if (input) input.value = '';
+  },
+
+  useCalcHint(level) {
+    const used = AppState.session.hintUsed;
+    const resultEl = document.getElementById('calc-hint-result');
+    const textEl = document.getElementById('calc-hint-result-text');
+
+    if (level === 1 && used === 0) {
+      AppState.session.hintUsed = 1;
+      document.getElementById('calc-hint-btn-1').disabled = true;
+      document.getElementById('calc-hint-btn-2').disabled = false;
+      textEl.textContent = AppState.session.hint1 || '관련 물리 공식을 떠올려보세요.';
+      resultEl.classList.add('visible');
+      Toast.show('힌트 1 사용 완료');
+    } else if (level === 2 && used === 1) {
+      AppState.session.hintUsed = 2;
+      document.getElementById('calc-hint-btn-2').disabled = true;
+      textEl.innerHTML = `
+        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${AppState.session.hint1 || ''}</div>
+        <div>${AppState.session.hint2 || '각 변수에 어떤 값을 대입할지 생각해보세요.'}</div>
+      `;
+      Toast.show('힌트 2 사용 완료');
+    }
+  },
+
+  submitCalc() {
+    const input = document.getElementById('calc-answer-input');
+    const select = document.getElementById('calc-unit-select');
+    const calcQuestion = AppState.session.calcQuestion;
+
+    const userValue = parseFloat(input?.value);
+    const userUnit = select?.value;
+
+    if (isNaN(userValue)) {
+      Toast.show('숫자를 입력해주세요');
+      return;
+    }
+
+    const correct = calcQuestion.correctAnswer;
+    const tolerance = Math.abs(correct) * 0.01; // ±1%
+    const isValueCorrect = Math.abs(userValue - correct) <= Math.max(tolerance, 0.001);
+    const isUnitCorrect = userUnit === calcQuestion.unit;
+    const isCorrect = isValueCorrect && isUnitCorrect;
+
+    const score = isCorrect ? 100 : 0;
+    AppState.session.score = score;
+
+    const feedbackData = {
+      score,
+      title: isCorrect ? '정확해요! 🎉' : '아쉬워요 📚',
+      subtitle: isCorrect ? '계산과 단위 모두 정확합니다' : (
+        !isValueCorrect ? `정답은 ${correct} ${calcQuestion.unit}입니다` :
+        `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`
+      ),
+      misconceptions: [],
+      items: [{
+        id: 1,
+        text: calcQuestion.text,
+        isWrong: !isCorrect,
+        isCorrectAnswer: isCorrect,
+        userReason: `${userValue} ${userUnit}`,
+        explanation: isCorrect
+          ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
+          : `정답은 ${correct} ${calcQuestion.unit}입니다. 공식과 단위를 다시 확인해보세요.`,
+      }],
+    };
+
+    AppState.session.feedbackData = feedbackData;
+    FeedbackScreen.render(feedbackData);
+    Router.go('feedback');
+  },
+
   /* 프로그레스 바 업데이트 */
   _updateProgress(step) {
     const fill = document.querySelector('.progress-fill');

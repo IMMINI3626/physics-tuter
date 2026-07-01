@@ -187,8 +187,13 @@ const FeedbackScreen = {
     AppState.session.isRetry = true;
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
-    QuizScreen.init(AppState.session.questions);
-    Router.go('step1');
+    if (AppState.session.calcQuestion) {
+      QuizScreen.initCalc(AppState.session.calcQuestion);
+      Router.go('calc');
+    } else {
+      QuizScreen.init(AppState.session.questions);
+      Router.go('step1');
+    }
   },
 
   /* 다음 문제 풀기: 같은 소단원/오개념/레벨로 새 문제 생성 */
@@ -205,13 +210,21 @@ const FeedbackScreen = {
         AppState.session.currentLevel
       );
       AppState.session.isRetry = false;
-      AppState.session.questions = result.questions;
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
-      QuizScreen.init(result.questions);
-      Router.go('step1');
+      if (result.calcQuestion) {
+        AppState.session.calcQuestion = result.calcQuestion;
+        AppState.session.questions = null;
+        QuizScreen.initCalc(result.calcQuestion);
+        Router.go('calc');
+      } else {
+        AppState.session.calcQuestion = null;
+        AppState.session.questions = result.questions;
+        QuizScreen.init(result.questions);
+        Router.go('step1');
+      }
     } catch (err) {
       console.error('문제 생성 실패:', err);
       Toast.show('문제 생성에 실패했어요. 다시 시도해주세요.');
@@ -358,6 +371,8 @@ const FeedbackScreen = {
       isRetry: false,
       hint1: null,
       hint2: null,
+      quizMode: null,
+      calcQuestion: null,
     };
     this._clearLevelArea();
     Router.go('home');
