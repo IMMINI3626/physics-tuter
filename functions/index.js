@@ -230,20 +230,37 @@ ${levelInstruction}
 - 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말 금지)
 
 JSON만 출력하세요 (다른 텍스트 금지):
-[
-  { "id": 1, "text": "문장 내용", "isWrong": true  },
-  { "id": 2, "text": "문장 내용", "isWrong": false }
-]
+{
+  "questions": [
+    { "id": 1, "text": "문장 내용", "isWrong": true  },
+    { "id": 2, "text": "문장 내용", "isWrong": false }
+  ],
+  "hint1": "5개 문장 전체를 대상으로, 어떤 물리 개념/법칙을 중심으로 판단해야 하는지 방향만 제시. 어느 문장이 틀렸는지 절대 언급 금지. 1~2문장 경어체.",
+  "hint2": "hint1보다 구체적으로, 틀린 문장에 사용된 표현이나 조건의 어떤 부분을 의심해봐야 하는지 유도. 어느 문장인지 직접 지목 금지. 1~2문장 경어체."
+}
+
+[힌트 작성 규칙]
+- 힌트는 문제 세트 전체에 대한 것 (특정 문장 번호 언급 금지)
+- hint1: 이 단원/오개념과 관련된 핵심 물리 법칙 방향만 제시
+- hint2: 틀린 문장에 쓰인 표현 패턴이나 조건을 간접적으로 유도
+- 정답(어느 문장이 틀렸는지) 절대 직접 언급 금지
+- 모든 힌트는 "~해보세요", "~생각해보세요" 경어체
 `;
 
     const result = await model.generateContent(prompt);
     const parsed = parseJSON(result.response.text());
 
-    if (!Array.isArray(parsed) || parsed.length !== 5) {
+    // 구버전 호환: 배열로 반환된 경우 힌트 없이 래핑
+    const questions = Array.isArray(parsed) ? parsed : parsed.questions;
+    if (!Array.isArray(questions) || questions.length !== 5) {
       throw new Error('문장 수가 올바르지 않거나 배열 형태가 아닙니다.');
     }
 
-    return parsed;
+    return {
+      questions,
+      hint1: parsed.hint1 || null,
+      hint2: parsed.hint2 || null,
+    };
   } catch (err) {
     console.error('[generateQuestions] Error:', err);
     throw new HttpsError('internal', `문제 생성 실패: ${err.message}`);

@@ -199,16 +199,18 @@ const FeedbackScreen = {
       btnEl.textContent = '문제 생성 중...';
     }
     try {
-      const questions = await ApiService.generateQuestions(
+      const result = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
         AppState.session.currentLevel
       );
       AppState.session.isRetry = false;
-      AppState.session.questions = questions;
+      AppState.session.questions = result.questions;
+      AppState.session.hint1 = result.hint1;
+      AppState.session.hint2 = result.hint2;
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
-      QuizScreen.init(questions);
+      QuizScreen.init(result.questions);
       Router.go('step1');
     } catch (err) {
       console.error('문제 생성 실패:', err);
@@ -354,6 +356,8 @@ const FeedbackScreen = {
       currentLevel: 1,
       correctCount: 0,
       isRetry: false,
+      hint1: null,
+      hint2: null,
     };
     this._clearLevelArea();
     Router.go('home');

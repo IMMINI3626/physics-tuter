@@ -59,32 +59,27 @@ const QuizScreen = {
   /* 힌트 사용 */
   useHint(level) {
     const used = AppState.session.hintUsed;
-    const questions = AppState.session.questions;
-    const wrongIds = questions.filter(q => q.isWrong).map(q => q.id);
+    const resultEl = document.getElementById('hint-result');
+    const textEl = document.getElementById('hint-result-text');
 
     if (level === 1 && used === 0) {
       AppState.session.hintUsed = 1;
       document.getElementById('hint-btn-1').disabled = true;
       document.getElementById('hint-btn-2').disabled = false;
 
-      const resultEl = document.getElementById('hint-result');
-      resultEl.querySelector('#hint-result-text').textContent =
-        `힌트 1: 틀린 문장은 총 ${wrongIds.length}개예요`;
+      textEl.textContent = AppState.session.hint1 || '관련 물리 개념과 법칙을 떠올려보세요.';
       resultEl.classList.add('visible');
       Toast.show('힌트 1 사용 완료');
+
     } else if (level === 2 && used === 1) {
       AppState.session.hintUsed = 2;
       document.getElementById('hint-btn-2').disabled = true;
 
-      // 틀린 문장 하이라이트
-      wrongIds.forEach(id => {
-        document.getElementById(`stmt-${id}`)?.classList.add('hint-highlight');
-      });
-
-      const resultEl = document.getElementById('hint-result');
-      resultEl.querySelector('#hint-result-text').textContent =
-        '힌트 2: 노란 테두리 문장을 다시 살펴보세요';
-      Toast.show('힌트 2 사용 완료 (이후 비활성)');
+      textEl.innerHTML = `
+        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${AppState.session.hint1 || ''}</div>
+        <div>${AppState.session.hint2 || '각 문장의 표현과 조건을 하나씩 따져보세요.'}</div>
+      `;
+      Toast.show('힌트 2 사용 완료');
     }
   },
 
