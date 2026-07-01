@@ -59,6 +59,8 @@ const AppState = {
     isRetry: false,          // 다시 풀어보기(같은 문제 재시도) 여부 — true면 카운터 증가 안 함
     hint1: null,             // 문제 세트 전체에 대한 1차 힌트
     hint2: null,             // 문제 세트 전체에 대한 2차 힌트
+    quizMode: null,          // Level 2 출제 방식: 'A'(STEP1/2 혼합) | 'B'(계산 단답형)
+    calcQuestion: null,      // Level 2 Mode B 계산 문제 객체
   },
 
   // 비로그인 시 문제 풀이 횟수
@@ -78,6 +80,7 @@ const Router = {
   navMap: {
     home:     'nav-home',
     keyword:  'nav-quiz',
+    calc:     'nav-quiz',
     step1:    'nav-quiz',
     step2:    'nav-quiz',
     feedback: 'nav-quiz',

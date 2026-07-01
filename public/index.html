@@ -180,6 +180,80 @@
 
 
 <!-- ============================================================
+     SCREEN 4-B: CALC — Level 2 Mode B 계산 단답형
+     ============================================================ -->
+<div id="screen-calc" class="screen">
+  <header class="topbar">
+    <button class="back-btn" onclick="Router.go('keyword')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      분석 결과
+    </button>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <div class="question-header">
+    <div class="question-unit" id="calc-unit-label">단원명</div>
+    <h2 class="question-title"><strong>계산</strong> 문제를 풀어보세요</h2>
+  </div>
+
+  <div class="guide-banner" style="margin-bottom:20px">
+    💡 Level 2 계산 문제입니다. 정확한 숫자와 단위를 입력하세요.
+  </div>
+
+  <div class="calc-question-card">
+    <p id="calc-question-text" class="calc-question-text"></p>
+  </div>
+
+  <div class="calc-answer-area">
+    <div class="calc-label">정답 입력</div>
+    <div class="calc-input-row">
+      <input
+        type="number"
+        id="calc-answer-input"
+        class="calc-input"
+        placeholder="숫자 입력"
+        step="any"
+      />
+      <select id="calc-unit-select" class="calc-unit-select"></select>
+    </div>
+  </div>
+
+  <div class="hint-row">
+    <button class="hint-btn" id="calc-hint-btn-1" onclick="QuizScreen.useCalcHint(1)">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      1차 힌트
+    </button>
+    <button class="hint-btn" id="calc-hint-btn-2" onclick="QuizScreen.useCalcHint(2)" disabled>
+      <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      2차 힌트
+    </button>
+  </div>
+
+  <div class="hint-result" id="calc-hint-result">
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span id="calc-hint-result-text"></span>
+  </div>
+
+  <button class="primary-btn" style="margin-top:20px" onclick="QuizScreen.submitCalc()">
+    제출하기
+    <svg viewBox="0 0 24 24">
+      <line x1="5" y1="12" x2="19" y2="12"/>
+      <polyline points="12 5 19 12 12 19"/>
+    </svg>
+  </button>
+</div><!-- /screen-calc -->
+
+
+<!-- ============================================================
      SCREEN 4: STEP 1 — 틀린 문장 선택
      ============================================================ -->
 <div id="screen-step1" class="screen">

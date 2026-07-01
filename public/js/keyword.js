@@ -89,22 +89,38 @@ const KeywordScreen = {
     }
 
     try {
-      // Firebase Function 호출 → Gemini API (2차: 문제 생성)
+      const level = AppState.session.currentLevel;
+      // Level 2: 랜덤으로 Mode A / Mode B 선택
+      const mode = level === 2 ? (Math.random() < 0.5 ? 'A' : 'B') : null;
+      AppState.session.quizMode = mode;
+
       const result = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
-        AppState.session.currentLevel
+        level,
+        mode
       );
-      AppState.session.questions = result.questions;
+
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
-      QuizScreen.init(result.questions);
-      Router.go('step1');
+
+      // Level 2 Mode B: 계산 단답형 화면으로 이동
+      if (result.calcQuestion) {
+        AppState.session.calcQuestion = result.calcQuestion;
+        AppState.session.questions = null;
+        QuizScreen.initCalc(result.calcQuestion);
+        Router.go('calc');
+      } else {
+        AppState.session.calcQuestion = null;
+        AppState.session.questions = result.questions;
+        QuizScreen.init(result.questions);
+        Router.go('step1');
+      }
     } catch (err) {
       console.error('Question generation failed:', err);
-      // 더미 문제로 폴백
       const dummy = this._getDummyQuestions();
       AppState.session.questions = dummy;
+      AppState.session.calcQuestion = null;
       AppState.session.hint1 = null;
       AppState.session.hint2 = null;
       QuizScreen.init(dummy);

@@ -145,7 +145,7 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
    Function 2: generateQuestions (DB 참고 문장 활용 + 레벨 분기)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
-  const { misconceptions, unit, level = 1 } = request.data;
+  const { misconceptions, unit, level = 1, mode = null } = request.data;
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
   }
@@ -182,7 +182,43 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     // 매 호출마다 고유한 시드값을 줘서 같은 입력이어도 다른 결과를 유도
     const varietySeed = Math.random().toString(36).slice(2, 8);
 
-    const model = getGeminiModel(0.8); // 🆕 문제 생성은 다양성을 위해 temperature 상향 (0 → 0.8)
+    const model = getGeminiModel(0.8);
+
+    // ── Level 2 Mode B: 계산 단답형 ──
+    if (level === 2 && mode === 'B') {
+      const prompt = `
+당신은 고등학교 물리 교사입니다.
+단원: "${unit}"
+학생들의 주요 오개념:
+${mcText}
+
+이 오개념과 관련된 단일 공식으로 풀 수 있는 계산 문제를 1개 만드세요.
+- 숫자와 단위가 명확하게 주어지는 문제
+- 고등학생이 풀 수 있는 수준 (F=ma, E=mc², W=Fs, v=at, p=mv 등 기본 공식)
+- 최종 답은 소수점 1자리 이하의 깔끔한 숫자
+
+JSON만 출력하세요:
+{
+  "calcQuestion": {
+    "text": "문제 내용 (조건과 수치 포함, 경어체)",
+    "correctAnswer": 숫자(정수 또는 소수),
+    "unit": "정답 단위 (예: m/s, N, J, kg·m/s 등)",
+    "unitOptions": ["정답단위", "헷갈릴단위1", "헷갈릴단위2", "헷갈릴단위3"],
+    "hint1": "이 문제를 풀 때 어떤 물리 법칙/공식을 사용해야 하는지 방향만 제시. 정답 언급 금지. 1~2문장 경어체.",
+    "hint2": "공식에서 각 변수에 어떤 값을 대입해야 하는지 구체적으로 유도. 최종 값 언급 금지. 1~2문장 경어체."
+  }
+}
+`;
+      const result = await model.generateContent(prompt);
+      const parsed = parseJSON(result.response.text());
+      if (!parsed.calcQuestion) throw new Error('calcQuestion 생성 실패');
+      return {
+        questions: null,
+        calcQuestion: parsed.calcQuestion,
+        hint1: parsed.calcQuestion.hint1 || null,
+        hint2: parsed.calcQuestion.hint2 || null,
+      };
+    }
 
     // 🆕 Level 1: 정성적 문장 + 공식 판별 문장 혼합 출제 지시
     const level1FormulaInstruction = `
@@ -201,7 +237,17 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
 계산을 직접 수행해야 하는 문제는 절대 포함하지 마세요. (Level 1은 계산 없이 옳고 그름만 판별하는 단계입니다)
 `;
 
-    const levelInstruction = level === 1 ? level1FormulaInstruction : '';
+    // Level 2 Mode A: 참/거짓 3문항 + 계산 서술 2문항 혼합
+    const level2AInstruction = level === 2 ? `
+[Level 2 추가 규칙 - 계산 서술 혼합]
+생성하는 5개의 문장 중:
+- 참/거짓 판별 문장: 3개 (개념 옳고 그름)
+- 계산 결과가 맞는지 틀린지 판별하는 문장: 2개 (예: "질량 2kg인 물체에 5N의 힘을 가하면 가속도는 2.5m/s²입니다" 형태)
+계산 판별 문장도 isWrong: true/false로 표시하고 같은 배열에 섞어주세요.
+계산 판별 문장은 실제로 계산해보면 맞거나 틀린 수치가 들어있는 형태입니다.
+` : '';
+
+    const levelInstruction = level === 1 ? level1FormulaInstruction : level2AInstruction;
 
     const prompt = `
 당신은 고등학교 물리 교사입니다.
