@@ -137,6 +137,18 @@ const LearningService = {
   },
 
   /**
+   * 소단원 + 오개념의 현재 누적 카운터 조회
+   */
+  async getCorrectCount(uid, unitName, misconceptionId) {
+    const docId = `${unitName}_${misconceptionId}`;
+    const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return 0;
+    const data = snap.data();
+    return data.overcome ? 5 : (data.count || 0);
+  },
+
+  /**
    * 소단원의 현재 레벨/완료 상태 조회 (없으면 기본값 level 1 반환)
    */
   async getUnitProgress(uid, unitName) {
