@@ -12,7 +12,7 @@ const UNIT_MAP = {
   },
   '에너지': {
     chapterId: '2',
-    subUnits: ['역학적 에너지 보존', '열역학 법칙']
+    subUnits: ['역학적 에너지 보존', '열역학 법칙', '특수 상대성 이론']
   },
   '전기와 자기': {
     chapterId: '3',
