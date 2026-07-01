@@ -58,7 +58,8 @@ const FeedbackScreen = {
         const result = await window.LearningService.incrementCorrectCount(
           window.AppState.user.uid,
           session.detectedUnit,
-          misconceptionId
+          misconceptionId,
+          session.currentLevel
         );
         session.correctCount = result.count;
         if (result.isPromoted) {

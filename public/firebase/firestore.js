@@ -131,8 +131,8 @@ const LearningService = {
    * 같은 소단원 내 새 문제 정답 시 누적 카운터 +1
    * 5회 도달 시 overcome: true로 표시하고 isPromoted: true를 반환
    */
-  async incrementCorrectCount(uid, unitName, misconceptionId) {
-    const docId = `${unitName}_${misconceptionId}`;
+  async incrementCorrectCount(uid, unitName, misconceptionId, level = 1) {
+    const docId = `${unitName}_${misconceptionId}_L${level}`;
     const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
     const snap = await getDoc(ref);
 
@@ -161,8 +161,8 @@ const LearningService = {
   /**
    * 소단원 + 오개념의 현재 누적 카운터 조회
    */
-  async getCorrectCount(uid, unitName, misconceptionId) {
-    const docId = `${unitName}_${misconceptionId}`;
+  async getCorrectCount(uid, unitName, misconceptionId, level = 1) {
+    const docId = `${unitName}_${misconceptionId}_L${level}`;
     const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return 0;

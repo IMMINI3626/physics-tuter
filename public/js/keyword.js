@@ -39,7 +39,7 @@ const KeywordScreen = {
 
           const [progress, count] = await Promise.all([
             LearningService.getUnitProgress(uid, result.unit),
-            LearningService.getCorrectCount(uid, result.unit, misconceptionId),
+            LearningService.getCorrectCount(uid, result.unit, misconceptionId, AppState.session.currentLevel),
           ]);
 
           AppState.session.currentLevel = progress.level || 1;
