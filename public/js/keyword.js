@@ -90,19 +90,23 @@ const KeywordScreen = {
 
     try {
       // Firebase Function 호출 → Gemini API (2차: 문제 생성)
-      const questions = await ApiService.generateQuestions(
+      const result = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
         AppState.session.currentLevel
       );
-      AppState.session.questions = questions;
-      QuizScreen.init(questions);
+      AppState.session.questions = result.questions;
+      AppState.session.hint1 = result.hint1;
+      AppState.session.hint2 = result.hint2;
+      QuizScreen.init(result.questions);
       Router.go('step1');
     } catch (err) {
       console.error('Question generation failed:', err);
       // 더미 문제로 폴백
       const dummy = this._getDummyQuestions();
       AppState.session.questions = dummy;
+      AppState.session.hint1 = null;
+      AppState.session.hint2 = null;
       QuizScreen.init(dummy);
       Router.go('step1');
     } finally {
