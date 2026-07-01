@@ -121,7 +121,14 @@ const LearningService = {
     const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
     const snap = await getDoc(ref);
 
-    const prevCount = snap.exists() ? (snap.data().count || 0) : 0;
+    const prevData = snap.exists() ? snap.data() : {};
+    const prevCount = prevData.count || 0;
+
+    // 이미 승급 완료(overcome)된 경우 카운터 증가 안 함
+    if (prevData.overcome) {
+      return { count: prevCount, isPromoted: false };
+    }
+
     const newCount = prevCount + 1;
     const overcome = newCount >= 5;
 
@@ -133,7 +140,7 @@ const LearningService = {
       lastUpdated: serverTimestamp(),
     }, { merge: true });
 
-    return { count: newCount, isPromoted: overcome && prevCount < 5 };
+    return { count: newCount, isPromoted: overcome };
   },
 
   /**
