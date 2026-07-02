@@ -90,8 +90,21 @@ const KeywordScreen = {
 
     try {
       const level = AppState.session.currentLevel;
-      // Level 2: 랜덤으로 Mode A / Mode B 선택
-      const mode = level === 2 ? (Math.random() < 0.5 ? 'A' : 'B') : null;
+      // Level 2: 랜덤 모드 선택 (같은 모드 2회 연속이면 강제 전환)
+      let mode = null;
+      if (level === 2) {
+        const last = AppState._lastQuizMode;
+        const count = AppState._consecutiveModeCount;
+        if (count >= 2 && last) {
+          mode = last === 'A' ? 'B' : 'A';
+        } else {
+          mode = Math.random() < 0.5 ? 'A' : 'B';
+        }
+        AppState._consecutiveModeCount = (mode === last) ? count + 1 : 1;
+        AppState._lastQuizMode = mode;
+        localStorage.setItem('pc_last_quiz_mode', mode);
+        localStorage.setItem('pc_consecutive_mode_count', AppState._consecutiveModeCount);
+      }
       AppState.session.quizMode = mode;
 
       const result = await ApiService.generateQuestions(

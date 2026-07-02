@@ -66,6 +66,10 @@ const AppState = {
   // 비로그인 시 문제 풀이 횟수
   guestCount: parseInt(localStorage.getItem('pc_guest_count') || '0'),
   GUEST_LIMIT: 3,
+
+  // Level 2 모드 연속 횟수 추적 (localStorage로 새로고침에도 유지)
+  _lastQuizMode: localStorage.getItem('pc_last_quiz_mode') || null,
+  _consecutiveModeCount: parseInt(localStorage.getItem('pc_consecutive_mode_count') || '0'),
 };
 
 /* ────────────────────────────────────────
