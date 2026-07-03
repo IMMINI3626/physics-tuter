@@ -184,6 +184,44 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
 
     const model = getGeminiModel(0.8);
 
+    // ── Level 3: 다단계 복합 계산 문제 ──
+    if (level === 3) {
+      const prompt = `
+당신은 고등학교 물리 교사입니다.
+단원: "${unit}"
+학생들의 주요 오개념:
+${mcText}
+
+이 단원과 오개념을 중심으로, 두 가지 이상의 물리 법칙이 결합된 다단계 복합 계산 문제를 1개 만드세요.
+- 실생활 또는 수능/모의고사 스타일 (놀이기구, 스포츠, 실험 등)
+- 최소 2단계 이상의 풀이 과정 필요
+- 고등학교 물리 수준 (뉴턴 법칙, 에너지 보존, 운동량, 전기회로, 파동 등)
+- 최종 답은 소수점 2자리 이하의 깔끔한 숫자
+
+JSON만 출력하세요:
+{
+  "calcQuestion": {
+    "text": "문제 내용 (조건과 수치 명확히 포함, 경어체)",
+    "correctAnswer": 숫자(정수 또는 소수),
+    "unit": "정답 단위",
+    "unitOptions": ["정답단위", "헷갈릴단위1", "헷갈릴단위2", "헷갈릴단위3"],
+    "solutionSteps": ["1단계: 적용할 법칙/공식 설명", "2단계: 계산 과정 설명"],
+    "hint1": "어떤 물리 법칙을 순서대로 적용해야 하는지 방향만 제시. 정답 언급 금지. 1~2문장 경어체.",
+    "hint2": "각 단계에서 어떤 변수를 구해야 하는지 유도. 최종 값 언급 금지. 1~2문장 경어체."
+  }
+}
+`;
+      const result = await model.generateContent(prompt);
+      const parsed = parseJSON(result.response.text());
+      if (!parsed.calcQuestion) throw new Error('L3 calcQuestion 생성 실패');
+      return {
+        questions: null,
+        calcQuestion: { ...parsed.calcQuestion, isLevel3: true },
+        hint1: parsed.calcQuestion.hint1 || null,
+        hint2: parsed.calcQuestion.hint2 || null,
+      };
+    }
+
     // ── Level 2 Mode B: 계산 단답형 ──
     if (level === 2 && mode === 'B') {
       const prompt = `
@@ -273,7 +311,7 @@ ${mcText}
 ${levelInstruction}
 
 [필수 규칙 - 어투]
-- 생성되는 모든 문장(text)은 반드시 "~습니다", "~합니다", "~입니다" 형태의 정중한 경어체를 사용하세요. (반말 금지)
+- 생성되는 모든 문장(text)은 반드시 "~한다", "~이다", "~된다" 형태의 평서문(교과서 서술체)으로 작성하세요. (경어체, 반말 금지)
 
 JSON만 출력하세요 (다른 텍스트 금지):
 {

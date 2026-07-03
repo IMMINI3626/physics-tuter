@@ -85,6 +85,7 @@ const Router = {
     home:     'nav-home',
     keyword:  'nav-quiz',
     calc:     'nav-quiz',
+    level3:   'nav-quiz',
     step1:    'nav-quiz',
     step2:    'nav-quiz',
     feedback: 'nav-quiz',

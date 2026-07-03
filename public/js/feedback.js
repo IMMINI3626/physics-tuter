@@ -64,12 +64,20 @@ const FeedbackScreen = {
         session.correctCount = result.count;
         if (result.isPromoted) {
           isPromoted = true;
-          promotedTo = session.currentLevel + 1;
-          session.currentLevel = promotedTo;
-          session.correctCount = 0;
-          await window.LearningService.setUnitLevel(
-            window.AppState.user.uid, session.detectedUnit, promotedTo
-          );
+          if (session.currentLevel >= 3) {
+            // L3 완료
+            promotedTo = 'complete';
+            await window.LearningService.setUnitLevel(
+              window.AppState.user.uid, session.detectedUnit, 3, true
+            );
+          } else {
+            promotedTo = session.currentLevel + 1;
+            session.currentLevel = promotedTo;
+            session.correctCount = 0;
+            await window.LearningService.setUnitLevel(
+              window.AppState.user.uid, session.detectedUnit, promotedTo
+            );
+          }
         }
       } catch (e) {
         console.error('카운터 증가 실패:', e);
@@ -115,10 +123,15 @@ const FeedbackScreen = {
     const area = document.getElementById('level-progress-area');
     if (!area) return;
     area.style.display = 'block';
+    const isComplete = newLevel === 'complete';
     area.innerHTML = `
       <div style="text-align:center;padding:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.3);border-radius:var(--r-md);margin:0 20px 16px;">
-        <div style="font-size:15px;font-weight:600;color:var(--green);margin-bottom:4px">🎉 Level ${newLevel}로 승급했어요!</div>
-        <div style="font-size:13px;color:var(--text2)">누적 5회 정답을 달성했어요</div>
+        <div style="font-size:15px;font-weight:600;color:var(--green);margin-bottom:4px">
+          ${isComplete ? '🏆 이 단원을 완전히 이해했어요!' : `🎉 Level ${newLevel}로 승급했어요!`}
+        </div>
+        <div style="font-size:13px;color:var(--text2)">
+          ${isComplete ? '마이페이지에서 학습 이력을 확인할 수 있어요' : '누적 5회 정답을 달성했어요'}
+        </div>
       </div>
     `;
   },
@@ -130,10 +143,15 @@ const FeedbackScreen = {
     const existing = area.querySelector('.promotion-actions');
     if (existing) existing.remove();
 
+    const isComplete = newLevel === 'complete';
     const div = document.createElement('div');
     div.className = 'promotion-actions';
     div.style.cssText = 'display:flex;gap:10px;margin:0 20px 20px;';
-    div.innerHTML = `
+    div.innerHTML = isComplete ? `
+      <button class="primary-btn" style="margin:0;flex:1" onclick="FeedbackScreen.continueNext()">
+        홈으로 나가기
+      </button>
+    ` : `
       <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
         홈으로 나가기
       </button>
@@ -189,8 +207,13 @@ const FeedbackScreen = {
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
     if (AppState.session.calcQuestion) {
-      QuizScreen.initCalc(AppState.session.calcQuestion);
-      Router.go('calc');
+      if (AppState.session.calcQuestion.isLevel3) {
+        Level3Screen.init(AppState.session.calcQuestion);
+        Router.go('level3');
+      } else {
+        QuizScreen.initCalc(AppState.session.calcQuestion);
+        Router.go('calc');
+      }
     } else {
       QuizScreen.init(AppState.session.questions);
       Router.go('step1');
@@ -218,8 +241,13 @@ const FeedbackScreen = {
       if (result.calcQuestion) {
         AppState.session.calcQuestion = result.calcQuestion;
         AppState.session.questions = null;
-        QuizScreen.initCalc(result.calcQuestion);
-        Router.go('calc');
+        if (result.calcQuestion.isLevel3) {
+          Level3Screen.init(result.calcQuestion);
+          Router.go('level3');
+        } else {
+          QuizScreen.initCalc(result.calcQuestion);
+          Router.go('calc');
+        }
       } else {
         AppState.session.calcQuestion = null;
         AppState.session.questions = result.questions;

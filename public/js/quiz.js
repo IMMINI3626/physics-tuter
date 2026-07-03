@@ -322,3 +322,211 @@ const QuizScreen = {
     };
   },
 };
+
+/* ============================================================
+   Level3Screen — 다단계 복합 계산 문제
+   ============================================================ */
+const Level3Screen = {
+  _tool: 'pen',        // 'pen' | 'eraser'
+  _drawing: false,
+  _ctx: null,
+  _photoBase64: null,  // 업로드된 사진 base64
+
+  init(calcQuestion) {
+    const session = window.AppState.session;
+    document.getElementById('l3-unit-label').textContent = session.detectedUnit || '';
+    document.getElementById('l3-question-text').textContent = calcQuestion.text;
+
+    // 단위 드롭다운
+    const select = document.getElementById('l3-unit-select');
+    select.innerHTML = calcQuestion.unitOptions.map(u =>
+      `<option value="${u}">${u}</option>`
+    ).join('');
+
+    // 입력 초기화
+    document.getElementById('l3-answer-input').value = '';
+    document.getElementById('l3-text-input').value = '';
+    this._photoBase64 = null;
+    this.switchTab('text');
+    this._resetHints();
+    this._initCanvas();
+  },
+
+  switchTab(tab) {
+    document.getElementById('l3-tab-text').classList.toggle('active', tab === 'text');
+    document.getElementById('l3-tab-draw').classList.toggle('active', tab === 'draw');
+    document.getElementById('l3-panel-text').classList.toggle('hidden', tab !== 'text');
+    document.getElementById('l3-panel-draw').classList.toggle('hidden', tab !== 'draw');
+    if (tab === 'draw') this._resizeCanvas();
+  },
+
+  setTool(tool) {
+    this._tool = tool;
+    document.getElementById('l3-tool-pen').classList.toggle('active', tool === 'pen');
+    document.getElementById('l3-tool-eraser').classList.toggle('active', tool === 'eraser');
+  },
+
+  clearCanvas() {
+    if (this._ctx) {
+      const canvas = document.getElementById('l3-canvas');
+      this._ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  },
+
+  handlePhotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      this._photoBase64 = ev.target.result;
+      document.getElementById('l3-photo-img').src = this._photoBase64;
+      document.getElementById('l3-photo-preview').classList.remove('hidden');
+      document.getElementById('l3-canvas').classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  },
+
+  removePhoto() {
+    this._photoBase64 = null;
+    document.getElementById('l3-photo-preview').classList.add('hidden');
+    document.getElementById('l3-canvas').classList.remove('hidden');
+    document.getElementById('l3-photo-input').value = '';
+  },
+
+  useHint(n) {
+    const session = window.AppState.session;
+    const text = n === 1 ? session.hint1 : session.hint2;
+    if (!text) return;
+    document.getElementById('l3-hint-result').style.display = 'flex';
+    document.getElementById('l3-hint-result-text').textContent = text;
+    if (n === 1) document.getElementById('l3-hint-btn-2').disabled = false;
+  },
+
+  async submit() {
+    const answerInput = document.getElementById('l3-answer-input');
+    const userValue = parseFloat(answerInput.value);
+    if (isNaN(userValue)) {
+      Toast.show('숫자를 입력해주세요.');
+      return;
+    }
+
+    const submitBtn = document.querySelector('#screen-level3 .primary-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '채점 중...';
+
+    try {
+      const calcQuestion = window.AppState.session.calcQuestion;
+      const userUnit = document.getElementById('l3-unit-select').value;
+      const correct = calcQuestion.correctAnswer;
+      const isValueCorrect = Math.abs(userValue - correct) / Math.abs(correct) <= 0.01;
+      const isUnitCorrect = userUnit === calcQuestion.unit;
+      const isCorrect = isValueCorrect && isUnitCorrect;
+
+      // 풀이 과정 수집
+      const textProcess = document.getElementById('l3-text-input').value.trim();
+      let processImageBase64 = null;
+      const activeTab = document.getElementById('l3-tab-draw').classList.contains('active');
+      if (activeTab) {
+        if (this._photoBase64) {
+          processImageBase64 = this._photoBase64;
+        } else {
+          const canvas = document.getElementById('l3-canvas');
+          processImageBase64 = canvas.toDataURL('image/png');
+        }
+      }
+
+      const score = isCorrect ? 100 : 0;
+      const explanation = isCorrect
+        ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
+        : !isValueCorrect
+          ? `정답은 ${correct} ${calcQuestion.unit}입니다. 풀이 과정을 다시 확인해보세요.`
+          : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
+
+      const feedbackData = {
+        score,
+        title: isCorrect ? '완벽해요! 🎉' : '다시 도전해봐요',
+        subtitle: isCorrect ? 'Level 3 문제를 맞혔어요!' : `정답: ${correct} ${calcQuestion.unit}`,
+        misconceptions: [],
+        items: [{
+          id: 1,
+          text: calcQuestion.text,
+          isWrong: !isCorrect,
+          isCorrectAnswer: isCorrect,
+          userReason: textProcess || (processImageBase64 ? '[직접 쓴 풀이]' : ''),
+          explanation,
+          solutionSteps: calcQuestion.solutionSteps || [],
+        }],
+      };
+
+      window.AppState.session.lastFeedback = feedbackData;
+      await FeedbackScreen.show(feedbackData);
+      Router.go('feedback');
+    } catch (err) {
+      console.error('L3 제출 실패:', err);
+      Toast.show('채점에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '제출하기';
+    }
+  },
+
+  _resetHints() {
+    document.getElementById('l3-hint-result').style.display = 'none';
+    document.getElementById('l3-hint-result-text').textContent = '';
+    document.getElementById('l3-hint-btn-1').disabled = false;
+    document.getElementById('l3-hint-btn-2').disabled = true;
+  },
+
+  _initCanvas() {
+    const canvas = document.getElementById('l3-canvas');
+    this._ctx = canvas.getContext('2d');
+    this._resizeCanvas();
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches ? e.touches[0] : e;
+      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    };
+
+    const start = (e) => {
+      e.preventDefault();
+      this._drawing = true;
+      const { x, y } = getPos(e);
+      this._ctx.beginPath();
+      this._ctx.moveTo(x, y);
+    };
+    const move = (e) => {
+      e.preventDefault();
+      if (!this._drawing) return;
+      const { x, y } = getPos(e);
+      this._ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
+      this._ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
+      this._ctx.strokeStyle = '#e2e8f0';
+      this._ctx.lineCap = 'round';
+      this._ctx.lineTo(x, y);
+      this._ctx.stroke();
+    };
+    const end = () => { this._drawing = false; };
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  },
+
+  _resizeCanvas() {
+    const canvas = document.getElementById('l3-canvas');
+    const saved = this._ctx ? canvas.toDataURL() : null;
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 280;
+    if (saved && this._ctx) {
+      const img = new Image();
+      img.onload = () => this._ctx.drawImage(img, 0, 0);
+      img.src = saved;
+    }
+  },
+};
+
+window.Level3Screen = Level3Screen;
