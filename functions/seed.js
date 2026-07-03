@@ -9,13 +9,13 @@
  *   3. node seed.js
  *
  * 시딩 대상:
- *   ✅ units                    (3개)
- *   ✅ misconception_dimensions  (6개)
- *   ✅ misconceptions            (28개 — K1~G5 전체)
- *   ✅ misconception_sentences   (50개+)
- *   ✅ scoring_keywords          (40개+)
- *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30)
- *   ✅ item_misconception_map    (80개+)
+ *   ✅ units                    (4개)
+ *   ✅ misconception_dimensions  (9개)
+ *   ✅ misconceptions            (49개 — unit1 K1~G5 30개 + unit2/4 ME/WI/MD 19개)
+ *   ✅ misconception_sentences   (70개+)
+ *   ✅ scoring_keywords          (40개+, unit1 전용)
+ *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
+ *   ✅ item_misconception_map    (80개+, unit1 전용)
  *
  * 제외 (동적 데이터):
  *   ❌ users / assessments / learning_sessions / learning_logs
@@ -34,6 +34,7 @@ const units = [
   { id:'1', name:'힘과 운동',   keywords:['관성','외력','뉴턴','등속','힘','가속도','마찰','운동','속도','알짜힘','합력'] },
   { id:'2', name:'에너지',      keywords:['운동에너지','퍼텐셜에너지','역학적에너지','보존','일','에너지'] },
   { id:'3', name:'전기와 자기', keywords:['전류','전압','자기장','전기력','저항','전기'] },
+  { id:'4', name:'파동',        keywords:['간섭','회절','파장','진동수','굴절','광전효과','이중성','불확정성'] },
 ];
 
 /* ============================================================
@@ -46,10 +47,13 @@ const dims = [
   { id:'4', code:'AR', name_ko:'작용-반작용', name_en:'Action/Reaction',    description:'뉴턴 3법칙 관련 오개념' },
   { id:'5', code:'CI', name_ko:'힘의 합성',   name_en:'Concatenation',      description:'힘의 합성 및 우선순위 오개념' },
   { id:'6', code:'G',  name_ko:'중력/저항',   name_en:'Gravity/Resistance', description:'중력, 공기저항 관련 오개념' },
+  { id:'7', code:'ME', name_ko:'역학적 에너지 보존', name_en:'Mechanical Energy Conservation', description:'위치에너지·운동에너지 전환 및 보존 관련 오개념' },
+  { id:'8', code:'WI', name_ko:'파동의 간섭',        name_en:'Wave Interference',              description:'음파 등 종파 간섭에서 진폭·위상 관련 오개념' },
+  { id:'9', code:'MD', name_ko:'물질의 이중성',      name_en:'Matter Duality',                 description:'불확정성 원리 등 양자역학적 이중성 관련 오개념' },
 ];
 
 /* ============================================================
-   3. MISCONCEPTIONS  (FCI Table 4-2, 전체 28개)
+   3. MISCONCEPTIONS  (unit1: FCI Table 4-2 28개 / unit2,4: 논문 기반 19개)
    ============================================================ */
 const misconceptions = [
   // Kinematics
@@ -178,6 +182,86 @@ const misconceptions = [
     description:'던진 물체의 임페투스가 소진된 후에야 중력이 작용하기 시작한다고 믿음',
     correctConcept:'중력은 던지는 순간부터 항상 작용함',
     sourcePaper:'Hestenes, Wells & Swackhamer (1992), The Physics Teacher 30(3)' },
+  // 역학적 에너지 보존 (unit 2) — 이종주 (2009)
+  { id:'ME1', unitId:'2', dimensionCode:'ME', code:'ME1', name_ko:'경로길이와 속력의 혼동', name_en:'Conflation of path length with velocity',
+    description:'같은 높이에서 미끄럼틀을 내려올 때 경로가 길거나 기울기가 다르면 바닥에서의 속력도 달라진다고 믿음',
+    correctConcept:'마찰이 없다면 같은 높이에서 출발해 같은 높이에 도달할 때 경로의 길이·기울기와 무관하게 최종 속력은 같다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.93-94' },
+  { id:'ME2', unitId:'2', dimensionCode:'ME', code:'ME2', name_ko:'던지는 방향과 속력의 혼동', name_en:'Throwing direction affects final velocity',
+    description:'같은 높이·같은 속력으로 공을 위/아래로 던질 때 던지는 방향에 따라 바닥 도달 속력이 달라진다고 믿음',
+    correctConcept:'역학적에너지 보존에 의해 같은 높이에 도달할 때 운동에너지(속력)는 던진 방향과 무관하게 같다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.94-95' },
+  { id:'ME3', unitId:'2', dimensionCode:'ME', code:'ME3', name_ko:'에너지 보존 조건 오해', name_en:'Misconception about conditions for conservation',
+    description:'마찰력 등 비보존력이 작용하는 상황에서도 역학적에너지가 항상 보존된다고 믿음',
+    correctConcept:'역학적에너지 보존은 마찰·공기저항 같은 비보존력이 작용하지 않을 때만 성립한다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.93' },
+  { id:'ME4', unitId:'2', dimensionCode:'ME', code:'ME4', name_ko:'에너지와 운동량의 혼동', name_en:'Confusion between energy and momentum',
+    description:'역학적에너지 보존과 운동량 보존을 구분하지 못하고 항상 함께 보존된다고 믿음',
+    correctConcept:'탄성충돌은 운동량과 운동에너지가 모두 보존되지만, 비탄성충돌은 운동량만 보존되고 운동에너지는 일부 손실된다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.39' },
+  { id:'ME5', unitId:'2', dimensionCode:'ME', code:'ME5', name_ko:'질량과 속력의 혼동', name_en:'Mass affects final velocity on frictionless surfaces',
+    description:'질량이 다른 두 물체가 마찰 없는 경사면을 같은 높이에서 내려올 때 무거운 물체가 더 빠르다고 믿음',
+    correctConcept:'마찰이 없다면 질량과 무관하게 같은 높이에서 도달한 최종 속력은 v=√(2gh)로 동일하다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.96' },
+  { id:'ME6', unitId:'2', dimensionCode:'ME', code:'ME6', name_ko:'충돌 시 운동에너지 보존 오해', name_en:'Misconception about kinetic energy in collisions',
+    description:'탄성충돌과 비탄성충돌을 구분하지 못하고 모든 충돌에서 운동에너지가 보존된다고 믿음',
+    correctConcept:'비탄성충돌에서는 운동량만 보존되고 운동에너지의 일부는 열·소리·변형 에너지로 손실된다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.94' },
+  { id:'ME7', unitId:'2', dimensionCode:'ME', code:'ME7', name_ko:'위치에너지 기준점 혼동', name_en:'Misconception about reference point for potential energy',
+    description:'위치에너지를 계산할 때 기준면으로부터의 높이를 명확히 하지 못하고 절대 높이와 혼동함',
+    correctConcept:'위치에너지는 선택한 기준면으로부터의 높이에 비례하는 상대적인 값이다',
+    sourcePaper:'이종주 (2009), 연세대학교 교육대학원 석사학위논문, p.41-42' },
+  // 역학적 에너지 보존 (unit 2) — 정현 (2021)
+  { id:'ME8', unitId:'2', dimensionCode:'ME', code:'ME8', name_ko:'운동에너지 크기비교 오류', name_en:'Misconception about kinetic energy magnitude comparison',
+    description:'운동에너지가 속력의 제곱에 비례한다는 공식은 알지만, 실제 비교 시 속력에만 비례한다고 잘못 적용함',
+    correctConcept:'운동에너지 KE=(1/2)mv²이므로 속력이 2배가 되면 운동에너지는 4배가 된다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.42-52' },
+  { id:'ME9', unitId:'2', dimensionCode:'ME', code:'ME9', name_ko:'위치에너지 기준점 오개념', name_en:'Misconception about height from reference point',
+    description:'위치에너지를 비교할 때 기준면으로부터의 높이를 올바르게 설정하지 못하고 높이 차이를 혼동함',
+    correctConcept:'위치에너지 PE=mgh이므로 명확히 정한 기준면으로부터의 높이만 고려해야 한다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.45-47' },
+  { id:'ME10', unitId:'2', dimensionCode:'ME', code:'ME10', name_ko:'에너지 보존 개념 미획득', name_en:'Failure to acquire mechanical energy conservation concept',
+    description:'위치에너지와 운동에너지를 서로 관련짓지 못하거나 힘과 에너지 개념을 구분하지 못함',
+    correctConcept:'역학적에너지(=위치에너지+운동에너지)는 비보존력이 없을 때 일정하게 유지되며, 위치에너지 감소분만큼 운동에너지가 증가한다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.59-68' },
+  { id:'ME11', unitId:'2', dimensionCode:'ME', code:'ME11', name_ko:'위치-운동에너지 역비례 오해', name_en:'Misconception about inverse relationship between PE and KE',
+    description:'한 지점 내에서의 위치·운동에너지 역비례 관계와, 초기 높이에 따라 전체 역학적에너지가 달라지는 보존 개념을 혼동함',
+    correctConcept:'한 지점에서 위치에너지가 클수록 운동에너지는 작지만, 초기 높이가 높을수록 최저점에서의 운동에너지(속력)는 더 커진다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.61-63' },
+  { id:'ME12', unitId:'2', dimensionCode:'ME', code:'ME12', name_ko:'에너지와 속력의 혼동', name_en:'Confusing energy with velocity',
+    description:'운동에너지와 속력을 구분하지 못하고 "빠르다"와 "에너지가 크다"를 같은 의미로 사용함',
+    correctConcept:'운동에너지는 속력의 제곱에 비례하는 별개의 물리량이며 속력 자체와 동일하지 않다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.59-69' },
+  { id:'ME13', unitId:'2', dimensionCode:'ME', code:'ME13', name_ko:'초기 상태 고려 실패', name_en:'Ignoring initial state in conservation problems',
+    description:'진자 등 계의 현재 위치만 고려하고 초기 위치에너지의 크기가 전체 역학적에너지를 결정한다는 점을 고려하지 못함',
+    correctConcept:'초기 높이가 높을수록 전체 역학적에너지가 크며, 진자가 도달 가능한 최고점도 초기 높이로 제한된다',
+    sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.50-68' },
+  // 파동의 간섭 (unit 4) — Yun et al. (2025)
+  { id:'WI1', unitId:'4', dimensionCode:'WI', code:'WI1', name_ko:'진폭 물리량 혼동', name_en:'Confusion about what "amplitude" represents',
+    description:'음파 간섭에서 합성파의 "진폭"을 음압 진폭이 아닌 매질 변위 진폭으로 해석함 (조사 대상 67%)',
+    correctConcept:'소리의 간섭은 스칼라량인 음압의 합성으로 설명되며, 같은 위상의 음파가 만나면 음압 진폭이 커져 보강간섭이 일어난다',
+    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.744, 752-753' },
+  { id:'WI2', unitId:'4', dimensionCode:'WI', code:'WI2', name_ko:'마주보는 음원 중앙 간섭 오개념', name_en:'Misconception about interference at midpoint of opposing speakers',
+    description:'매질 변위를 벡터로 상쇄시키는 논리로, 마주보는 두 스피커 정중앙에서 상쇄간섭이 일어난다고 잘못 판단함',
+    correctConcept:'중앙에서는 두 음파가 위상차 없이 만나 음압 진폭이 최대가 되므로 보강간섭이 일어난다 (음압과 변위는 위상이 90˚ 어긋남)',
+    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.750, 752-753' },
+  { id:'WI3', unitId:'4', dimensionCode:'WI', code:'WI3', name_ko:'종파 변위 벡터합 오용', name_en:'Incorrect application of displacement vector addition to longitudinal waves',
+    description:'종파인 음파의 간섭을 매질 변위 벡터의 합으로만 분석하려 하여 2차원 공간에서의 보강·상쇄를 올바로 구분하지 못함',
+    correctConcept:'음파 간섭은 스칼라량인 음압의 합으로 분석해야 하며, 변위 벡터합만으로는 압력 변화를 설명할 수 없다',
+    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.746-748' },
+  { id:'WI4', unitId:'4', dimensionCode:'WI', code:'WI4', name_ko:'교과서 진폭 표기 모호성', name_en:"Textbook's ambiguous use of amplitude in interference description",
+    description:'"위상이 같으면 진폭이 커진다"는 교과서 서술이 음압 진폭인지 변위 진폭인지 명시하지 않아 변위로 오해하게 됨',
+    correctConcept:'간섭을 설명할 때는 다루는 진폭이 음압의 진폭임을 명확히 표기해야 한다',
+    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.750-751' },
+  { id:'WI5', unitId:'4', dimensionCode:'WI', code:'WI5', name_ko:'횡파 표현으로 인한 종파 특성 간과', name_en:'Sinusoidal representation obscuring longitudinal nature of sound',
+    description:'교과서가 소리(종파)를 이해하기 쉽도록 사인곡선(횡파 형태)으로 표현하는 관행 때문에 종파 특성과 음압의 스칼라적 성질을 간과함',
+    correctConcept:'음파는 종파이며 음압은 스칼라량으로 단순 덧셈으로 합성된다는 점을 매질 입자의 진동 방향(벡터)과 구분해 이해해야 한다',
+    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.747-748' },
+  // 물질의 이중성 (unit 4) — 이창열 (2021)
+  { id:'MD1', unitId:'4', dimensionCode:'MD', code:'MD1', name_ko:'불확정성 원리 원인 오해', name_en:'Misconception that uncertainty arises from measurement device limits',
+    description:'전자 등 입자의 위치·운동량을 동시에 정확히 측정할 수 없는 불확정성의 원인을 측정 장비의 정밀도 한계로 오해함',
+    correctConcept:'불확정성 원리는 측정 장비의 정밀성과 무관하게 근본적으로 존재하는 물리적 한계이며 Δx·Δp≥ℏ/2로 표현된다',
+    sourcePaper:'이창열 (2021), 서울대학교 사범대학 물리교육과 학사학위논문, p.5' },
 ];
 
 /* ============================================================
@@ -237,6 +321,34 @@ const sentences = [
   { misconceptionId:'R1',  isWrong:false, sentence:'질량은 관성(운동 상태를 유지하려는 성질)의 척도이며 멈추려는 성질이 아니다', difficulty:2 },
   { misconceptionId:'R2',  isWrong:true,  sentence:'힘이 마찰력보다 클 때만 물체가 움직일 수 있다', difficulty:2 },
   { misconceptionId:'R2',  isWrong:false, sentence:'알짜힘이 0이어도 이미 운동 중인 물체는 등속으로 계속 움직인다', difficulty:2 },
+  // 역학적 에너지 보존 (unit 2)
+  { misconceptionId:'ME1',  isWrong:true,  sentence:'미끄럼틀의 경로가 길어 가속이 더 잘되므로 경로가 긴 쪽이 바닥에서 더 큰 속력을 갖는다', difficulty:2 },
+  { misconceptionId:'ME1',  isWrong:true,  sentence:'경사가 일정한 미끄럼틀이 가속이 더 잘되므로 그쪽에서 더 큰 속력을 갖는다', difficulty:2 },
+  { misconceptionId:'ME1',  isWrong:false, sentence:'마찰이 없다면 경로가 달라도 같은 높이에서 출발해 같은 높이에 도달하면 속력은 같다', difficulty:2 },
+  { misconceptionId:'ME2',  isWrong:true,  sentence:'아래 방향으로 던진 공이 위로 던진 공보다 바닥에서 더 빠르다', difficulty:2 },
+  { misconceptionId:'ME2',  isWrong:false, sentence:'같은 높이에서 같은 속력으로 던지면 방향과 무관하게 바닥에서의 속력은 같다', difficulty:2 },
+  { misconceptionId:'ME4',  isWrong:true,  sentence:'선운동량과 운동에너지가 모두 보존되므로 공을 던진 후에도 사람은 움직이지 않는다', difficulty:3 },
+  { misconceptionId:'ME4',  isWrong:false, sentence:'운동량이 보존되므로 공을 던진 사람은 던진 반대 방향으로 움직인다', difficulty:3 },
+  { misconceptionId:'ME5',  isWrong:true,  sentence:'무거운 물체가 가벼운 물체보다 아래 방향으로 더 가속되어 바닥에서 속력이 더 크다', difficulty:2 },
+  { misconceptionId:'ME5',  isWrong:false, sentence:'마찰이 없다면 질량과 무관하게 같은 높이에서 내려온 물체들의 바닥 속력은 같다', difficulty:2 },
+  { misconceptionId:'ME8',  isWrong:true,  sentence:'물체가 2배 먼 거리를 이동했으므로 운동에너지도 2배이다', difficulty:2 },
+  { misconceptionId:'ME8',  isWrong:false, sentence:'속력이 2배이면 운동에너지는 속력의 제곱에 비례하므로 4배가 된다', difficulty:3 },
+  { misconceptionId:'ME9',  isWrong:true,  sentence:'높이 차이와 절대 높이를 혼동해 위치에너지가 2배라고 판단한다', difficulty:2 },
+  { misconceptionId:'ME9',  isWrong:false, sentence:'위치에너지는 질량과 기준면으로부터의 높이의 곱에 비례하므로 높이가 3배면 위치에너지도 3배이다', difficulty:2 },
+  { misconceptionId:'ME10', isWrong:true,  sentence:'운동에너지가 움직여야 위치에너지가 움직인다', difficulty:2 },
+  { misconceptionId:'ME10', isWrong:true,  sentence:'위치에 따라 빨라지거나 느려진다고만 말할 뿐 에너지 전환은 언급하지 않는다', difficulty:2 },
+  { misconceptionId:'ME10', isWrong:false, sentence:'위치에너지가 감소하는 만큼 운동에너지가 증가하며 그 합인 역학적에너지는 일정하다', difficulty:2 },
+  { misconceptionId:'ME11', isWrong:true,  sentence:'위치에너지와 운동에너지는 항상 반비례하므로 높이가 높아질수록 운동에너지는 줄어들기만 한다', difficulty:3 },
+  { misconceptionId:'ME11', isWrong:false, sentence:'한 지점에서는 위치·운동에너지가 반비례 관계이지만, 초기 높이가 높을수록 최저점에서의 운동에너지는 더 커진다', difficulty:3 },
+  { misconceptionId:'ME12', isWrong:true,  sentence:'높이가 높을수록 속력이 빠르다', difficulty:1 },
+  { misconceptionId:'ME12', isWrong:false, sentence:'운동에너지는 속력의 제곱에 비례하는 물리량으로 속력 자체와는 다르다', difficulty:2 },
+  { misconceptionId:'ME13', isWrong:true,  sentence:'진자의 현재 위치만 보고 판단할 뿐 처음에 놓은 높이는 고려하지 않는다', difficulty:2 },
+  { misconceptionId:'ME13', isWrong:false, sentence:'초기 높이가 높을수록 전체 역학적에너지가 크고 최저점에서의 속력도 커진다', difficulty:2 },
+  // 파동의 간섭 (unit 4)
+  { misconceptionId:'WI1',  isWrong:true,  sentence:'진폭이란 매질의 변위(m)를 의미한다', difficulty:2 },
+  { misconceptionId:'WI1',  isWrong:false, sentence:'소리 간섭에서 말하는 진폭은 음압의 진폭(Pa)이다', difficulty:2 },
+  { misconceptionId:'WI2',  isWrong:true,  sentence:'마주보는 두 스피커 정중앙에서는 매질이 서로 반대 방향으로 진동하므로 상쇄간섭이 일어난다', difficulty:3 },
+  { misconceptionId:'WI2',  isWrong:false, sentence:'두 음원으로부터 거리차가 없어 위상차 없이 만나므로 정중앙에서는 보강간섭이 일어난다', difficulty:3 },
 ];
 
 /* ============================================================
@@ -646,7 +758,7 @@ async function seed() {
   await batchUpload('misconception_dimensions', dims, 'id');
   console.log(`    ✅ ${dims.length}개`);
 
-  console.log('3/7 🧠 misconceptions (전체 28개)...');
+  console.log('3/7 🧠 misconceptions (전체 49개)...');
   await batchUpload('misconceptions', misconceptions, 'id');
   console.log(`    ✅ ${misconceptions.length}개`);
 
@@ -672,7 +784,7 @@ async function seed() {
   console.log('   ─────────────────────────────');
   console.log(`   units                    | ${units.length}`);
   console.log(`   misconception_dimensions  | ${dims.length}`);
-  console.log(`   misconceptions            | ${misconceptions.length}  ← K1~G5 전체`);
+  console.log(`   misconceptions            | ${misconceptions.length}  ← unit1 K1~G5 + unit2/4 ME/WI/MD`);
   console.log(`   misconception_sentences   | ${sentences.length}`);
   console.log(`   scoring_keywords          | ${keywords.length}`);
   console.log(`   fci_fmce_items            | ${fciItems.length}  ← FMCE 43 + FCI 30`);
