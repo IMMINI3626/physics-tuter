@@ -131,43 +131,36 @@ const LearningService = {
    * 같은 소단원 내 새 문제 정답 시 누적 카운터 +1
    * 5회 도달 시 overcome: true로 표시하고 isPromoted: true를 반환
    */
-  async incrementCorrectCount(uid, unitName, misconceptionId, level = 1) {
-    const docId = `${unitName}_${misconceptionId}_L${level}`;
-    const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
+  async incrementCorrectCount(uid, unitName) {
+    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
     const snap = await getDoc(ref);
-
     const prevData = snap.exists() ? snap.data() : {};
-    const prevCount = prevData.count || 0;
+    const prevCount = prevData.correctCount || 0;
 
-    // 이미 승급 완료(overcome)된 경우 카운터 증가 안 함
-    if (prevData.overcome) {
+    // 이미 승급 완료(completed)된 경우 카운터 증가 안 함
+    if (prevData.completed) {
       return { count: prevCount, isPromoted: false };
     }
 
     const newCount = prevCount + 1;
-    const overcome = newCount >= 5;
+    const isPromoted = newCount >= 5;
 
     await setDoc(ref, {
-      unit: unitName,
-      misconceptionId,
-      count: newCount,
-      overcome,
-      lastUpdated: serverTimestamp(),
+      correctCount: isPromoted ? 0 : newCount,
+      lastStudied: serverTimestamp(),
     }, { merge: true });
 
-    return { count: newCount, isPromoted: overcome };
+    return { count: newCount, isPromoted };
   },
 
   /**
-   * 소단원 + 오개념의 현재 누적 카운터 조회
+   * 소단원의 현재 승급 카운터 조회
    */
-  async getCorrectCount(uid, unitName, misconceptionId, level = 1) {
-    const docId = `${unitName}_${misconceptionId}_L${level}`;
-    const ref = doc(db, 'users', uid, 'misconceptionProgress', docId);
+  async getCorrectCount(uid, unitName) {
+    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
     const snap = await getDoc(ref);
     if (!snap.exists()) return 0;
-    const data = snap.data();
-    return data.overcome ? 5 : (data.count || 0);
+    return snap.data().correctCount || 0;
   },
 
   /**

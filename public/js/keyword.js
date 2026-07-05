@@ -35,11 +35,9 @@ const KeywordScreen = {
       if (AppState.isLoggedIn && AppState.user) {
         try {
           const uid = AppState.user.uid;
-          const misconceptionId = result.misconceptions?.[0]?.id || 'ETC';
-
           const [progress, count] = await Promise.all([
             LearningService.getUnitProgress(uid, result.unit),
-            LearningService.getCorrectCount(uid, result.unit, misconceptionId, AppState.session.currentLevel),
+            LearningService.getCorrectCount(uid, result.unit),
           ]);
 
           AppState.session.currentLevel = progress.level || 1;

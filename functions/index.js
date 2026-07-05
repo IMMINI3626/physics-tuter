@@ -151,12 +151,23 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
   }
 
   try {
-    // 🔑 속도 최적화: for문 대신 Promise.all을 사용하여 병렬로 DB 조회
-    const validMisconceptions = misconceptions.filter(mc => mc.id);
-    const dbQueries = validMisconceptions.map(mc => 
-      db.collection('misconception_sentences').where('misconceptionId', '==', mc.id).get()
+    // 소단원 기반 오개념 전체 조회 (subUnit 필터링)
+    const subUnitSnap = await db.collection('misconceptions')
+      .where('subUnit', '==', unit)
+      .get();
+    const subUnitMisconceptions = subUnitSnap.docs.map(d => d.data());
+
+    // 소단원 오개념이 있으면 그걸 사용, 없으면 Gemini가 골라준 misconceptions 사용
+    const activeMisconceptions = subUnitMisconceptions.length > 0
+      ? subUnitMisconceptions
+      : misconceptions;
+
+    // 해당 소단원 오개념 ID 목록으로 sentences 조회
+    const validIds = activeMisconceptions.map(mc => mc.id).filter(Boolean);
+    const dbQueries = validIds.map(id =>
+      db.collection('misconception_sentences').where('misconceptionId', '==', id).get()
     );
-    
+
     const querySnapshots = await Promise.all(dbQueries);
     const contextSentences = querySnapshots.flatMap(snap => snap.docs.map(doc => doc.data()));
 
@@ -164,7 +175,7 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     const wrongExamples = contextSentences.filter(s => s.isWrong).map(s => s.sentence).join(' / ');
     const correctExamples = contextSentences.filter(s => !s.isWrong).map(s => s.sentence).join(' / ');
 
-    const mcText = misconceptions.map((mc, i) => `${i + 1}. ${mc.description}`).join('\n');
+    const mcText = activeMisconceptions.map((mc, i) => `${i + 1}. ${mc.description}`).join('\n');
 
     const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
     const rightCount = 5 - wrongCount; // 4 or 3

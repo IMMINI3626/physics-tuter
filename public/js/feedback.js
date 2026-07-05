@@ -53,13 +53,10 @@ const FeedbackScreen = {
 
     // 100점 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
     if (isLoggedIn && session.detectedUnit && isPerfect && isNewProblem) {
-      const misconceptionId = session.misconceptions?.[0]?.id || 'ETC';
       try {
         const result = await window.LearningService.incrementCorrectCount(
           window.AppState.user.uid,
-          session.detectedUnit,
-          misconceptionId,
-          session.currentLevel
+          session.detectedUnit
         );
         session.correctCount = result.count;
         if (result.isPromoted) {
