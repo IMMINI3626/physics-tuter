@@ -2,7 +2,6 @@ const HomeScreen = {
   init() {
     this._bindUploadZone();
     this._bindUploadButtons();
-    this._renderRecentList();
     GuestGuard._updateUI();
   },
 
@@ -68,52 +67,6 @@ const HomeScreen = {
     reader.readAsDataURL(file);
   },
 
-  // 🔑 Firestore 연동 + 더미 폴백
-  async _renderRecentList() {
-    const list = document.getElementById('recent-list');
-    if (!list) return;
-
-    let sessions = [];
-
-    if (AppState.isLoggedIn && AppState.user) {
-      try {
-        sessions = await LearningService.fetchRecentSessions(AppState.user.uid, 5);
-      } catch (e) {
-        console.warn('Firestore 조회 실패:', e);
-      }
-    }
-
-    if (!sessions.length) {
-      list.innerHTML = `
-        <div style="text-align:center;padding:32px 20px;color:var(--text3);font-size:13px">
-          📚 아직 학습 기록이 없어요.<br>사진을 업로드해서 첫 학습을 시작해보세요!
-        </div>`;
-      return;
-    }
-
-    const icons = ['⚡','🔭','🌊','🔥','🧲'];
-    const colors = ['blue','purple','green','blue','purple'];
-    list.innerHTML = sessions.map((item, i) => {
-      const score = item.score ?? 0;
-      const badgeClass = score >= 80 ? 'badge-green' : score >= 60 ? 'badge-amber' : 'badge-red';
-      const dateStr = item.createdAt?.toDate
-        ? item.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-      return `
-        <div class="recent-card">
-          <div class="recent-icon ${colors[i % colors.length]}">${icons[i % icons.length]}</div>
-          <div class="recent-info">
-            <div class="recent-unit">${item.unit}</div>
-            <div class="recent-meta">${dateStr}</div>
-          </div>
-          <span class="badge ${badgeClass}">${score}점</span>
-        </div>`;
-    }).join('');
-  },
-
-
-  goToSession(unit) {
-    Toast.show(`"${unit}" 다시 학습하기`);
-  },
 };
 
 document.addEventListener('DOMContentLoaded', () => {

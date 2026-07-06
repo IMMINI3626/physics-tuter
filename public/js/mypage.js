@@ -1,25 +1,18 @@
 const MypageScreen = {
   async init() {
-    if (!AppState.isLoggedIn || !AppState.user) {
-      document.getElementById('mypage-login-required')?.style.setProperty('display', 'block');
-      document.getElementById('mypage-content')?.style.setProperty('display', 'none');
-      return;
-    }
-
-    document.getElementById('mypage-login-required')?.style.setProperty('display', 'none');
-    document.getElementById('mypage-content')?.style.setProperty('display', 'block');
+    // Router.go('mypage')가 비로그인 시 이미 진입 자체를 막아주므로 여기선 방어적으로만 체크
+    if (!AppState.isLoggedIn || !AppState.user) return;
 
     try {
       // 1. 전체 통계 가져오기
       const stats = await LearningService.fetchStats(AppState.user.uid);
-      
+
       // 2. 최근 세션 최대 20개를 가져와서 취약 단원 분석 및 이력 렌더링에 모두 활용
       const recentSessions = await LearningService.fetchRecentSessions(AppState.user.uid, 20);
 
       this._renderStats(stats);
       this._renderWeakUnits(recentSessions); // M-001 대신 단원별 평균으로 계산
       this._renderHistory(recentSessions, 'history-list'); // 마이페이지 하단
-      this._renderHistory(recentSessions.slice(0, 5), 'recent-list'); // 문제풀기 탭 (최근 5개만)
     } catch (e) {
       console.error('마이페이지 로드 실패:', e);
       window.Toast.show('데이터를 불러오지 못했어요');

@@ -8,6 +8,9 @@ const QuizScreen = {
     AppState.session.checkedStatements = new Set();
     AppState.session.hintUsed = 0;
 
+    const unitLabel = document.getElementById('q-unit-label');
+    if (unitLabel) unitLabel.textContent = AppState.session.detectedUnit || '';
+
     this._renderStatements(questions);
     this._resetHints();
     this._updateProgress(1);

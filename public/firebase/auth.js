@@ -97,6 +97,22 @@ const AuthService = {
   _onLogout() {
     document.getElementById('guest-bar')?.style.removeProperty('display');
 
+    // 🔑 마이페이지 프로필/통계 초기화 (같은 기기를 쓰는 다음 사람에게 이전 로그인 정보가 남지 않도록)
+    const avatarEl = document.getElementById('mp-avatar');
+    const nameEl   = document.getElementById('mp-name');
+    const emailEl  = document.getElementById('mp-email');
+    if (avatarEl) avatarEl.textContent = '?';
+    if (nameEl)   nameEl.textContent   = '로그인 필요';
+    if (emailEl)  emailEl.textContent  = '로그인 후 이용해주세요';
+    ['mp-total', 'mp-avgscore', 'mp-corrected'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    const weakList = document.getElementById('weak-list');
+    if (weakList) weakList.innerHTML = '';
+    const historyList = document.getElementById('history-list');
+    if (historyList) historyList.innerHTML = '';
+
     // 🔑 상단 버튼들 → 전부 로그인 아이콘으로 복원
     const loginBtns = document.querySelectorAll('.login-icon-btn');
     loginBtns.forEach(loginBtn => {

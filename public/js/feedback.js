@@ -411,6 +411,7 @@ const FeedbackScreen = {
       feedbackData: null,
       currentLevel: 1,
       correctCount: 0,
+      misconceptionCount: 0,
       isRetry: false,
       hint1: null,
       hint2: null,
