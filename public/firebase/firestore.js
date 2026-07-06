@@ -131,7 +131,7 @@ const LearningService = {
    * 같은 소단원 내 새 문제 정답 시 누적 카운터 +1
    * 5회 도달 시 overcome: true로 표시하고 isPromoted: true를 반환
    */
-  async incrementCorrectCount(uid, unitName) {
+  async incrementCorrectCount(uid, unitName, target = 5) {
     const ref = doc(db, 'users', uid, 'unitProgress', unitName);
     const snap = await getDoc(ref);
     const prevData = snap.exists() ? snap.data() : {};
@@ -143,7 +143,7 @@ const LearningService = {
     }
 
     const newCount = prevCount + 1;
-    const isPromoted = newCount >= 5;
+    const isPromoted = newCount >= target;
 
     await setDoc(ref, {
       correctCount: isPromoted ? 0 : newCount,

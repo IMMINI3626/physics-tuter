@@ -51,12 +51,26 @@ const FeedbackScreen = {
     let isPromoted = false;
     let promotedTo = null;
 
+    // 소단원 오개념 수 기반 동적 목표치 계산
+    const _calcTarget = (mcCount, level) => {
+      const configs = [
+        { mul: 1.7, min: 10, max: 20 }, // L1
+        { mul: 1.3, min: 7,  max: 13 }, // L2
+        { mul: 1.0, min: 5,  max: 10 }, // L3
+      ];
+      const { mul, min, max } = configs[(level - 1)] || configs[0];
+      return Math.min(Math.max(Math.round(mcCount * mul), min), max);
+    };
+    const mcCount = session.misconceptionCount || 5;
+    const promotionTarget = _calcTarget(mcCount, session.currentLevel);
+
     // 100점 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
     if (isLoggedIn && session.detectedUnit && isPerfect && isNewProblem) {
       try {
         const result = await window.LearningService.incrementCorrectCount(
           window.AppState.user.uid,
-          session.detectedUnit
+          session.detectedUnit,
+          promotionTarget
         );
         session.correctCount = result.count;
         if (result.isPromoted) {

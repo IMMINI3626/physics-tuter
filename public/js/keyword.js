@@ -114,6 +114,9 @@ const KeywordScreen = {
 
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
+      if (result.misconceptionCount) {
+        AppState.session.misconceptionCount = result.misconceptionCount;
+      }
 
       // Level 2 Mode B: 계산 단답형 화면으로 이동
       if (result.calcQuestion) {

@@ -230,6 +230,7 @@ JSON만 출력하세요:
         calcQuestion: { ...parsed.calcQuestion, isLevel3: true },
         hint1: parsed.calcQuestion.hint1 || null,
         hint2: parsed.calcQuestion.hint2 || null,
+        misconceptionCount: activeMisconceptions.length,
       };
     }
 
@@ -266,6 +267,7 @@ JSON만 출력하세요:
         calcQuestion: parsed.calcQuestion,
         hint1: parsed.calcQuestion.hint1 || null,
         hint2: parsed.calcQuestion.hint2 || null,
+        misconceptionCount: activeMisconceptions.length,
       };
     }
 
@@ -355,6 +357,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
       questions,
       hint1: parsed.hint1 || null,
       hint2: parsed.hint2 || null,
+      misconceptionCount: activeMisconceptions.length,
     };
   } catch (err) {
     console.error('[generateQuestions] Error:', err);
