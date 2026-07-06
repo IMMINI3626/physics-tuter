@@ -458,8 +458,9 @@ const Level3Screen = {
         }],
       };
 
-      window.AppState.session.lastFeedback = feedbackData;
-      await FeedbackScreen.show(feedbackData);
+      AppState.session.score = score;
+      AppState.session.feedbackData = feedbackData;
+      await FeedbackScreen.render(feedbackData);
       Router.go('feedback');
     } catch (err) {
       console.error('L3 제출 실패:', err);

@@ -103,7 +103,7 @@ const HomeScreen = {
           <div class="recent-icon ${colors[i % colors.length]}">${icons[i % icons.length]}</div>
           <div class="recent-info">
             <div class="recent-unit">${item.unit}</div>
-            <div class="recent-meta">${dateStr} · 5문제</div>
+            <div class="recent-meta">${dateStr}</div>
           </div>
           <span class="badge ${badgeClass}">${score}점</span>
         </div>`;

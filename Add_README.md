@@ -236,17 +236,16 @@ L3 목표: Math.min(Math.max(Math.round(오개념수 × 1.0), 5),  10)
 - 캔버스/사진 모두 base64로 변환 → Gemini에 이미지로 넘겨서 채점
 - 풀이 과정 채점은 Gemini가 담당 (추후 판별 정확도 낮을 시 피드백만 제공하는 B안으로 교체 가능하도록 gradeAnswers 내 분리 설계)
 
-**승급 조건 및 완료 흐름**
+**승급 조건 및 완료 흐름 (실제 구현: L1/L2와 동일한 동적 목표치 방식)**
 
 ```
-누적 3회 정답 달성
-  ├─ "계속 풀기" 버튼 → 새 문제 계속 생성
-  └─ "완료하기" 버튼 → 소단원 완료 처리
-
-5문제 도달 시 (3회 정답 여부 무관)
-  → "이 개념을 완전히 이해했어요! 나중에 마이페이지에서 복습할 수 있어요" 문구 표시
-  → 소단원 완료 처리
+소단원 오개념 수 기반 동적 목표치 달성 (위 표 참고, L3 기준 min 5 ~ max 10)
+  → 소단원 완료 처리 (unitProgress.completed = true)
+  → "이 단원을 완전히 이해했어요!" 배너 표시 후 홈으로 이동
 ```
+
+> ⚠️ 별도의 "누적 3회 정답 → 계속 풀기/완료하기" 버튼이나 "5문제 도달 시 강제 완료" 캡은 도입하지 않음.
+> L1→L2, L2→L3 승급과 동일한 로직(_calcTarget/calcPromotionTarget)을 그대로 재사용해 일관성을 유지하기로 결정.
 
 **변경 파일**
 
@@ -343,9 +342,10 @@ const improvement = scores.at(-1) - scores[0];
               + misconceptionCount 반환
 [x] 4. firebase/api.js — level, mode 파라미터 추가
 [x] 5. quiz.js — Level 2 방식 B 계산 화면, Level 3 화면 렌더링 추가
-[x] 6. feedback.js — 승급 조건 판단 + 교정 루프 UI + Level 3 완료 흐름
-              + 동적 목표치 계산 (_calcTarget)
+[x] 6. feedback.js — 승급 조건 판단 + 교정 루프 UI
+              + 동적 목표치 계산 (calcPromotionTarget, L1/L2/L3 공용)
               + n/target 진행 표시
+              + L3는 별도 완료 흐름 없이 동일 로직으로 completed 처리
 [x] 7. index.html — screen-calc, Level 3 화면, 캔버스 UI 추가
 [x] 8. quiz.css — 계산 input, 단위 드롭다운, 캔버스, 탭 스타일 추가
 [ ] 9. mypage.js — 대단원 카드 뷰, 소단원 상세 화면 구현

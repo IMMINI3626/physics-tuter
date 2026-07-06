@@ -29,6 +29,11 @@ const KeywordScreen = {
         // 소단원이 바뀐 경우에만 초기화 후 Firestore에서 실제 진행 상태 불러오기
         AppState.session.currentLevel = 1;
         AppState.session.correctCount = 0;
+        // Level 2 모드 반복 방지 상태도 단원 전환 시 함께 초기화
+        AppState._lastQuizMode = null;
+        AppState._consecutiveModeCount = 0;
+        localStorage.removeItem('pc_last_quiz_mode');
+        localStorage.removeItem('pc_consecutive_mode_count');
       }
 
       // 로그인 상태라면 항상 Firestore의 실제 카운터/레벨로 동기화
@@ -50,10 +55,8 @@ const KeywordScreen = {
       this._showResult(result);
     } catch (err) {
       console.error('Keyword extraction failed:', err);
-      // 소단원 변경 시 초기화 보장 (폴백 경로)
-      AppState.session.currentLevel = 1;
-      AppState.session.correctCount = 0;
-      this._showResult(this._getDummyResult());
+      Toast.show('사진을 다시 인식하지 못했어요. 다시 업로드해주세요.');
+      Router.go('home');
     }
   },
 
@@ -145,18 +148,6 @@ const KeywordScreen = {
         btn.textContent = '문제 풀기 시작';
       }
     }
-  },
-
-  /* 개발용 더미 결과 */
-  _getDummyResult() {
-    return {
-      unit: '뉴턴의 운동 법칙',
-      keywords: ['뉴턴 법칙', '관성', '외력', '작용·반작용', '등속운동', '가속도', '질량'],
-      misconceptions: [
-        { id: 'M-001', description: '힘이 없으면 물체가 반드시 정지한다고 생각하는 경향 (뉴턴 제1법칙 관련)' },
-        { id: 'M-007', description: '작용·반작용이 같은 물체에 작용한다고 오해하는 경향 (뉴턴 제3법칙 관련)' },
-      ],
-    };
   },
 
   /* 개발용 더미 문제 */

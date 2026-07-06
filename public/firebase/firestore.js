@@ -44,14 +44,13 @@ const LearningService = {
     );
 
     // unitProgress 업데이트 (bestScore, sessionCount — 마이페이지 카드용)
+    // 🔑 level/completed 필드는 setUnitLevel()만 갱신함 (동시 저장 시 레이스로 인한 덮어쓰기 방지)
     if (sessionData.detectedUnit) {
       const unitRef = doc(db, 'users', uid, 'unitProgress', sessionData.detectedUnit);
       const unitSnap = await getDoc(unitRef);
       const prev = unitSnap.exists() ? unitSnap.data() : {};
       await setDoc(unitRef, {
         chapter:      window.getChapter?.(sessionData.detectedUnit) || null,
-        level:        prev.level || 1,
-        completed:    prev.completed || false,
         bestScore:    Math.max(prev.bestScore || 0, feedbackData.score),
         sessionCount: (prev.sessionCount || 0) + 1,
         lastStudied:  serverTimestamp(),

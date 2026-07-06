@@ -1,6 +1,17 @@
 /* ============================================================
    PhysiClinic — Feedback Screen Logic
    ============================================================ */
+/* 소단원 오개념 수 기반 동적 목표치 계산 (레벨별 배수/상하한) */
+function calcPromotionTarget(mcCount, level) {
+  const configs = [
+    { mul: 1.7, min: 10, max: 20 }, // L1
+    { mul: 1.3, min: 7,  max: 13 }, // L2
+    { mul: 1.0, min: 5,  max: 10 }, // L3
+  ];
+  const { mul, min, max } = configs[(level - 1)] || configs[0];
+  return Math.min(Math.max(Math.round(mcCount * mul), min), max);
+}
+
 const FeedbackScreen = {
   // isHistory 파라미터 추가, returnTo로 돌아갈 화면 지정 (기본값: mypage)
   async render(data, isHistory = false, returnTo = 'mypage') {
@@ -51,18 +62,8 @@ const FeedbackScreen = {
     let isPromoted = false;
     let promotedTo = null;
 
-    // 소단원 오개념 수 기반 동적 목표치 계산
-    const _calcTarget = (mcCount, level) => {
-      const configs = [
-        { mul: 1.7, min: 10, max: 20 }, // L1
-        { mul: 1.3, min: 7,  max: 13 }, // L2
-        { mul: 1.0, min: 5,  max: 10 }, // L3
-      ];
-      const { mul, min, max } = configs[(level - 1)] || configs[0];
-      return Math.min(Math.max(Math.round(mcCount * mul), min), max);
-    };
     const mcCount = session.misconceptionCount || 5;
-    const promotionTarget = _calcTarget(mcCount, session.currentLevel);
+    const promotionTarget = calcPromotionTarget(mcCount, session.currentLevel);
 
     // 100점 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
     if (isLoggedIn && session.detectedUnit && isPerfect && isNewProblem) {
@@ -181,8 +182,7 @@ const FeedbackScreen = {
     const count = window.AppState.session.correctCount || 0;
     const level = window.AppState.session.currentLevel;
     const mcCount = window.AppState.session.misconceptionCount || 5;
-    const _t = (n, l) => { const c=[{mul:1.7,min:10,max:20},{mul:1.3,min:7,max:13},{mul:1.0,min:5,max:10}]; const {mul,min,max}=c[(l-1)]||c[0]; return Math.min(Math.max(Math.round(n*mul),min),max); };
-    const target = _t(mcCount, level);
+    const target = calcPromotionTarget(mcCount, level);
 
     // 100점이면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
     const retryBtn = isPerfect ? '' : `
