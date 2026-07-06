@@ -62,27 +62,51 @@ extractKeywords 프롬프트의 소단원 리스트를 UNIT_MAP과 동일하게 
 - 같은 소단원 내 새로운 문제 누적 정답으로 승급
 - 다시 풀어보기(같은 문제 재시도)는 카운트 안 됨
 - 오답이 나와도 카운터 유지, 맞춘 것만 누적
-- 카운터는 Firestore misconceptionProgress에 저장
+- 카운터는 Firestore unitProgress.correctCount에 저장 (소단원 단위 통합)
 
 ```
 // Firestore 저장 위치
-/users/{uid}/misconceptionProgress/{unitId}_{misconceptionId}
-  {
-    count: 3,        // 현재 누적 정답 횟수
-    overcome: false, // 승급 조건 달성 시 true
-    lastUpdated: timestamp
-  }
-
-/users/{uid}/unitProgress/{unitId}
+/users/{uid}/unitProgress/{소단원명}
   {
     level: 1 | 2 | 3,
     completed: boolean,
-    chapter: string,   // 대단원명
-    bestScore: number,
-    sessionCount: number,
+    correctCount: number,  // 현재 누적 정답 횟수 (승급 시 0으로 리셋)
+    chapter: string,       // 대단원명
     lastStudied: timestamp
   }
 ```
+
+> ⚠️ 기존 misconceptionProgress 컬렉션은 더 이상 승급 카운터로 사용하지 않음.
+> Gemini가 매 세션 다른 오개념 ID를 선택해 카운터가 분산되는 문제로 인해 unitProgress로 통합함.
+> misconceptionProgress는 향후 마이페이지 "취약 개념" 표시 용도로만 활용 예정.
+
+### 승급 목표치 (동적 계산)
+
+소단원마다 오개념 수가 다르므로 목표치를 고정하지 않고 실시간 계산:
+
+```js
+// feedback.js 내 계산 로직
+L1 목표: Math.min(Math.max(Math.round(오개념수 × 1.7), 10), 20)
+L2 목표: Math.min(Math.max(Math.round(오개념수 × 1.3), 7),  13)
+L3 목표: Math.min(Math.max(Math.round(오개념수 × 1.0), 5),  10)
+```
+
+| 소단원 | 오개념 수 | L1 목표 | L2 목표 | L3 목표 |
+|--------|----------|---------|---------|---------|
+| 뉴턴 운동 법칙 | 18 | 20 | 13 | 10 |
+| 역학적 에너지 보존 | 13 | 20 | 13 | 10 |
+| 전류의 자기 작용 | 13 | 20 | 13 | 10 |
+| 전자기 유도 | 5 | 10 | 7 | 5 |
+| 물체의 운동 | 8 | 14 | 10 | 8 |
+| 운동량과 충격량 | 3 | 10 | 7 | 5 |
+| 원자 모형과 전기력 | 6 | 10 | 8 | 6 |
+| 에너지 띠와 반도체 | 3 | 10 | 7 | 5 |
+| 파동의 진동과 굴절 | 4 | 10 | 7 | 5 |
+| 파동의 간섭 | 5 | 10 | 7 | 5 |
+| 빛의 이중성 | 4 | 10 | 7 | 5 |
+| 물질의 이중성 | 1 | 10 | 7 | 5 |
+
+목표치는 Firestore에 저장하지 않고 매 세션 오개념 수 조회 결과로 즉시 계산 → seed.js에 오개념 추가 시 자동 반영됨.
 
 ### 교정 루프
 
@@ -114,7 +138,7 @@ extractKeywords 프롬프트의 소단원 리스트를 UNIT_MAP과 동일하게 
   - "F = ma 에서 가속도는 a = m/F 입니다" → 맞다/틀리다 판별
 
 **승급 조건**
-- 같은 소단원 내 새로운 문제 누적 5회 정답 → Level 2 승급
+- 소단원 오개념 수 기반 동적 목표치 달성 → Level 2 승급 (위 표 참고)
 
 **Gemini 프롬프트 전략**
 - 수식 계산이 없는 정성적 문장 + 공식 판별 문장을 혼합 생성하도록 지시
@@ -165,7 +189,7 @@ extractKeywords 프롬프트의 소단원 리스트를 UNIT_MAP과 동일하게 
 ```
 
 **승급 조건**
-- 같은 소단원 내 새로운 문제 누적 5회 정답 → Level 3 승급
+- 소단원 오개념 수 기반 동적 목표치 달성 → Level 3 승급 (위 표 참고)
 
 **변경 파일**
 
@@ -312,16 +336,20 @@ const improvement = scores.at(-1) - scores[0];
 ## 구현 순서 권장
 
 ```
-1. app.js — UNIT_MAP 상수 추가, AppState.session 필드 추가
-2. firestore.js — unitProgress, misconceptionProgress 컬렉션 저장/조회 함수 추가
-3. functions/index.js — level 파라미터 분기 추가 (L1 → L2 → L3 순서로)
-4. firebase/api.js — level, mode 파라미터 추가
-5. quiz.js — Level 2 방식 B 계산 화면, Level 3 화면 렌더링 추가
-6. feedback.js — 승급 조건 판단 + 교정 루프 UI + Level 3 완료 흐름
-7. index.html — screen-calc, Level 3 화면, 캔버스 UI 추가
-8. quiz.css — 계산 input, 단위 드롭다운, 캔버스, 탭 스타일 추가
-9. mypage.js — 대단원 카드 뷰, 소단원 상세 화면 구현
-10. feedback.css — 마이페이지 상세 화면 스타일 추가
+[x] 1. app.js — UNIT_MAP 상수 추가, AppState.session 필드 추가
+[x] 2. firestore.js — unitProgress.correctCount 기반 승급 카운터 구현
+[x] 3. functions/index.js — level 파라미터 분기 추가 (L1 → L2 → L3)
+              + subUnit 기반 오개념 필터링
+              + misconceptionCount 반환
+[x] 4. firebase/api.js — level, mode 파라미터 추가
+[x] 5. quiz.js — Level 2 방식 B 계산 화면, Level 3 화면 렌더링 추가
+[x] 6. feedback.js — 승급 조건 판단 + 교정 루프 UI + Level 3 완료 흐름
+              + 동적 목표치 계산 (_calcTarget)
+              + n/target 진행 표시
+[x] 7. index.html — screen-calc, Level 3 화면, 캔버스 UI 추가
+[x] 8. quiz.css — 계산 input, 단위 드롭다운, 캔버스, 탭 스타일 추가
+[ ] 9. mypage.js — 대단원 카드 뷰, 소단원 상세 화면 구현
+[ ] 10. feedback.css — 마이페이지 상세 화면 스타일 추가
 ```
 
 ---
@@ -341,14 +369,14 @@ const improvement = scores.at(-1) - scores[0];
 | 7 | ME | 역학적 에너지 보존 | unit2 | ✅ seed.js 포함 |
 | 8 | WI | 파동의 간섭 | unit4 | ✅ seed.js 포함 |
 | 9 | MD | 물질의 이중성 | unit4 | ✅ seed.js 포함 |
-| 10 | EC | 전기 회로 | unit3 | ❌ 미추가 |
-| 11 | MF | 자기장 | unit3 | ❌ 미추가 |
-| 12 | EMI | 전자기 유도 | unit3 | ❌ 미추가 |
-| 13 | MO | 운동량 | unit2 | ❌ 미추가 |
-| 14 | AT | 원자 모형 | unit3 | ❌ 미추가 |
-| 15 | EB | 에너지 띠와 반도체 | unit3 | ❌ 미추가 |
-| 16 | LD | 빛의 이중성 | unit4 | ❌ 미추가 |
-| 17 | WR | 파동·굴절 | unit4 | ❌ 미추가 |
+| 10 | EC | 전기 회로 | unit3 | ✅ seed.js 포함 |
+| 11 | MF | 자기장 | unit3 | ✅ seed.js 포함 |
+| 12 | EMI | 전자기 유도 | unit3 | ✅ seed.js 포함 |
+| 13 | MO | 운동량 | unit2 | ✅ seed.js 포함 |
+| 14 | AT | 원자 모형 | unit3 | ✅ seed.js 포함 |
+| 15 | EB | 에너지 띠와 반도체 | unit3 | ✅ seed.js 포함 |
+| 16 | LD | 빛의 이중성 | unit4 | ✅ seed.js 포함 |
+| 17 | WR | 파동·굴절 | unit4 | ✅ seed.js 포함 |
 
 ---
 
@@ -370,7 +398,7 @@ const improvement = scores.at(-1) - scores[0];
 | WI1~WI5 | unit4 파동 | Yun, Kwak & Choi (2025), 새물리 |
 | MD1 | unit4 파동 | 이창열 (2021), 서울대 학사 |
 
-#### ❌ 추가 예정 (약 35개)
+#### ✅ 추가 완료 (38개 — 2026-07 시딩 완료)
 
 **unit2 추가분**
 
@@ -457,22 +485,26 @@ const improvement = scores.at(-1) - scores[0];
 ### seed.js 작업 체크리스트
 
 ```
-[ ] dims 배열에 EC/MF/EMI/MO/AT/EB/LD/WR 8개 추가 (id 10~17)
-[ ] unit2 — MO1~MO3 misconceptions + sentences 추가
-[ ] unit3 — EC1~EC6 misconceptions + sentences 추가
-[ ] unit3 — MF1~MF7 misconceptions + sentences 추가
-[ ] unit3 — EMI1~EMI5 misconceptions + sentences 추가
-[ ] unit3 — AT1~AT6 misconceptions + sentences 추가
-[ ] unit3 — EB1~EB3 misconceptions + sentences 추가
-[ ] unit4 — WR1~WR4 misconceptions + sentences 추가
-[ ] unit4 — LD1~LD4 misconceptions + sentences 추가
-[ ] serviceAccountKey.json 재발급 후 node seed.js 실행
+[x] dims 배열에 EC/MF/EMI/MO/AT/EB/LD/WR 8개 추가 (id 10~17)
+[x] unit2 — MO1~MO3 misconceptions + sentences 추가
+[x] unit3 — EC1~EC6 misconceptions + sentences 추가
+[x] unit3 — MF1~MF7 misconceptions + sentences 추가
+[x] unit3 — EMI1~EMI5 misconceptions + sentences 추가
+[x] unit3 — AT1~AT6 misconceptions + sentences 추가
+[x] unit3 — EB1~EB3 misconceptions + sentences 추가
+[x] unit4 — WR1~WR4 misconceptions + sentences 추가
+[x] unit4 — LD1~LD4 misconceptions + sentences 추가
+[x] 전체 87개 오개념에 subUnit 필드 추가 (소단원 기반 필터링용)
+[x] serviceAccountKey.json 재발급 후 node seed.js 실행 (2026-07)
+    → misconceptions 87개, misconception_sentences 166개 시딩 완료
 ```
 
 ---
 
 ## 미결 사항
 
+- **마이페이지 리뉴얼** (다음 작업) — 대단원 카드 뷰, 소단원별 레벨 배지, 진행 표시
 - Level 3 풀이 과정 채점 정확도는 실제 구현 후 확인하며 필요 시 B안(피드백만 제공)으로 교체
+- misconceptionProgress 컬렉션 활용 방안 확정 (마이페이지 "취약 개념" 표시용으로 부활 여부)
 - 마이페이지 메인 카드에 취약도(반복 오개념)까지 요약 표시할지는 카드 UI 설계 시 추가 결정 필요
 - screen-mypage-detail의 "추가 문제 풀기" 버튼 위치 (최하단 vs 우측 상단) 확정 필요
