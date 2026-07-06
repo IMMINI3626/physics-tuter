@@ -141,7 +141,7 @@ const FeedbackScreen = {
           ${isComplete ? '🏆 이 단원을 완전히 이해했어요!' : `🎉 Level ${newLevel}로 승급했어요!`}
         </div>
         <div style="font-size:13px;color:var(--text2)">
-          ${isComplete ? '마이페이지에서 학습 이력을 확인할 수 있어요' : '누적 5회 정답을 달성했어요'}
+          ${isComplete ? '마이페이지에서 학습 이력을 확인할 수 있어요' : `누적 정답 목표를 달성했어요`}
         </div>
       </div>
     `;
@@ -180,6 +180,9 @@ const FeedbackScreen = {
 
     const count = window.AppState.session.correctCount || 0;
     const level = window.AppState.session.currentLevel;
+    const mcCount = window.AppState.session.misconceptionCount || 5;
+    const _t = (n, l) => { const c=[{mul:1.7,min:10,max:20},{mul:1.3,min:7,max:13},{mul:1.0,min:5,max:10}]; const {mul,min,max}=c[(l-1)]||c[0]; return Math.min(Math.max(Math.round(n*mul),min),max); };
+    const target = _t(mcCount, level);
 
     // 100점이면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
     const retryBtn = isPerfect ? '' : `
@@ -191,7 +194,7 @@ const FeedbackScreen = {
     area.style.display = 'block';
     area.innerHTML = `
       <div style="margin:0 20px 12px;padding:12px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-md);text-align:center;font-size:13px;color:var(--text2)">
-        현재 Level ${level} · 누적 정답 <strong style="color:var(--accent2)">${count} / 5</strong>
+        현재 Level ${level} · 누적 정답 <strong style="color:var(--accent2)">${count} / ${target}</strong>
       </div>
       <div style="display:flex;gap:10px;margin:0 20px 12px;">
         ${retryBtn}
