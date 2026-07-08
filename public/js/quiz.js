@@ -350,9 +350,11 @@ const Level3Screen = {
     document.getElementById('l3-answer-input').value = '';
     document.getElementById('l3-text-input').value = '';
     this._photoBase64 = null;
+    this._pending = null;
     this.switchTab('text');
     this._resetHints();
     this._initCanvas();
+    this._resetReviewUI();
   },
 
   switchTab(tab) {
@@ -405,6 +407,7 @@ const Level3Screen = {
     if (n === 1) document.getElementById('l3-hint-btn-2').disabled = false;
   },
 
+  /* 최종 답 제출 → (풀이 과정 있으면) AI가 인식한 내용을 검토 단계로, 없으면 바로 채점 */
   async submit() {
     const answerInput = document.getElementById('l3-answer-input');
     const userValue = parseFloat(answerInput.value);
@@ -413,9 +416,9 @@ const Level3Screen = {
       return;
     }
 
-    const submitBtn = document.querySelector('#screen-level3 .primary-btn');
+    const submitBtn = document.getElementById('l3-submit-btn');
     submitBtn.disabled = true;
-    submitBtn.textContent = '채점 중...';
+    submitBtn.textContent = '풀이 확인 중...';
 
     try {
       const calcQuestion = window.AppState.session.calcQuestion;
@@ -424,8 +427,9 @@ const Level3Screen = {
       const isValueCorrect = Math.abs(userValue - correct) / Math.abs(correct) <= 0.01;
       const isUnitCorrect = userUnit === calcQuestion.unit;
       const isCorrect = isValueCorrect && isUnitCorrect;
+      const answerScore = isCorrect ? 100 : 0;
 
-      // 풀이 과정 수집
+      // 풀이 과정 수집 (텍스트 또는 캔버스/사진)
       const textProcess = document.getElementById('l3-text-input').value.trim();
       let processImageBase64 = null;
       const activeTab = document.getElementById('l3-tab-draw').classList.contains('active');
@@ -438,40 +442,101 @@ const Level3Screen = {
         }
       }
 
-      const score = isCorrect ? 100 : 0;
-      const explanation = isCorrect
-        ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
-        : !isValueCorrect
-          ? `정답은 ${correct} ${calcQuestion.unit}입니다. 풀이 과정을 다시 확인해보세요.`
-          : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
+      this._pending = { isCorrect, isValueCorrect, answerScore, correct, calcQuestion };
 
-      const feedbackData = {
-        score,
-        title: isCorrect ? '완벽해요! 🎉' : '다시 도전해봐요',
-        subtitle: isCorrect ? 'Level 3 문제를 맞혔어요!' : `정답: ${correct} ${calcQuestion.unit}`,
-        misconceptions: [],
-        items: [{
-          id: 1,
-          text: calcQuestion.text,
-          isWrong: !isCorrect,
-          isCorrectAnswer: isCorrect,
-          userReason: textProcess || (processImageBase64 ? '[직접 쓴 풀이]' : ''),
-          explanation,
-          solutionSteps: calcQuestion.solutionSteps || [],
-        }],
-      };
+      if (!processImageBase64 && !textProcess) {
+        // 풀이 과정 미제출 → 검토 단계 없이 바로 최종 결과로
+        await this._finalize('', 0, '풀이 과정이 제출되지 않았습니다.');
+        return;
+      }
 
-      AppState.session.score = score;
-      AppState.session.feedbackData = feedbackData;
-      await FeedbackScreen.render(feedbackData);
-      Router.go('feedback');
+      // 이미지면 AI가 먼저 텍스트로 옮겨 적고, 텍스트 입력이면 그대로 사용
+      const recognizedText = processImageBase64
+        ? await ApiService.recognizeSolutionImage(processImageBase64)
+        : textProcess;
+
+      this._showReview(recognizedText);
     } catch (err) {
       console.error('L3 제출 실패:', err);
       Toast.show('채점에 실패했어요. 다시 시도해주세요.');
-    } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = '제출하기';
     }
+  },
+
+  /* AI가 읽은 풀이 과정을 보여주고 수정할 수 있게 함 */
+  _showReview(text) {
+    const submitBtn = document.getElementById('l3-submit-btn');
+    submitBtn.style.display = 'none';
+    document.getElementById('l3-review-area').classList.remove('hidden');
+    document.getElementById('l3-review-textarea').value = text;
+  },
+
+  /* 검토/수정한 풀이 과정으로 실제 채점 요청 */
+  async confirmGrade(btnEl) {
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = '채점 중...'; }
+    try {
+      const editedText = document.getElementById('l3-review-textarea').value.trim();
+      const { calcQuestion } = this._pending;
+      const { score, feedback } = await ApiService.gradeSolutionProcess(
+        calcQuestion.text,
+        calcQuestion.correctAnswer,
+        calcQuestion.unit,
+        calcQuestion.solutionSteps,
+        editedText
+      );
+      await this._finalize(editedText, score, feedback);
+    } catch (err) {
+      console.error('풀이 과정 채점 실패:', err);
+      Toast.show('풀이 과정 채점에 실패했어요. 다시 시도해주세요.');
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '이 내용으로 채점받기'; }
+    }
+  },
+
+  /* 답 정확도(60%) + 풀이 과정 점수(40%)를 합쳐 최종 결과 화면으로 */
+  async _finalize(processText, processScore, processFeedback) {
+    const { isCorrect, isValueCorrect, answerScore, correct, calcQuestion } = this._pending;
+    const finalScore = Math.round(answerScore * 0.6 + processScore * 0.4);
+
+    const answerLine = isCorrect
+      ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
+      : !isValueCorrect
+        ? `정답은 ${correct} ${calcQuestion.unit}입니다.`
+        : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
+
+    const explanation = processText
+      ? `[최종 답] ${answerLine}\n[풀이 과정 · ${processScore}점] ${processFeedback}`
+      : `[최종 답] ${answerLine}\n[풀이 과정] ${processFeedback}`;
+
+    const feedbackData = {
+      score: finalScore,
+      title: finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 50 ? '잘 하셨어요! 👍' : '다시 도전해봐요 📚',
+      subtitle: `정답 ${isCorrect ? 'O' : 'X'} · 풀이 과정 ${processScore}점`,
+      misconceptions: [],
+      items: [{
+        id: 1,
+        text: calcQuestion.text,
+        isWrong: !isCorrect,
+        isCorrectAnswer: isCorrect,
+        userReason: processText || '(풀이 과정 없음)',
+        explanation,
+        solutionSteps: calcQuestion.solutionSteps || [],
+      }],
+    };
+
+    AppState.session.score = finalScore;
+    AppState.session.feedbackData = feedbackData;
+    this._resetReviewUI();
+    await FeedbackScreen.render(feedbackData);
+    Router.go('feedback');
+  },
+
+  _resetReviewUI() {
+    const submitBtn = document.getElementById('l3-submit-btn');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '제출하기';
+    submitBtn.style.display = '';
+    document.getElementById('l3-review-area').classList.add('hidden');
   },
 
   _resetHints() {
@@ -481,6 +546,7 @@ const Level3Screen = {
     document.getElementById('l3-hint-btn-2').disabled = true;
   },
 
+  /* Pointer Events로 통합 — 마우스/손가락 터치/펜슬(애플펜슬, 서피스펜 등) 전부 하나의 이벤트로 처리 */
   _initCanvas() {
     const canvas = document.getElementById('l3-canvas');
     this._ctx = canvas.getContext('2d');
@@ -488,20 +554,20 @@ const Level3Screen = {
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const touch = e.touches ? e.touches[0] : e;
-      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
     const start = (e) => {
       e.preventDefault();
+      canvas.setPointerCapture?.(e.pointerId);
       this._drawing = true;
       const { x, y } = getPos(e);
       this._ctx.beginPath();
       this._ctx.moveTo(x, y);
     };
     const move = (e) => {
-      e.preventDefault();
       if (!this._drawing) return;
+      e.preventDefault();
       const { x, y } = getPos(e);
       this._ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
       this._ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
@@ -510,21 +576,23 @@ const Level3Screen = {
       this._ctx.lineTo(x, y);
       this._ctx.stroke();
     };
-    const end = () => { this._drawing = false; };
+    const end = (e) => {
+      this._drawing = false;
+      if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    };
 
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('mouseup', end);
-    canvas.addEventListener('touchstart', start, { passive: false });
-    canvas.addEventListener('touchmove', move, { passive: false });
-    canvas.addEventListener('touchend', end);
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('pointerleave', end);
   },
 
   _resizeCanvas() {
     const canvas = document.getElementById('l3-canvas');
     const saved = this._ctx ? canvas.toDataURL() : null;
     canvas.width = canvas.offsetWidth;
-    canvas.height = 280;
+    canvas.height = canvas.offsetHeight; // CSS(.l3-canvas)의 반응형 높이(vh 기준)를 그대로 따라감
     if (saved && this._ctx) {
       const img = new Image();
       img.onload = () => this._ctx.drawImage(img, 0, 0);

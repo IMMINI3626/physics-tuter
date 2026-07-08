@@ -366,7 +366,91 @@ JSON만 출력하세요 (다른 텍스트 금지):
 });
 
 /* ────────────────────────────────────────
-   Function 3: gradeAnswers 
+   Function 3-1: recognizeSolutionImage (Level 3 풀이 손글씨/사진 → 텍스트)
+──────────────────────────────────────── */
+exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
+  const { imageBase64 } = request.data;
+  if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
+
+  try {
+    const model = getGeminiModel();
+    const prompt = `
+다음은 학생이 물리 문제를 풀이한 손글씨 또는 사진입니다.
+이미지에 적힌 풀이 과정을 최대한 정확하게 텍스트로 옮겨 적으세요.
+- 수식은 일반 텍스트로 표기하세요 (예: F=ma, v^2 = 2as)
+- 판독이 어려운 부분은 [판독불가]로 표시하세요
+- 옮겨 적기만 하고, 채점하거나 평가하지 마세요
+
+JSON만 출력하세요:
+{ "text": "옮겨 적은 풀이 과정 전체" }
+`;
+    const result = await model.generateContent([
+      prompt,
+      { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+    ]);
+    const parsed = parseJSON(result.response.text());
+    return { text: parsed.text || '' };
+  } catch (err) {
+    console.error('[recognizeSolutionImage] Error:', err);
+    throw new HttpsError('internal', `풀이 인식 실패: ${err.message}`);
+  }
+});
+
+/* ────────────────────────────────────────
+   Function 3-2: gradeSolutionProcess (Level 3 풀이 과정 채점)
+──────────────────────────────────────── */
+exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
+  const { questionText, correctAnswer, unit, solutionSteps, processText } = request.data;
+  if (!questionText || !processText) {
+    throw new HttpsError('invalid-argument', '문제 또는 풀이 과정이 없습니다');
+  }
+
+  try {
+    const model = getGeminiModel();
+    const stepsText = (solutionSteps || []).join('\n');
+    const prompt = `
+당신은 고등학교 물리 교사입니다.
+
+문제: "${questionText}"
+정답: ${correctAnswer} ${unit || ''}
+모범 풀이 단계:
+${stepsText || '(제공되지 않음)'}
+
+학생이 작성한 풀이 과정:
+"${processText}"
+
+학생의 풀이 과정이 물리적으로 타당한 논리와 절차를 거쳤는지 채점하세요.
+최종 답이 맞았는지는 이미 별도로 채점되므로, 여기서는 오직 "풀이 과정 자체의 논리적 타당성"만 평가하세요.
+
+[필수 규칙]
+1. 어투: 설명은 반드시 "~습니다", "~합니다" 형태의 경어체
+2. feedback을 작성할 때 학생이 쓴 풀이를 먼저 언급하며 잘한 점 또는 고칠 점을 짚어주세요.
+3. 채점 기준:
+   - 90~100점: 필요한 물리 법칙을 모두 올바르게 적용하고 계산 절차도 타당함
+   - 50~89점: 방향은 맞지만 일부 단계 누락/오류가 있음
+   - 10~49점: 관련 개념을 일부 언급했으나 논리 전개가 부족함
+   - 0~9점: 풀이 과정이 없거나 문제와 무관함
+
+JSON만 출력하세요:
+{
+  "score": 0~100 사이 정수,
+  "feedback": "학생 풀이에 대한 구체적 코멘트 (2~3문장 이상)"
+}
+`;
+    const result = await model.generateContent(prompt);
+    const parsed = parseJSON(result.response.text());
+    return {
+      score: typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 0,
+      feedback: parsed.feedback || '풀이 과정에 대한 설명이 제공되지 않았습니다.',
+    };
+  } catch (err) {
+    console.error('[gradeSolutionProcess] Error:', err);
+    throw new HttpsError('internal', `풀이 과정 채점 실패: ${err.message}`);
+  }
+});
+
+/* ────────────────────────────────────────
+   Function 3-3: gradeAnswers
 ──────────────────────────────────────── */
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   const { answers, questions, unit } = request.data;

@@ -354,13 +354,22 @@
     <span id="l3-hint-result-text"></span>
   </div>
 
-  <button class="primary-btn" style="margin-top:20px" onclick="Level3Screen.submit()">
+  <button class="primary-btn" id="l3-submit-btn" style="margin-top:20px" onclick="Level3Screen.submit()">
     제출하기
     <svg viewBox="0 0 24 24">
       <line x1="5" y1="12" x2="19" y2="12"/>
       <polyline points="12 5 19 12 12 19"/>
     </svg>
   </button>
+
+  <!-- AI가 인식한 풀이 과정 확인/수정 -->
+  <div class="l3-process-area hidden" id="l3-review-area" style="margin-top:20px">
+    <div class="l3-process-label">AI가 읽은 내 풀이 과정 <span style="color:var(--text3);font-weight:400">(틀리게 인식됐다면 직접 고쳐주세요)</span></div>
+    <textarea id="l3-review-textarea" class="l3-textarea" rows="6"></textarea>
+    <button class="primary-btn" style="margin-top:12px" onclick="Level3Screen.confirmGrade(this)">
+      이 내용으로 채점받기
+    </button>
+  </div>
 </div><!-- /screen-level3 -->
 
 

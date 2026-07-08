@@ -20,6 +20,19 @@ const ApiService = {
     const { data } = await fn({ answers, questions, unit });
     return data;
   },
+
+  async recognizeSolutionImage(imageBase64) {
+    const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+    const fn = httpsCallable(functions, 'recognizeSolutionImage');
+    const { data } = await fn({ imageBase64: base64Data });
+    return data.text;
+  },
+
+  async gradeSolutionProcess(questionText, correctAnswer, unit, solutionSteps, processText) {
+    const fn = httpsCallable(functions, 'gradeSolutionProcess');
+    const { data } = await fn({ questionText, correctAnswer, unit, solutionSteps, processText });
+    return data; // { score, feedback }
+  },
 };
 
 // 🔑 글로벌로 노출 (public/js/*.js에서 ApiService로 접근 가능)
