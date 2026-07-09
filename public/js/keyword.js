@@ -121,12 +121,17 @@ const KeywordScreen = {
         AppState.session.misconceptionCount = result.misconceptionCount;
       }
 
-      // Level 2 Mode B: 계산 단답형 화면으로 이동
+      // Level 3: 복합 계산 문제 화면 / Level 2 Mode B: 계산 단답형 화면
       if (result.calcQuestion) {
         AppState.session.calcQuestion = result.calcQuestion;
         AppState.session.questions = null;
-        QuizScreen.initCalc(result.calcQuestion);
-        Router.go('calc');
+        if (result.calcQuestion.isLevel3) {
+          Level3Screen.init(result.calcQuestion);
+          Router.go('level3');
+        } else {
+          QuizScreen.initCalc(result.calcQuestion);
+          Router.go('calc');
+        }
       } else {
         AppState.session.calcQuestion = null;
         AppState.session.questions = result.questions;
