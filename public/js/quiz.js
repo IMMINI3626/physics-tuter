@@ -519,7 +519,7 @@ const Level3Screen = {
     const finalScore = Math.round(answerScore * 0.6 + processScore * 0.4);
 
     const answerLine = isCorrect
-      ? `정답이 맞아요! (AI가 확인함)`
+      ? `정답입니다!`
       : `정답은 ${correct} ${calcQuestion.unit}입니다.`;
 
     const explanation = `[내가 쓴 답] ${answerText} → ${answerLine}\n[풀이 과정 · ${processScore}점] ${processFeedback}`;
@@ -592,7 +592,7 @@ const Level3Screen = {
       const ctx = this[ctxKey];
       ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
       ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
-      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeStyle = '#111018'; // --text1과 동일한 검정 (밝은 캔버스 배경 위에서 잘 보이도록)
       ctx.lineCap = 'round';
       ctx.lineTo(x, y);
       ctx.stroke();
