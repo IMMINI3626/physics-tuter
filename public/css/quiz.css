@@ -376,6 +376,25 @@
   cursor: pointer;
   min-width: 90px;
 }
+.l3-answer-text-row {
+  margin-top: 14px;
+}
+.l3-answer-text-input {
+  width: 100%;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font);
+  color: var(--text1);
+  transition: border-color 0.18s;
+}
+.l3-answer-text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.l3-answer-text-input::placeholder { color: var(--text3); }
 
 /* ── Level 3 화면 ── */
 .l3-process-area {

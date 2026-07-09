@@ -400,14 +400,22 @@ JSON만 출력하세요:
    Function 3-2: gradeSolutionProcess (Level 3 풀이 과정 채점)
 ──────────────────────────────────────── */
 exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
-  const { questionText, correctAnswer, unit, solutionSteps, processText } = request.data;
-  if (!questionText || !processText) {
-    throw new HttpsError('invalid-argument', '문제 또는 풀이 과정이 없습니다');
+  const { questionText, correctAnswer, unit, solutionSteps, processText, answerText } = request.data;
+  if (!questionText || (!processText && !answerText)) {
+    throw new HttpsError('invalid-argument', '문제 또는 풀이/답안 정보가 없습니다');
   }
 
   try {
     const model = getGeminiModel();
     const stepsText = (solutionSteps || []).join('\n');
+
+    // 숫자 입력칸 대신 직접 쓴 답(근호·분수 등)이 있으면 정오 여부도 함께 판단
+    const answerCheckBlock = answerText ? `
+학생이 숫자 입력란 대신 직접 작성한 최종 답: "${answerText}"
+이 답이 정답(${correctAnswer} ${unit || ''})과 실질적으로 같은 값인지 판단하세요.
+표현 형태가 달라도(예: 근호, 분수, 소수, 단위 표기 차이) 값이 사실상 같으면 정답으로 인정하세요.
+` : '';
+
     const prompt = `
 당신은 고등학교 물리 교사입니다.
 
@@ -417,15 +425,16 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
 ${stepsText || '(제공되지 않음)'}
 
 학생이 작성한 풀이 과정:
-"${processText}"
+"${processText || '(제공되지 않음)'}"
+${answerCheckBlock}
 
 학생의 풀이 과정이 물리적으로 타당한 논리와 절차를 거쳤는지 채점하세요.
-최종 답이 맞았는지는 이미 별도로 채점되므로, 여기서는 오직 "풀이 과정 자체의 논리적 타당성"만 평가하세요.
+${answerText ? '' : '최종 답이 맞았는지는 이미 별도로 채점되므로, 여기서는 오직 "풀이 과정 자체의 논리적 타당성"만 평가하세요.'}
 
 [필수 규칙]
 1. 어투: 설명은 반드시 "~습니다", "~합니다" 형태의 경어체
 2. feedback을 작성할 때 학생이 쓴 풀이를 먼저 언급하며 잘한 점 또는 고칠 점을 짚어주세요.
-3. 채점 기준:
+3. 채점 기준 (풀이 과정 score):
    - 90~100점: 필요한 물리 법칙을 모두 올바르게 적용하고 계산 절차도 타당함
    - 50~89점: 방향은 맞지만 일부 단계 누락/오류가 있음
    - 10~49점: 관련 개념을 일부 언급했으나 논리 전개가 부족함
@@ -434,7 +443,7 @@ ${stepsText || '(제공되지 않음)'}
 JSON만 출력하세요:
 {
   "score": 0~100 사이 정수,
-  "feedback": "학생 풀이에 대한 구체적 코멘트 (2~3문장 이상)"
+  "feedback": "학생 풀이에 대한 구체적 코멘트 (2~3문장 이상)"${answerText ? ',\n  "answerCorrect": true 또는 false (위 직접 쓴 답이 정답과 같은지)' : ''}
 }
 `;
     const result = await model.generateContent(prompt);
@@ -442,6 +451,7 @@ JSON만 출력하세요:
     return {
       score: typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 0,
       feedback: parsed.feedback || '풀이 과정에 대한 설명이 제공되지 않았습니다.',
+      answerCorrect: answerText ? !!parsed.answerCorrect : null,
     };
   } catch (err) {
     console.error('[gradeSolutionProcess] Error:', err);

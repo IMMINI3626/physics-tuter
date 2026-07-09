@@ -28,10 +28,10 @@ const ApiService = {
     return data.text;
   },
 
-  async gradeSolutionProcess(questionText, correctAnswer, unit, solutionSteps, processText) {
+  async gradeSolutionProcess(questionText, correctAnswer, unit, solutionSteps, processText, answerText = null) {
     const fn = httpsCallable(functions, 'gradeSolutionProcess');
-    const { data } = await fn({ questionText, correctAnswer, unit, solutionSteps, processText });
-    return data; // { score, feedback }
+    const { data } = await fn({ questionText, correctAnswer, unit, solutionSteps, processText, answerText });
+    return data; // { score, feedback, answerCorrect }
   },
 };
 
