@@ -144,6 +144,7 @@ const Toast = {
 const Modal = {
   open(id) {
     document.getElementById(id)?.classList.add('open');
+    document.dispatchEvent(new CustomEvent('modal:open', { detail: { id } }));
   },
   close(id) {
     document.getElementById(id)?.classList.remove('open');

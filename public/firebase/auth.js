@@ -130,6 +130,69 @@ const AuthService = {
 // 글로벌 노출
 window.AuthService = AuthService;
 
+/* ── 이메일 로그인/회원가입 폼 상태 ── */
+let emailMode = 'login'; // 'login' | 'signup'
+
+function updateEmailModeUI() {
+  const title      = document.getElementById('login-email-title');
+  const desc       = document.getElementById('login-email-desc');
+  const submitBtn  = document.getElementById('btn-email-submit');
+  const toggleBtn  = document.getElementById('btn-email-toggle-mode');
+  if (emailMode === 'signup') {
+    if (title)     title.textContent      = '이메일로 회원가입';
+    if (desc)      desc.textContent       = '사용하실 이메일과 비밀번호를 입력해주세요.';
+    if (submitBtn) submitBtn.textContent  = '회원가입';
+    if (toggleBtn) toggleBtn.textContent  = '이미 계정이 있으신가요? 로그인';
+  } else {
+    if (title)     title.textContent      = '이메일로 로그인';
+    if (desc)      desc.textContent       = '가입하신 이메일과 비밀번호를 입력해주세요.';
+    if (submitBtn) submitBtn.textContent  = '로그인';
+    if (toggleBtn) toggleBtn.textContent  = '계정이 없으신가요? 회원가입';
+  }
+}
+
+function showEmailError(msg) {
+  const errEl = document.getElementById('login-email-error');
+  if (!errEl) return;
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+}
+
+function hideEmailError() {
+  const errEl = document.getElementById('login-email-error');
+  if (!errEl) return;
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+}
+
+function resetEmailForm() {
+  const mainEl  = document.getElementById('login-modal-main');
+  const emailEl = document.getElementById('login-modal-email');
+  if (mainEl)  mainEl.style.display  = '';
+  if (emailEl) emailEl.style.display = 'none';
+  const emailInput = document.getElementById('login-email-input');
+  const pwInput    = document.getElementById('login-password-input');
+  if (emailInput) emailInput.value = '';
+  if (pwInput)    pwInput.value    = '';
+  hideEmailError();
+  emailMode = 'login';
+  updateEmailModeUI();
+}
+
+function mapAuthError(err) {
+  switch (err?.code) {
+    case 'auth/invalid-email':      return '올바른 이메일 형식이 아니에요.';
+    case 'auth/missing-password':   return '비밀번호를 입력해주세요.';
+    case 'auth/weak-password':      return '비밀번호는 6자 이상이어야 해요.';
+    case 'auth/email-already-in-use': return '이미 가입된 이메일이에요. 로그인을 시도해보세요.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return '이메일 또는 비밀번호가 올바르지 않아요.';
+    case 'auth/too-many-requests':  return '너무 많이 시도했어요. 잠시 후 다시 시도해주세요.';
+    default:                        return '처리 중 문제가 생겼어요. 다시 시도해주세요.';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   AuthService.watchAuthState();
 
@@ -142,8 +205,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // 모달이 열릴 때마다 이메일 폼을 초기 상태(첫 화면)로 되돌림
+  document.addEventListener('modal:open', (e) => {
+    if (e.detail?.id === 'login-modal') resetEmailForm();
+  });
+
   document.getElementById('btn-login-email')?.addEventListener('click', () => {
-    window.Toast.show('이메일 로그인은 준비 중이에요');
+    document.getElementById('login-modal-main').style.display  = 'none';
+    document.getElementById('login-modal-email').style.display = 'block';
+    document.getElementById('login-email-input')?.focus();
+  });
+
+  document.getElementById('btn-email-back')?.addEventListener('click', () => {
+    resetEmailForm();
+  });
+
+  document.getElementById('btn-email-toggle-mode')?.addEventListener('click', () => {
+    emailMode = emailMode === 'login' ? 'signup' : 'login';
+    hideEmailError();
+    updateEmailModeUI();
+  });
+
+  document.getElementById('btn-email-submit')?.addEventListener('click', async () => {
+    const email    = document.getElementById('login-email-input')?.value.trim();
+    const password = document.getElementById('login-password-input')?.value || '';
+    hideEmailError();
+
+    if (!email || !password) {
+      showEmailError('이메일과 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-email-submit');
+    if (btn) btn.disabled = true;
+    try {
+      if (emailMode === 'signup') {
+        await AuthService.signUpWithEmail(email, password);
+        window.Toast.show('회원가입 완료! 바로 로그인됐어요.');
+      } else {
+        await AuthService.loginWithEmail(email, password);
+        window.Toast.show('로그인 성공!');
+      }
+      // 성공 시 _onLogin()이 모달을 닫음(watchAuthState 콜백)
+    } catch (e) {
+      showEmailError(mapAuthError(e));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  document.getElementById('login-password-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-email-submit')?.click();
   });
 
   document.getElementById('btn-logout')?.addEventListener('click', () => {
