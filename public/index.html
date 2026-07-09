@@ -280,7 +280,7 @@
 
   <!-- 최종 답 입력 -->
   <div class="calc-answer-area">
-    <div class="calc-label">최종 답 입력 <span style="color:var(--text3);font-weight:400">(필수)</span></div>
+    <div class="calc-label">최종 답 입력 <span style="color:var(--text3);font-weight:400">(숫자로 표현 가능하면 여기에)</span></div>
     <div class="calc-input-row">
       <input
         type="number"
@@ -290,6 +290,15 @@
         step="any"
       />
       <select id="l3-unit-select" class="calc-unit-select"></select>
+    </div>
+    <div class="l3-answer-text-row">
+      <div class="calc-label">또는 답 직접 쓰기 <span style="color:var(--text3);font-weight:400">(근호·분수 등 숫자 칸에 쓰기 어려울 때)</span></div>
+      <input
+        type="text"
+        id="l3-answer-text"
+        class="l3-answer-text-input"
+        placeholder="예: 5√2 m/s"
+      />
     </div>
   </div>
 

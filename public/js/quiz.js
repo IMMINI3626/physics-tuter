@@ -348,6 +348,7 @@ const Level3Screen = {
 
     // 입력 초기화
     document.getElementById('l3-answer-input').value = '';
+    document.getElementById('l3-answer-text').value = '';
     document.getElementById('l3-text-input').value = '';
     this._photoBase64 = null;
     this._pending = null;
@@ -409,10 +410,12 @@ const Level3Screen = {
 
   /* 최종 답 제출 → (풀이 과정 있으면) AI가 인식한 내용을 검토 단계로, 없으면 바로 채점 */
   async submit() {
-    const answerInput = document.getElementById('l3-answer-input');
-    const userValue = parseFloat(answerInput.value);
-    if (isNaN(userValue)) {
-      Toast.show('숫자를 입력해주세요.');
+    const userValue = parseFloat(document.getElementById('l3-answer-input').value);
+    const hasNumericAnswer = !isNaN(userValue);
+    const rawAnswerText = document.getElementById('l3-answer-text').value.trim();
+
+    if (!hasNumericAnswer && !rawAnswerText) {
+      Toast.show('정답을 숫자로 입력하거나, 아래 직접 쓰기 칸에 적어주세요.');
       return;
     }
 
@@ -422,12 +425,18 @@ const Level3Screen = {
 
     try {
       const calcQuestion = window.AppState.session.calcQuestion;
-      const userUnit = document.getElementById('l3-unit-select').value;
       const correct = calcQuestion.correctAnswer;
-      const isValueCorrect = Math.abs(userValue - correct) / Math.abs(correct) <= 0.01;
-      const isUnitCorrect = userUnit === calcQuestion.unit;
-      const isCorrect = isValueCorrect && isUnitCorrect;
-      const answerScore = isCorrect ? 100 : 0;
+
+      // 숫자 입력칸을 채웠으면 기존처럼 즉시·정확하게 판정 (우선)
+      let isCorrect = null, isValueCorrect = null, answerScore = null;
+      if (hasNumericAnswer) {
+        const userUnit = document.getElementById('l3-unit-select').value;
+        isValueCorrect = Math.abs(userValue - correct) / Math.abs(correct) <= 0.01;
+        const isUnitCorrect = userUnit === calcQuestion.unit;
+        isCorrect = isValueCorrect && isUnitCorrect;
+        answerScore = isCorrect ? 100 : 0;
+      }
+      // 숫자 입력이 없으면 rawAnswerText를 AI가 나중에(_gradeAndFinalize) 판정함
 
       // 풀이 과정 수집 (텍스트 또는 캔버스/사진)
       const textProcess = document.getElementById('l3-text-input').value.trim();
@@ -442,11 +451,19 @@ const Level3Screen = {
         }
       }
 
-      this._pending = { isCorrect, isValueCorrect, answerScore, correct, calcQuestion };
+      this._pending = { hasNumericAnswer, isCorrect, isValueCorrect, answerScore, correct, calcQuestion, rawAnswerText };
 
-      if (!processImageBase64 && !textProcess) {
-        // 풀이 과정 미제출 → 검토 단계 없이 바로 최종 결과로
+      const hasProcessContent = !!(processImageBase64 || textProcess);
+
+      if (!hasProcessContent && hasNumericAnswer) {
+        // 숫자로 채점 끝났고 풀이 과정도 없음 → 검토 단계 없이 바로 결과로
         await this._finalize('', 0, '풀이 과정이 제출되지 않았습니다.');
+        return;
+      }
+
+      if (!hasProcessContent) {
+        // 풀이 과정은 없지만, 직접 쓴 답은 AI 판정이 필요함 → 검토 단계 생략하고 바로 채점 요청
+        await this._gradeAndFinalize('');
         return;
       }
 
@@ -477,15 +494,7 @@ const Level3Screen = {
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = '채점 중...'; }
     try {
       const editedText = document.getElementById('l3-review-textarea').value.trim();
-      const { calcQuestion } = this._pending;
-      const { score, feedback } = await ApiService.gradeSolutionProcess(
-        calcQuestion.text,
-        calcQuestion.correctAnswer,
-        calcQuestion.unit,
-        calcQuestion.solutionSteps,
-        editedText
-      );
-      await this._finalize(editedText, score, feedback);
+      await this._gradeAndFinalize(editedText);
     } catch (err) {
       console.error('풀이 과정 채점 실패:', err);
       Toast.show('풀이 과정 채점에 실패했어요. 다시 시도해주세요.');
@@ -493,16 +502,36 @@ const Level3Screen = {
     }
   },
 
+  /* Gemini에 풀이 과정(+필요시 직접 쓴 답)을 보내 채점받고 최종 결과로 넘어감 */
+  async _gradeAndFinalize(processText) {
+    const { calcQuestion, hasNumericAnswer, rawAnswerText } = this._pending;
+    const { score, feedback, answerCorrect } = await ApiService.gradeSolutionProcess(
+      calcQuestion.text,
+      calcQuestion.correctAnswer,
+      calcQuestion.unit,
+      calcQuestion.solutionSteps,
+      processText,
+      hasNumericAnswer ? null : rawAnswerText
+    );
+    if (!hasNumericAnswer) {
+      this._pending.isCorrect = !!answerCorrect;
+      this._pending.answerScore = answerCorrect ? 100 : 0;
+    }
+    await this._finalize(processText, score, feedback);
+  },
+
   /* 답 정확도(60%) + 풀이 과정 점수(40%)를 합쳐 최종 결과 화면으로 */
   async _finalize(processText, processScore, processFeedback) {
-    const { isCorrect, isValueCorrect, answerScore, correct, calcQuestion } = this._pending;
+    const { hasNumericAnswer, isCorrect, isValueCorrect, answerScore, correct, calcQuestion, rawAnswerText } = this._pending;
     const finalScore = Math.round(answerScore * 0.6 + processScore * 0.4);
 
-    const answerLine = isCorrect
-      ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
-      : !isValueCorrect
-        ? `정답은 ${correct} ${calcQuestion.unit}입니다.`
-        : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
+    const answerLine = !hasNumericAnswer
+      ? (isCorrect ? `정답이 맞아요! (AI가 확인함)` : `정답은 ${correct} ${calcQuestion.unit}입니다.`)
+      : isCorrect
+        ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
+        : !isValueCorrect
+          ? `정답은 ${correct} ${calcQuestion.unit}입니다.`
+          : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
 
     const explanation = processText
       ? `[최종 답] ${answerLine}\n[풀이 과정 · ${processScore}점] ${processFeedback}`
@@ -518,7 +547,7 @@ const Level3Screen = {
         text: calcQuestion.text,
         isWrong: !isCorrect,
         isCorrectAnswer: isCorrect,
-        userReason: processText || '(풀이 과정 없음)',
+        userReason: processText || (rawAnswerText ? `[직접 쓴 답] ${rawAnswerText}` : '(풀이 과정 없음)'),
         explanation,
         solutionSteps: calcQuestion.solutionSteps || [],
       }],
