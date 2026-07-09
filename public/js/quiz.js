@@ -347,25 +347,31 @@ const Level3Screen = {
     this._photoBase64 = null;
     this._answerHasDrawing = false;
     this._pending = null;
-    this.switchTab('text');
+    this.switchProcessTab('text');
+    this.switchAnswerTab('text');
     this._resetHints();
     this._initCanvas('l3-canvas', '_ctx');
     this._initCanvas('l3-answer-canvas', '_answerCtx', () => { this._answerHasDrawing = true; });
+    this._bindResizeHandles();
     this._resetReviewUI();
   },
 
-  /* 풀이 과정 탭과 답 탭이 같이 전환됨 (같은 방식으로 쓰도록) */
-  switchTab(tab) {
+  /* 풀이 과정 탭 전환 (답과 독립적) */
+  switchProcessTab(tab) {
     document.getElementById('l3-tab-text').classList.toggle('active', tab === 'text');
     document.getElementById('l3-tab-draw').classList.toggle('active', tab === 'draw');
     document.getElementById('l3-panel-text').classList.toggle('hidden', tab !== 'text');
     document.getElementById('l3-panel-draw').classList.toggle('hidden', tab !== 'draw');
+    if (tab === 'draw') this._resizeCanvas('l3-canvas', '_ctx');
+  },
+
+  /* 답 탭 전환 (풀이 과정과 독립적) */
+  switchAnswerTab(tab) {
+    document.getElementById('l3-answer-tab-text').classList.toggle('active', tab === 'text');
+    document.getElementById('l3-answer-tab-draw').classList.toggle('active', tab === 'draw');
     document.getElementById('l3-answer-panel-text').classList.toggle('hidden', tab !== 'text');
     document.getElementById('l3-answer-panel-draw').classList.toggle('hidden', tab !== 'draw');
-    if (tab === 'draw') {
-      this._resizeCanvas('l3-canvas', '_ctx');
-      this._resizeCanvas('l3-answer-canvas', '_answerCtx');
-    }
+    if (tab === 'draw') this._resizeCanvas('l3-answer-canvas', '_answerCtx');
   },
 
   setTool(tool) {
@@ -420,18 +426,19 @@ const Level3Screen = {
 
   /* 제출 → 풀이 과정/답을 (이미지면) AI가 먼저 텍스트로 읽어서 검토 단계로 보여줌 */
   async submit() {
-    const isDrawTab = document.getElementById('l3-tab-draw').classList.contains('active');
+    const isProcessDrawTab = document.getElementById('l3-tab-draw').classList.contains('active');
+    const isAnswerDrawTab = document.getElementById('l3-answer-tab-draw').classList.contains('active');
 
     const textProcess = document.getElementById('l3-text-input').value.trim();
     const rawAnswerText = document.getElementById('l3-answer-text-input').value.trim();
 
     let processImageBase64 = null;
     let answerImageBase64 = null;
-    if (isDrawTab) {
+    if (isProcessDrawTab) {
       processImageBase64 = this._photoBase64 || document.getElementById('l3-canvas').toDataURL('image/png');
-      if (this._answerHasDrawing) {
-        answerImageBase64 = document.getElementById('l3-answer-canvas').toDataURL('image/png');
-      }
+    }
+    if (isAnswerDrawTab && this._answerHasDrawing) {
+      answerImageBase64 = document.getElementById('l3-answer-canvas').toDataURL('image/png');
     }
 
     const hasAnswer = !!(rawAnswerText || answerImageBase64);
@@ -613,6 +620,51 @@ const Level3Screen = {
       img.onload = () => ctx.drawImage(img, 0, 0);
       img.src = saved;
     }
+  },
+
+  /* 캔버스 우하단 핸들을 드래그해서 세로 크기 조절 (텍스트박스 resize와 동일한 역할) */
+  _bindResizeHandles() {
+    document.querySelectorAll('.l3-canvas-resize-handle').forEach(handleEl => {
+      if (handleEl._l3ResizeBound) return;
+      handleEl._l3ResizeBound = true;
+      this._initResizeHandle(handleEl);
+    });
+  },
+
+  _initResizeHandle(handleEl) {
+    const wrap = document.getElementById(handleEl.dataset.wrap);
+    const canvasId = handleEl.dataset.canvas;
+    const ctxKey = handleEl.dataset.ctx;
+    let dragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    const move = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      const styles = getComputedStyle(wrap);
+      const min = parseFloat(styles.minHeight) || 100;
+      const max = parseFloat(styles.maxHeight) || 800;
+      const next = Math.min(max, Math.max(min, startHeight + (e.clientY - startY)));
+      wrap.style.height = `${next}px`;
+    };
+    const end = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (handleEl.hasPointerCapture?.(e.pointerId)) handleEl.releasePointerCapture(e.pointerId);
+      this._resizeCanvas(canvasId, ctxKey);
+    };
+
+    handleEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      startY = e.clientY;
+      startHeight = wrap.offsetHeight;
+      handleEl.setPointerCapture?.(e.pointerId);
+    });
+    handleEl.addEventListener('pointermove', move);
+    handleEl.addEventListener('pointerup', end);
+    handleEl.addEventListener('pointercancel', end);
   },
 };
 

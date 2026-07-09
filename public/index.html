@@ -278,12 +278,12 @@
     <p id="l3-question-text" class="calc-question-text"></p>
   </div>
 
-  <!-- 풀이 과정 입력 (탭) -->
+  <!-- 풀이 과정 입력 (탭 — 답과 독립적으로 선택) -->
   <div class="l3-process-area">
     <div class="l3-process-label">풀이 과정</div>
     <div class="l3-tab-row">
-      <button class="l3-tab active" id="l3-tab-text" onclick="Level3Screen.switchTab('text')">✏️ 텍스트 입력</button>
-      <button class="l3-tab" id="l3-tab-draw" onclick="Level3Screen.switchTab('draw')">🖊️ 직접 쓰기</button>
+      <button class="l3-tab active" id="l3-tab-text" onclick="Level3Screen.switchProcessTab('text')">✏️ 텍스트 입력</button>
+      <button class="l3-tab" id="l3-tab-draw" onclick="Level3Screen.switchProcessTab('draw')">🖊️ 직접 쓰기</button>
     </div>
 
     <!-- 텍스트 탭 -->
@@ -307,7 +307,10 @@
           <input type="file" id="l3-photo-input" accept="image/*" style="display:none" onchange="Level3Screen.handlePhotoUpload(event)">
         </label>
       </div>
-      <canvas id="l3-canvas" class="l3-canvas"></canvas>
+      <div class="l3-canvas-wrap" id="l3-canvas-wrap">
+        <canvas id="l3-canvas" class="l3-canvas"></canvas>
+        <div class="l3-canvas-resize-handle" data-wrap="l3-canvas-wrap" data-canvas="l3-canvas" data-ctx="_ctx"></div>
+      </div>
       <div id="l3-photo-preview" class="l3-photo-preview hidden">
         <img id="l3-photo-img" src="" alt="업로드된 사진">
         <button class="l3-tool-btn" onclick="Level3Screen.removePhoto()" style="margin-top:8px">사진 제거</button>
@@ -315,9 +318,13 @@
     </div>
   </div>
 
-  <!-- 답 입력 (풀이 과정과 같은 탭을 따라감) -->
+  <!-- 답 입력 (탭 — 풀이 과정과 독립적으로 선택) -->
   <div class="l3-process-area">
     <div class="l3-process-label">답</div>
+    <div class="l3-tab-row">
+      <button class="l3-tab active" id="l3-answer-tab-text" onclick="Level3Screen.switchAnswerTab('text')">✏️ 텍스트 입력</button>
+      <button class="l3-tab" id="l3-answer-tab-draw" onclick="Level3Screen.switchAnswerTab('draw')">🖊️ 직접 쓰기</button>
+    </div>
 
     <!-- 텍스트 탭 -->
     <div id="l3-answer-panel-text" class="l3-panel">
@@ -334,7 +341,10 @@
       <div class="l3-draw-toolbar">
         <button class="l3-tool-btn" onclick="Level3Screen.clearAnswerCanvas()">🗑️ 지우기</button>
       </div>
-      <canvas id="l3-answer-canvas" class="l3-canvas l3-answer-canvas"></canvas>
+      <div class="l3-canvas-wrap l3-answer-canvas-wrap" id="l3-answer-canvas-wrap">
+        <canvas id="l3-answer-canvas" class="l3-canvas l3-answer-canvas"></canvas>
+        <div class="l3-canvas-resize-handle" data-wrap="l3-answer-canvas-wrap" data-canvas="l3-answer-canvas" data-ctx="_answerCtx"></div>
+      </div>
     </div>
   </div>
 
