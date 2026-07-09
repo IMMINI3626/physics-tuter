@@ -330,40 +330,42 @@ const QuizScreen = {
    Level3Screen — 다단계 복합 계산 문제
    ============================================================ */
 const Level3Screen = {
-  _tool: 'pen',        // 'pen' | 'eraser'
-  _drawing: false,
-  _ctx: null,
-  _photoBase64: null,  // 업로드된 사진 base64
+  _tool: 'pen',        // 'pen' | 'eraser' (풀이 과정/답 캔버스 공용)
+  _ctx: null,           // 풀이 과정 캔버스 컨텍스트
+  _answerCtx: null,      // 답 캔버스 컨텍스트
+  _photoBase64: null,   // 업로드된 사진 base64 (풀이 과정용)
+  _answerHasDrawing: false, // 답 캔버스에 실제로 뭔가 그려졌는지
 
   init(calcQuestion) {
     const session = window.AppState.session;
     document.getElementById('l3-unit-label').textContent = session.detectedUnit || '';
     document.getElementById('l3-question-text').textContent = calcQuestion.text;
 
-    // 단위 드롭다운
-    const select = document.getElementById('l3-unit-select');
-    select.innerHTML = calcQuestion.unitOptions.map(u =>
-      `<option value="${u}">${u}</option>`
-    ).join('');
-
     // 입력 초기화
-    document.getElementById('l3-answer-input').value = '';
-    document.getElementById('l3-answer-text').value = '';
     document.getElementById('l3-text-input').value = '';
+    document.getElementById('l3-answer-text-input').value = '';
     this._photoBase64 = null;
+    this._answerHasDrawing = false;
     this._pending = null;
     this.switchTab('text');
     this._resetHints();
-    this._initCanvas();
+    this._initCanvas('l3-canvas', '_ctx');
+    this._initCanvas('l3-answer-canvas', '_answerCtx', () => { this._answerHasDrawing = true; });
     this._resetReviewUI();
   },
 
+  /* 풀이 과정 탭과 답 탭이 같이 전환됨 (같은 방식으로 쓰도록) */
   switchTab(tab) {
     document.getElementById('l3-tab-text').classList.toggle('active', tab === 'text');
     document.getElementById('l3-tab-draw').classList.toggle('active', tab === 'draw');
     document.getElementById('l3-panel-text').classList.toggle('hidden', tab !== 'text');
     document.getElementById('l3-panel-draw').classList.toggle('hidden', tab !== 'draw');
-    if (tab === 'draw') this._resizeCanvas();
+    document.getElementById('l3-answer-panel-text').classList.toggle('hidden', tab !== 'text');
+    document.getElementById('l3-answer-panel-draw').classList.toggle('hidden', tab !== 'draw');
+    if (tab === 'draw') {
+      this._resizeCanvas('l3-canvas', '_ctx');
+      this._resizeCanvas('l3-answer-canvas', '_answerCtx');
+    }
   },
 
   setTool(tool) {
@@ -376,6 +378,14 @@ const Level3Screen = {
     if (this._ctx) {
       const canvas = document.getElementById('l3-canvas');
       this._ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  },
+
+  clearAnswerCanvas() {
+    if (this._answerCtx) {
+      const canvas = document.getElementById('l3-answer-canvas');
+      this._answerCtx.clearRect(0, 0, canvas.width, canvas.height);
+      this._answerHasDrawing = false;
     }
   },
 
@@ -408,14 +418,25 @@ const Level3Screen = {
     if (n === 1) document.getElementById('l3-hint-btn-2').disabled = false;
   },
 
-  /* 최종 답 제출 → (풀이 과정 있으면) AI가 인식한 내용을 검토 단계로, 없으면 바로 채점 */
+  /* 제출 → 풀이 과정/답을 (이미지면) AI가 먼저 텍스트로 읽어서 검토 단계로 보여줌 */
   async submit() {
-    const userValue = parseFloat(document.getElementById('l3-answer-input').value);
-    const hasNumericAnswer = !isNaN(userValue);
-    const rawAnswerText = document.getElementById('l3-answer-text').value.trim();
+    const isDrawTab = document.getElementById('l3-tab-draw').classList.contains('active');
 
-    if (!hasNumericAnswer && !rawAnswerText) {
-      Toast.show('정답을 숫자로 입력하거나, 아래 직접 쓰기 칸에 적어주세요.');
+    const textProcess = document.getElementById('l3-text-input').value.trim();
+    const rawAnswerText = document.getElementById('l3-answer-text-input').value.trim();
+
+    let processImageBase64 = null;
+    let answerImageBase64 = null;
+    if (isDrawTab) {
+      processImageBase64 = this._photoBase64 || document.getElementById('l3-canvas').toDataURL('image/png');
+      if (this._answerHasDrawing) {
+        answerImageBase64 = document.getElementById('l3-answer-canvas').toDataURL('image/png');
+      }
+    }
+
+    const hasAnswer = !!(rawAnswerText || answerImageBase64);
+    if (!hasAnswer) {
+      Toast.show('답을 입력해주세요.');
       return;
     }
 
@@ -425,54 +446,17 @@ const Level3Screen = {
 
     try {
       const calcQuestion = window.AppState.session.calcQuestion;
-      const correct = calcQuestion.correctAnswer;
-
-      // 숫자 입력칸을 채웠으면 기존처럼 즉시·정확하게 판정 (우선)
-      let isCorrect = null, isValueCorrect = null, answerScore = null;
-      if (hasNumericAnswer) {
-        const userUnit = document.getElementById('l3-unit-select').value;
-        isValueCorrect = Math.abs(userValue - correct) / Math.abs(correct) <= 0.01;
-        const isUnitCorrect = userUnit === calcQuestion.unit;
-        isCorrect = isValueCorrect && isUnitCorrect;
-        answerScore = isCorrect ? 100 : 0;
-      }
-      // 숫자 입력이 없으면 rawAnswerText를 AI가 나중에(_gradeAndFinalize) 판정함
-
-      // 풀이 과정 수집 (텍스트 또는 캔버스/사진)
-      const textProcess = document.getElementById('l3-text-input').value.trim();
-      let processImageBase64 = null;
-      const activeTab = document.getElementById('l3-tab-draw').classList.contains('active');
-      if (activeTab) {
-        if (this._photoBase64) {
-          processImageBase64 = this._photoBase64;
-        } else {
-          const canvas = document.getElementById('l3-canvas');
-          processImageBase64 = canvas.toDataURL('image/png');
-        }
-      }
-
-      this._pending = { hasNumericAnswer, isCorrect, isValueCorrect, answerScore, correct, calcQuestion, rawAnswerText };
-
-      const hasProcessContent = !!(processImageBase64 || textProcess);
-
-      if (!hasProcessContent && hasNumericAnswer) {
-        // 숫자로 채점 끝났고 풀이 과정도 없음 → 검토 단계 없이 바로 결과로
-        await this._finalize('', 0, '풀이 과정이 제출되지 않았습니다.');
-        return;
-      }
-
-      if (!hasProcessContent) {
-        // 풀이 과정은 없지만, 직접 쓴 답은 AI 판정이 필요함 → 검토 단계 생략하고 바로 채점 요청
-        await this._gradeAndFinalize('');
-        return;
-      }
+      this._pending = { calcQuestion };
 
       // 이미지면 AI가 먼저 텍스트로 옮겨 적고, 텍스트 입력이면 그대로 사용
-      const recognizedText = processImageBase64
+      const recognizedProcessText = processImageBase64
         ? await ApiService.recognizeSolutionImage(processImageBase64)
         : textProcess;
+      const recognizedAnswerText = answerImageBase64
+        ? await ApiService.recognizeSolutionImage(answerImageBase64)
+        : rawAnswerText;
 
-      this._showReview(recognizedText);
+      this._showReview(recognizedProcessText, recognizedAnswerText);
     } catch (err) {
       console.error('L3 제출 실패:', err);
       Toast.show('채점에 실패했어요. 다시 시도해주세요.');
@@ -481,20 +465,39 @@ const Level3Screen = {
     }
   },
 
-  /* AI가 읽은 풀이 과정을 보여주고 수정할 수 있게 함 */
-  _showReview(text) {
+  /* AI가 읽은 풀이 과정/답을 보여주고 수정할 수 있게 함 */
+  _showReview(processText, answerText) {
     const submitBtn = document.getElementById('l3-submit-btn');
     submitBtn.style.display = 'none';
     document.getElementById('l3-review-area').classList.remove('hidden');
-    document.getElementById('l3-review-textarea').value = text;
+    document.getElementById('l3-review-textarea').value = processText;
+    document.getElementById('l3-review-answer-input').value = answerText;
   },
 
-  /* 검토/수정한 풀이 과정으로 실제 채점 요청 */
+  /* 검토/수정한 풀이 과정·답으로 실제 채점 요청 */
   async confirmGrade(btnEl) {
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = '채점 중...'; }
     try {
-      const editedText = document.getElementById('l3-review-textarea').value.trim();
-      await this._gradeAndFinalize(editedText);
+      const editedProcess = document.getElementById('l3-review-textarea').value.trim();
+      const editedAnswer = document.getElementById('l3-review-answer-input').value.trim();
+      if (!editedAnswer) {
+        Toast.show('답을 입력해주세요.');
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '이 내용으로 채점받기'; }
+        return;
+      }
+
+      const { calcQuestion } = this._pending;
+      const { score, feedback, answerCorrect } = await ApiService.gradeSolutionProcess(
+        calcQuestion.text,
+        calcQuestion.correctAnswer,
+        calcQuestion.unit,
+        calcQuestion.solutionSteps,
+        editedProcess,
+        editedAnswer
+      );
+      this._pending.isCorrect = !!answerCorrect;
+      this._pending.answerScore = answerCorrect ? 100 : 0;
+      await this._finalize(editedProcess, editedAnswer, score, feedback);
     } catch (err) {
       console.error('풀이 과정 채점 실패:', err);
       Toast.show('풀이 과정 채점에 실패했어요. 다시 시도해주세요.');
@@ -502,40 +505,17 @@ const Level3Screen = {
     }
   },
 
-  /* Gemini에 풀이 과정(+필요시 직접 쓴 답)을 보내 채점받고 최종 결과로 넘어감 */
-  async _gradeAndFinalize(processText) {
-    const { calcQuestion, hasNumericAnswer, rawAnswerText } = this._pending;
-    const { score, feedback, answerCorrect } = await ApiService.gradeSolutionProcess(
-      calcQuestion.text,
-      calcQuestion.correctAnswer,
-      calcQuestion.unit,
-      calcQuestion.solutionSteps,
-      processText,
-      hasNumericAnswer ? null : rawAnswerText
-    );
-    if (!hasNumericAnswer) {
-      this._pending.isCorrect = !!answerCorrect;
-      this._pending.answerScore = answerCorrect ? 100 : 0;
-    }
-    await this._finalize(processText, score, feedback);
-  },
-
   /* 답 정확도(60%) + 풀이 과정 점수(40%)를 합쳐 최종 결과 화면으로 */
-  async _finalize(processText, processScore, processFeedback) {
-    const { hasNumericAnswer, isCorrect, isValueCorrect, answerScore, correct, calcQuestion, rawAnswerText } = this._pending;
+  async _finalize(processText, answerText, processScore, processFeedback) {
+    const { isCorrect, answerScore, calcQuestion } = this._pending;
+    const correct = calcQuestion.correctAnswer;
     const finalScore = Math.round(answerScore * 0.6 + processScore * 0.4);
 
-    const answerLine = !hasNumericAnswer
-      ? (isCorrect ? `정답이 맞아요! (AI가 확인함)` : `정답은 ${correct} ${calcQuestion.unit}입니다.`)
-      : isCorrect
-        ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
-        : !isValueCorrect
-          ? `정답은 ${correct} ${calcQuestion.unit}입니다.`
-          : `단위가 틀렸어요. 정답 단위: ${calcQuestion.unit}`;
+    const answerLine = isCorrect
+      ? `정답이 맞아요! (AI가 확인함)`
+      : `정답은 ${correct} ${calcQuestion.unit}입니다.`;
 
-    const explanation = processText
-      ? `[최종 답] ${answerLine}\n[풀이 과정 · ${processScore}점] ${processFeedback}`
-      : `[최종 답] ${answerLine}\n[풀이 과정] ${processFeedback}`;
+    const explanation = `[내가 쓴 답] ${answerText} → ${answerLine}\n[풀이 과정 · ${processScore}점] ${processFeedback}`;
 
     const feedbackData = {
       score: finalScore,
@@ -547,7 +527,7 @@ const Level3Screen = {
         text: calcQuestion.text,
         isWrong: !isCorrect,
         isCorrectAnswer: isCorrect,
-        userReason: processText || (rawAnswerText ? `[직접 쓴 답] ${rawAnswerText}` : '(풀이 과정 없음)'),
+        userReason: processText || `[답] ${answerText}`,
         explanation,
         solutionSteps: calcQuestion.solutionSteps || [],
       }],
@@ -575,12 +555,14 @@ const Level3Screen = {
     document.getElementById('l3-hint-btn-2').disabled = true;
   },
 
-  /* Pointer Events로 통합 — 마우스/손가락 터치/펜슬(애플펜슬, 서피스펜 등) 전부 하나의 이벤트로 처리 */
-  _initCanvas() {
-    const canvas = document.getElementById('l3-canvas');
-    this._ctx = canvas.getContext('2d');
-    this._resizeCanvas();
+  /* Pointer Events로 통합 — 마우스/손가락 터치/펜슬(애플펜슬, 서피스펜 등) 전부 하나의 이벤트로 처리.
+     canvasId/ctxKey로 풀이 과정 캔버스와 답 캔버스에 공용으로 사용. */
+  _initCanvas(canvasId, ctxKey, onStroke) {
+    const canvas = document.getElementById(canvasId);
+    this[ctxKey] = canvas.getContext('2d');
+    this._resizeCanvas(canvasId, ctxKey);
 
+    let drawing = false;
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -589,24 +571,27 @@ const Level3Screen = {
     const start = (e) => {
       e.preventDefault();
       canvas.setPointerCapture?.(e.pointerId);
-      this._drawing = true;
+      drawing = true;
+      onStroke?.();
       const { x, y } = getPos(e);
-      this._ctx.beginPath();
-      this._ctx.moveTo(x, y);
+      const ctx = this[ctxKey];
+      ctx.beginPath();
+      ctx.moveTo(x, y);
     };
     const move = (e) => {
-      if (!this._drawing) return;
+      if (!drawing) return;
       e.preventDefault();
       const { x, y } = getPos(e);
-      this._ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
-      this._ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
-      this._ctx.strokeStyle = '#e2e8f0';
-      this._ctx.lineCap = 'round';
-      this._ctx.lineTo(x, y);
-      this._ctx.stroke();
+      const ctx = this[ctxKey];
+      ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineCap = 'round';
+      ctx.lineTo(x, y);
+      ctx.stroke();
     };
     const end = (e) => {
-      this._drawing = false;
+      drawing = false;
       if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     };
 
@@ -617,14 +602,15 @@ const Level3Screen = {
     canvas.addEventListener('pointerleave', end);
   },
 
-  _resizeCanvas() {
-    const canvas = document.getElementById('l3-canvas');
-    const saved = this._ctx ? canvas.toDataURL() : null;
+  _resizeCanvas(canvasId, ctxKey) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = this[ctxKey];
+    const saved = ctx ? canvas.toDataURL() : null;
     canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight; // CSS(.l3-canvas)의 반응형 높이(vh 기준)를 그대로 따라감
-    if (saved && this._ctx) {
+    canvas.height = canvas.offsetHeight; // CSS의 반응형 높이를 그대로 따라감
+    if (saved && ctx) {
       const img = new Image();
-      img.onload = () => this._ctx.drawImage(img, 0, 0);
+      img.onload = () => ctx.drawImage(img, 0, 0);
       img.src = saved;
     }
   },

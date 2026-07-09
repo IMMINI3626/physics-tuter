@@ -278,33 +278,9 @@
     <p id="l3-question-text" class="calc-question-text"></p>
   </div>
 
-  <!-- 최종 답 입력 -->
-  <div class="calc-answer-area">
-    <div class="calc-label">최종 답 입력 <span style="color:var(--text3);font-weight:400">(숫자로 표현 가능하면 여기에)</span></div>
-    <div class="calc-input-row">
-      <input
-        type="number"
-        id="l3-answer-input"
-        class="calc-input"
-        placeholder="숫자 입력"
-        step="any"
-      />
-      <select id="l3-unit-select" class="calc-unit-select"></select>
-    </div>
-    <div class="l3-answer-text-row">
-      <div class="calc-label">또는 답 직접 쓰기 <span style="color:var(--text3);font-weight:400">(근호·분수 등 숫자 칸에 쓰기 어려울 때)</span></div>
-      <input
-        type="text"
-        id="l3-answer-text"
-        class="l3-answer-text-input"
-        placeholder="예: 5√2 m/s"
-      />
-    </div>
-  </div>
-
   <!-- 풀이 과정 입력 (탭) -->
   <div class="l3-process-area">
-    <div class="l3-process-label">풀이 과정 <span style="color:var(--text3);font-weight:400">(선택)</span></div>
+    <div class="l3-process-label">풀이 과정</div>
     <div class="l3-tab-row">
       <button class="l3-tab active" id="l3-tab-text" onclick="Level3Screen.switchTab('text')">✏️ 텍스트 입력</button>
       <button class="l3-tab" id="l3-tab-draw" onclick="Level3Screen.switchTab('draw')">🖊️ 직접 쓰기</button>
@@ -336,6 +312,29 @@
         <img id="l3-photo-img" src="" alt="업로드된 사진">
         <button class="l3-tool-btn" onclick="Level3Screen.removePhoto()" style="margin-top:8px">사진 제거</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 답 입력 (풀이 과정과 같은 탭을 따라감) -->
+  <div class="l3-process-area">
+    <div class="l3-process-label">답</div>
+
+    <!-- 텍스트 탭 -->
+    <div id="l3-answer-panel-text" class="l3-panel">
+      <input
+        type="text"
+        id="l3-answer-text-input"
+        class="l3-answer-text-input"
+        placeholder="예: 7.07 m/s"
+      />
+    </div>
+
+    <!-- 직접 쓰기 탭 -->
+    <div id="l3-answer-panel-draw" class="l3-panel hidden">
+      <div class="l3-draw-toolbar">
+        <button class="l3-tool-btn" onclick="Level3Screen.clearAnswerCanvas()">🗑️ 지우기</button>
+      </div>
+      <canvas id="l3-answer-canvas" class="l3-canvas l3-answer-canvas"></canvas>
     </div>
   </div>
 
@@ -371,10 +370,12 @@
     </svg>
   </button>
 
-  <!-- AI가 인식한 풀이 과정 확인/수정 -->
+  <!-- AI가 인식한 풀이 과정/답 확인·수정 -->
   <div class="l3-process-area hidden" id="l3-review-area" style="margin-top:20px">
-    <div class="l3-process-label">AI가 읽은 내 풀이 과정 <span style="color:var(--text3);font-weight:400">(틀리게 인식됐다면 직접 고쳐주세요)</span></div>
+    <div class="l3-process-label"> 풀이과정 검토 <span style="color:var(--text3);font-weight:400">(자신이 작성한 답안과 다르다면 직접 고쳐주세요)</span></div>
     <textarea id="l3-review-textarea" class="l3-textarea" rows="6"></textarea>
+    <div class="l3-process-label" style="margin-top:14px"> 작성한 답 확인</div>
+    <input type="text" id="l3-review-answer-input" class="l3-answer-text-input" />
     <button class="primary-btn" style="margin-top:12px" onclick="Level3Screen.confirmGrade(this)">
       이 내용으로 채점받기
     </button>

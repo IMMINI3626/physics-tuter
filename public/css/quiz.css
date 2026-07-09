@@ -376,9 +376,6 @@
   cursor: pointer;
   min-width: 90px;
 }
-.l3-answer-text-row {
-  margin-top: 14px;
-}
 .l3-answer-text-input {
   width: 100%;
   background: var(--surface);
@@ -482,6 +479,11 @@
   display: block;
   touch-action: none;
   cursor: crosshair;
+}
+.l3-answer-canvas {
+  height: 120px;
+  min-height: 100px;
+  max-height: 160px;
 }
 .l3-photo-preview {
   text-align: center;
