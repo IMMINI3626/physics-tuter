@@ -171,6 +171,24 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     const querySnapshots = await Promise.all(dbQueries);
     const contextSentences = querySnapshots.flatMap(snap => snap.docs.map(doc => doc.data()));
 
+    // 🆕 소단원 기반 실제 기출 유형 패턴 조회 (완자 물리학Ⅰ 유형 추상화 DB, 원문 미포함)
+    const patternSnap = await db.collection('question_patterns').where('subUnit', '==', unit).get();
+    const allPatterns = patternSnap.docs.map(d => d.data());
+    const sampledPatterns = [...allPatterns]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, Math.min(3, allPatterns.length));
+    const patternText = sampledPatterns.length > 0
+      ? sampledPatterns.map((p, i) =>
+          `${i + 1}. [${p.patternType}] ${p.situationArchetype}\n   (핵심 개념: ${p.keyDiscriminator} / 흔한 함정: ${p.commonTrap})`
+        ).join('\n')
+      : '';
+    const patternInstruction = patternText ? `
+[참고: 실제 기출/문제집에 자주 나오는 유형 - 스타일 참고 전용, 절대 그대로 베끼지 마세요]
+아래는 이 소단원에서 실제로 자주 출제되는 문제 유형입니다. "상황 설정 방식"과 "형식", "함정 포인트"만 참고하여
+완전히 새로운 소재·숫자·문장으로 창작하세요. 아래 내용의 문장을 그대로 옮기거나 숫자만 바꾸는 것은 금지합니다.
+${patternText}
+` : '';
+
     // 틀린 문장과 옳은 문장을 분류
     const wrongExamples = contextSentences.filter(s => s.isWrong).map(s => s.sentence).join(' / ');
     const correctExamples = contextSentences.filter(s => !s.isWrong).map(s => s.sentence).join(' / ');
@@ -202,12 +220,28 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
-
+${patternInstruction}
 이 단원과 오개념을 중심으로, 두 가지 이상의 물리 법칙이 결합된 다단계 복합 계산 문제를 1개 만드세요.
 - 실생활 또는 수능/모의고사 스타일 (놀이기구, 스포츠, 실험 등)
 - 최소 2단계 이상의 풀이 과정 필요
 - 고등학교 물리 수준 (뉴턴 법칙, 에너지 보존, 운동량, 전기회로, 파동 등)
 - 최종 답은 소수점 2자리 이하의 깔끔한 숫자
+- 중력 가속도는 반드시 9.8 m/s²를 사용하세요. (10 m/s² 같은 간이값 금지 — 고등학교 물리학Ⅰ/Ⅱ 교육과정 기준 값입니다)
+
+[복합성 필수 조건 - 매우 중요, 반드시 지키세요]
+겉보기엔 단계가 나뉘어 보여도 실제로는 물리 법칙 하나(예: 역학적 에너지 보존 한 줄)만 적용하면 끝나는 문제는 절대 만들지 마세요.
+
+나쁜 예 (단일 법칙 - 금지): "물체가 마찰 없는 곡면에서 높이 h에서 출발해 미끄러져 내려온 뒤 용수철과 충돌해 정지한다. 최대 압축 길이는?"
+→ mgh = (1/2)kx² 한 줄이면 끝나는 문제. 마찰·충돌 등 두 번째 요소가 빠져있어 Level 3 수준이 아닙니다.
+
+좋은 예 (진짜 복합 - 이런 식으로 만드세요): "물체가 마찰 없는 곡면에서 내려온 뒤, 마찰이 있는 수평 구간을 통과하며 운동 마찰력으로 에너지를 잃고, 그 다음 용수철과 충돌해 압축된다."
+→ (1) 역학적 에너지 보존 (2) 마찰에 의한 일-에너지 정리(에너지 손실 계산) 두 가지가 실제로 결합됩니다.
+
+아래 중 최소 1개 이상을 반드시 문제에 포함시켜, 서로 다른 물리 개념 2개 이상이 실제 계산에 관여하도록 하세요:
+- 마찰 구간 (운동 마찰력에 의한 에너지 손실 계산 필요)
+- 충돌 (운동량 보존 + 운동에너지 보존/손실 구분)
+- 서로 다른 두 물체의 상호작용
+- 성질이 다른 두 구간의 운동 결합 (예: 등가속도 구간 + 등속 구간, 경사면 + 수평면 등)
 
 [필수 규칙 - 어투 및 표기]
 - 문제 본문(text)은 반드시 "~한다", "~이다", "~된다" 형태의 평서문(교과서 서술체)으로 작성하세요. (예: "출발한다", "통과한다", "도달한다") 경어체("~습니다", "~합니다")나 반말은 금지합니다.
@@ -240,6 +274,7 @@ JSON만 출력하세요:
         hint1: parsed.calcQuestion.hint1 || null,
         hint2: parsed.calcQuestion.hint2 || null,
         misconceptionCount: activeMisconceptions.length,
+        patternCount: sampledPatterns.length,
       };
     }
 
@@ -250,11 +285,12 @@ JSON만 출력하세요:
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
-
+${patternInstruction}
 이 오개념과 관련된 단일 공식으로 풀 수 있는 계산 문제를 1개 만드세요.
 - 숫자와 단위가 명확하게 주어지는 문제
 - 고등학생이 풀 수 있는 수준 (F=ma, E=mc², W=Fs, v=at, p=mv 등 기본 공식)
 - 최종 답은 소수점 1자리 이하의 깔끔한 숫자
+- 중력 가속도가 필요하다면 반드시 9.8 m/s²를 사용하세요. (10 m/s² 같은 간이값 금지 — 고등학교 물리학Ⅰ/Ⅱ 교육과정 기준 값입니다)
 
 [필수 규칙 - 어투 및 표기]
 - 문제 본문(text)은 반드시 "~한다", "~이다", "~된다" 형태의 평서문(교과서 서술체)으로 작성하세요. 경어체("~습니다", "~합니다")나 반말은 금지합니다.
@@ -286,6 +322,7 @@ JSON만 출력하세요:
         hint1: parsed.calcQuestion.hint1 || null,
         hint2: parsed.calcQuestion.hint2 || null,
         misconceptionCount: activeMisconceptions.length,
+        patternCount: sampledPatterns.length,
       };
     }
 
@@ -327,7 +364,7 @@ ${mcText}
 [학술적 참고 자료 (FCI/FMCE 기반)]
 - 학생들이 흔히 하는 틀린 생각 예시: ${wrongExamples || '관련 자료 없음'}
 - 올바른 물리 개념 예시: ${correctExamples || '관련 자료 없음'}
-
+${patternInstruction}
 [출제 다양성 지시 - 매우 중요]
 이번 출제는 ${randomAngle} 문장을 구성하세요.
 이전에 동일한 오개념으로 여러 번 출제되었을 수 있습니다. 단순히 어미나 단어만 바꾸는 것이 아니라,
@@ -343,6 +380,7 @@ ${levelInstruction}
 
 [필수 규칙 - 어투 및 표기]
 - 생성되는 모든 문장(text)은 반드시 "~한다", "~이다", "~된다" 형태의 평서문(교과서 서술체)으로 작성하세요. (경어체, 반말 금지)
+- 중력 가속도가 필요한 문장이라면 반드시 9.8 m/s²를 사용하세요. (10 m/s² 같은 간이값 금지 — 고등학교 물리학Ⅰ/Ⅱ 교육과정 기준 값입니다)
 - 수학·물리 기호는 아스키 문자로 대체하지 말고 실제 유니코드 기호를 사용하세요.
   · 제곱·세제곱 등 지수: "m/s^2" (X) → "m/s²" (O)
   · 곱셈: "*" 또는 "x" (X) → "×" (O)
@@ -382,6 +420,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
       hint1: parsed.hint1 || null,
       hint2: parsed.hint2 || null,
       misconceptionCount: activeMisconceptions.length,
+      patternCount: sampledPatterns.length,
     };
   } catch (err) {
     console.error('[generateQuestions] Error:', err);

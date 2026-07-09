@@ -911,6 +911,28 @@ const fciItems = [
 
 /* ============================================================
    7. ITEM-MISCONCEPTION MAP
+
+   [이게 뭔가요?]
+   FCI/FMCE 문항에서 "몇 번 문항에 어떤 오답(선택지)을 고르면 어떤 오개념을
+   가진 것으로 진단되는지" 나타내는 정답표(룩업 테이블)입니다.
+   예: { itemId:'FCI-23', choice:'A', misconceptionId:'R1' }
+       → FCI 23번 문항에서 A를 고르면 R1(질량이 크면 멈추게 함) 오개념을
+         가진 것으로 판단.
+   Hestenes, Wells & Swackhamer (1992) Table 4-2 원문에 기반한 데이터이며,
+   출처는 "프로젝트 전체 설명/FCI_FMCE_extracted.xlsx"의 FCI_오개념분류 시트입니다.
+   (FMCE 항목은 원본 엑셀에 해당 매핑표가 없어 FMCE 문항 내용을 보고 별도로
+   추론한 것이라 위 논문 표만큼 검증된 데이터는 아닙니다.)
+
+   [지금 앱에서 쓰이나요?] → 아니요, 2026-07 기준 미사용
+   현재 진단 흐름(extractKeywords → generateQuestions)은 학생이 찍은 사진을
+   Gemini가 보고 소단원/오개념을 직접 판단하는 방식이라, "FCI 몇 번 문항에서
+   몇 번 선택지를 골랐는지"를 쓰지 않습니다. 즉 이 테이블은 현재 어떤 함수
+   에서도 조회되지 않는 순수 참고/보존용 데이터입니다.
+
+   [언제 쓰나요?]
+   나중에 "학생에게 FCI 30문항(또는 FMCE 43문항) 원본을 그대로 풀게 하고
+   선택지만으로 자동 채점/오개념 진단하는 정식 진단평가 기능"을 만들 때,
+   여기 있는 데이터로 AI 판단 없이 결정론적으로 오개념을 계산할 수 있습니다.
    ============================================================ */
 const itemMap = [
   // FMCE
@@ -940,21 +962,38 @@ const itemMap = [
   { itemId:'FCI-20', choice:'A', misconceptionId:'K2' },
   { itemId:'FCI-21', choice:'B', misconceptionId:'K2' },
   { itemId:'FCI-21', choice:'C', misconceptionId:'K2' },
-  { itemId:'FCI-7',  choice:'C', misconceptionId:'K3' },
+  { itemId:'FCI-7', choice:'C', misconceptionId:'K3' },
   // FCI Impetus
-  { itemId:'FCI-9',  choice:'B', misconceptionId:'I1' },
-  { itemId:'FCI-9',  choice:'C', misconceptionId:'I1' },
-  { itemId:'FCI-4',  choice:'D', misconceptionId:'I2' },
-  { itemId:'FCI-6',  choice:'C', misconceptionId:'I2' },
-  { itemId:'FCI-5',  choice:'A', misconceptionId:'I3' },
-  { itemId:'FCI-5',  choice:'B', misconceptionId:'I3' },
-  { itemId:'FCI-5',  choice:'C', misconceptionId:'I3' },
-  { itemId:'FCI-8',  choice:'C', misconceptionId:'I3' },
-  { itemId:'FCI-6',  choice:'D', misconceptionId:'I4' },
-  { itemId:'FCI-8',  choice:'B', misconceptionId:'I4' },
-  { itemId:'FCI-8',  choice:'D', misconceptionId:'I4' },
-  { itemId:'FCI-4',  choice:'A', misconceptionId:'I5' },
-  { itemId:'FCI-4',  choice:'D', misconceptionId:'I5' },
+  { itemId:'FCI-9', choice:'B', misconceptionId:'I1' },
+  { itemId:'FCI-9', choice:'C', misconceptionId:'I1' },
+  { itemId:'FCI-22', choice:'B', misconceptionId:'I1' },
+  { itemId:'FCI-22', choice:'C', misconceptionId:'I1' },
+  { itemId:'FCI-22', choice:'E', misconceptionId:'I1' },
+  { itemId:'FCI-29', choice:'D', misconceptionId:'I1' },
+  { itemId:'FCI-4', choice:'D', misconceptionId:'I2' },
+  { itemId:'FCI-6', choice:'C', misconceptionId:'I2' },
+  { itemId:'FCI-6', choice:'E', misconceptionId:'I2' },
+  { itemId:'FCI-24', choice:'A', misconceptionId:'I2' },
+  { itemId:'FCI-26', choice:'A', misconceptionId:'I2' },
+  { itemId:'FCI-26', choice:'D', misconceptionId:'I2' },
+  { itemId:'FCI-26', choice:'E', misconceptionId:'I2' },
+  { itemId:'FCI-5', choice:'A', misconceptionId:'I3' },
+  { itemId:'FCI-5', choice:'B', misconceptionId:'I3' },
+  { itemId:'FCI-5', choice:'C', misconceptionId:'I3' },
+  { itemId:'FCI-8', choice:'C', misconceptionId:'I3' },
+  { itemId:'FCI-16', choice:'C', misconceptionId:'I3' },
+  { itemId:'FCI-16', choice:'D', misconceptionId:'I3' },
+  { itemId:'FCI-23', choice:'E', misconceptionId:'I3' },
+  { itemId:'FCI-27', choice:'C', misconceptionId:'I3' },
+  { itemId:'FCI-27', choice:'E', misconceptionId:'I3' },
+  { itemId:'FCI-29', choice:'B', misconceptionId:'I3' },
+  { itemId:'FCI-6', choice:'D', misconceptionId:'I4' },
+  { itemId:'FCI-8', choice:'B', misconceptionId:'I4' },
+  { itemId:'FCI-8', choice:'D', misconceptionId:'I4' },
+  { itemId:'FCI-24', choice:'D', misconceptionId:'I4' },
+  { itemId:'FCI-29', choice:'E', misconceptionId:'I4' },
+  { itemId:'FCI-4', choice:'A', misconceptionId:'I5' },
+  { itemId:'FCI-4', choice:'D', misconceptionId:'I5' },
   { itemId:'FCI-10', choice:'A', misconceptionId:'I5' },
   // FCI Active Force
   { itemId:'FCI-11', choice:'B', misconceptionId:'AF1' },
@@ -963,51 +1002,217 @@ const itemMap = [
   { itemId:'FCI-14', choice:'D', misconceptionId:'AF1' },
   { itemId:'FCI-15', choice:'A', misconceptionId:'AF1' },
   { itemId:'FCI-15', choice:'B', misconceptionId:'AF1' },
+  { itemId:'FCI-18', choice:'D', misconceptionId:'AF1' },
+  { itemId:'FCI-22', choice:'A', misconceptionId:'AF1' },
   { itemId:'FCI-29', choice:'A', misconceptionId:'AF2' },
   { itemId:'FCI-12', choice:'E', misconceptionId:'AF3' },
   { itemId:'FCI-25', choice:'A', misconceptionId:'AF4' },
   { itemId:'FCI-28', choice:'A', misconceptionId:'AF4' },
+  { itemId:'FCI-17', choice:'B', misconceptionId:'AF5' },
+  { itemId:'FCI-17', choice:'A', misconceptionId:'AF6' },
+  { itemId:'FCI-25', choice:'D', misconceptionId:'AF6' },
+  { itemId:'FCI-25', choice:'C', misconceptionId:'AF7' },
+  { itemId:'FCI-25', choice:'E', misconceptionId:'AF7' },
   // FCI Action/Reaction
-  { itemId:'FCI-2',  choice:'A', misconceptionId:'AR1' },
-  { itemId:'FCI-2',  choice:'D', misconceptionId:'AR1' },
+  { itemId:'FCI-2', choice:'A', misconceptionId:'AR1' },
+  { itemId:'FCI-2', choice:'D', misconceptionId:'AR1' },
   { itemId:'FCI-11', choice:'D', misconceptionId:'AR1' },
   { itemId:'FCI-13', choice:'B', misconceptionId:'AR1' },
   { itemId:'FCI-14', choice:'B', misconceptionId:'AR1' },
+  { itemId:'FCI-11', choice:'D', misconceptionId:'AR2' },
   { itemId:'FCI-13', choice:'C', misconceptionId:'AR2' },
   { itemId:'FCI-14', choice:'C', misconceptionId:'AR2' },
   // FCI Concatenation
   { itemId:'FCI-18', choice:'A', misconceptionId:'CI1' },
   { itemId:'FCI-18', choice:'E', misconceptionId:'CI1' },
   { itemId:'FCI-19', choice:'A', misconceptionId:'CI1' },
-  { itemId:'FCI-4',  choice:'C', misconceptionId:'CI2' },
+  { itemId:'FCI-4', choice:'C', misconceptionId:'CI2' },
   { itemId:'FCI-10', choice:'D', misconceptionId:'CI2' },
-  { itemId:'FCI-6',  choice:'A', misconceptionId:'CI3' },
-  { itemId:'FCI-7',  choice:'B', misconceptionId:'CI3' },
+  { itemId:'FCI-16', choice:'A', misconceptionId:'CI2' },
+  { itemId:'FCI-19', choice:'C', misconceptionId:'CI2' },
+  { itemId:'FCI-19', choice:'D', misconceptionId:'CI2' },
+  { itemId:'FCI-23', choice:'C', misconceptionId:'CI2' },
+  { itemId:'FCI-24', choice:'C', misconceptionId:'CI2' },
+  { itemId:'FCI-6', choice:'A', misconceptionId:'CI3' },
+  { itemId:'FCI-7', choice:'B', misconceptionId:'CI3' },
+  { itemId:'FCI-24', choice:'B', misconceptionId:'CI3' },
+  { itemId:'FCI-26', choice:'C', misconceptionId:'CI3' },
   // FCI Centrifugal
-  { itemId:'FCI-4',  choice:'C', misconceptionId:'CF' },
-  { itemId:'FCI-4',  choice:'E', misconceptionId:'CF' },
+  { itemId:'FCI-4', choice:'C', misconceptionId:'CF' },
+  { itemId:'FCI-4', choice:'D', misconceptionId:'CF' },
+  { itemId:'FCI-4', choice:'E', misconceptionId:'CF' },
   { itemId:'FCI-10', choice:'C', misconceptionId:'CF' },
   { itemId:'FCI-10', choice:'D', misconceptionId:'CF' },
   { itemId:'FCI-10', choice:'E', misconceptionId:'CF' },
   // FCI Obstacles
-  { itemId:'FCI-2',  choice:'C', misconceptionId:'Ob' },
-  { itemId:'FCI-9',  choice:'A', misconceptionId:'Ob' },
-  { itemId:'FCI-9',  choice:'B', misconceptionId:'Ob' },
+  { itemId:'FCI-2', choice:'C', misconceptionId:'Ob' },
+  { itemId:'FCI-9', choice:'A', misconceptionId:'Ob' },
+  { itemId:'FCI-9', choice:'B', misconceptionId:'Ob' },
   { itemId:'FCI-12', choice:'A', misconceptionId:'Ob' },
   { itemId:'FCI-13', choice:'E', misconceptionId:'Ob' },
   { itemId:'FCI-14', choice:'E', misconceptionId:'Ob' },
+  // FCI Resistance
+  { itemId:'FCI-23', choice:'A', misconceptionId:'R1' },
+  { itemId:'FCI-23', choice:'B', misconceptionId:'R1' },
+  { itemId:'FCI-29', choice:'A', misconceptionId:'R1' },
+  { itemId:'FCI-29', choice:'B', misconceptionId:'R1' },
+  { itemId:'FCI-28', choice:'B', misconceptionId:'R2' },
+  { itemId:'FCI-28', choice:'D', misconceptionId:'R2' },
+  { itemId:'FCI-28', choice:'E', misconceptionId:'R3' },
   // FCI Gravity
-  { itemId:'FCI-9',  choice:'A', misconceptionId:'G1' },
+  { itemId:'FCI-9', choice:'A', misconceptionId:'G1' },
   { itemId:'FCI-12', choice:'C', misconceptionId:'G1' },
-  { itemId:'FCI-5',  choice:'E', misconceptionId:'G2' },
-  { itemId:'FCI-9',  choice:'E', misconceptionId:'G2' },
-  { itemId:'FCI-1',  choice:'A', misconceptionId:'G3' },
-  { itemId:'FCI-3',  choice:'B', misconceptionId:'G3' },
-  { itemId:'FCI-3',  choice:'D', misconceptionId:'G3' },
-  { itemId:'FCI-5',  choice:'B', misconceptionId:'G4' },
+  { itemId:'FCI-17', choice:'E', misconceptionId:'G1' },
+  { itemId:'FCI-18', choice:'E', misconceptionId:'G1' },
+  { itemId:'FCI-5', choice:'E', misconceptionId:'G2' },
+  { itemId:'FCI-9', choice:'E', misconceptionId:'G2' },
+  { itemId:'FCI-17', choice:'D', misconceptionId:'G2' },
+  { itemId:'FCI-1', choice:'A', misconceptionId:'G3' },
+  { itemId:'FCI-3', choice:'B', misconceptionId:'G3' },
+  { itemId:'FCI-3', choice:'D', misconceptionId:'G3' },
+  { itemId:'FCI-5', choice:'B', misconceptionId:'G4' },
   { itemId:'FCI-17', choice:'B', misconceptionId:'G4' },
-  { itemId:'FCI-5',  choice:'B', misconceptionId:'G5' },
+  { itemId:'FCI-5', choice:'B', misconceptionId:'G5' },
   { itemId:'FCI-16', choice:'D', misconceptionId:'G5' },
+  { itemId:'FCI-23', choice:'E', misconceptionId:'G5' },
+];
+
+/* ============================================================
+   QUESTION PATTERNS (완자 물리학Ⅰ 기출 유형 패턴 추상화)
+   원문 문제 텍스트/숫자는 포함하지 않음 - 상황 유형/핵심개념/흔한 오답 함정만 요약
+   총 116개 (14개 소단원 x 6~12개)
+   ============================================================ */
+const questionPatterns = [
+  // -- 물체의 운동 --------------------------------
+  { id:'QP-KIN-01', unitId:'1', subUnit:'물체의 운동', patternType:'단답형', situationArchetype:'직선상에서 왕복하거나 방향을 바꾸는 물체의 이동 경로를 제시하고, 특정 구간의 이동 거리와 변위의 크기를 각각 구하게 하는 문제.', keyDiscriminator:'이동 거리는 실제 경로 길이의 합이고 변위는 출발점에서 도착점까지의 직선 거리와 방향임을 구분하여 계산해야 한다.', commonTrap:'방향이 바뀌는 구간에서 이동 거리를 그대로 더하지 않고 변위처럼 상쇄해서 계산하는 오류를 범한다.', difficultyHint:'하' },
+  { id:'QP-KIN-02', unitId:'1', subUnit:'물체의 운동', patternType:'그래프해석형', situationArchetype:'직선 운동하는 한 물체 또는 두 물체의 위치-시간 그래프를 주고, 특정 구간에서의 평균 속도, 순간 속도, 운동 방향, 두 물체 사이 거리 등을 판단하게 하는 문제.', keyDiscriminator:'두 점을 잇는 직선의 기울기는 평균 속도, 한 점에서의 접선의 기울기는 순간 속도를 의미한다는 그래프 해석 규칙을 적용해야 한다.', commonTrap:'위치가 감소하는 구간을 속력이 감소하는 것으로 착각하거나, 그래프의 교차점을 두 물체가 같은 속도를 갖는 순간으로 오인한다.', difficultyHint:'중' },
+  { id:'QP-KIN-03', unitId:'1', subUnit:'물체의 운동', patternType:'그래프해석형', situationArchetype:'직선 운동하는 물체의 속도-시간 그래프(또는 가속도-시간 그래프)를 주고 특정 시간 구간의 이동 거리, 변위, 가속도, 운동 방향 전환 여부를 묻는 문제.', keyDiscriminator:'속도-시간 그래프 아랫부분의 넓이는 이동 거리(부호 고려 시 변위)이고 그래프의 기울기는 가속도임을 이용해 구간별로 해석한다.', commonTrap:'그래프가 음의 값을 가지는 구간에서 넓이의 부호를 무시하고 모두 더해 변위를 이동 거리와 혼동한다.', difficultyHint:'중' },
+  { id:'QP-KIN-04', unitId:'1', subUnit:'물체의 운동', patternType:'계산형', situationArchetype:'처음 속도와 가속도(또는 나중 속도)가 주어진 등가속도 직선 운동 물체의 이동 거리, 걸린 시간, 나중 속도 등을 등가속도 운동 공식을 이용해 구하는 문제.', keyDiscriminator:'v=v0+at, s=v0t+1/2at^2, 2as=v^2-v0^2 세 관계식 중 주어진 값에 맞는 식을 선택해 대입한다.', commonTrap:'평균 속도를 (처음 속도+나중 속도)/2로 구하지 않고 산술적으로 잘못 처리하거나 가속도의 부호를 빠뜨린다.', difficultyHint:'중' },
+  { id:'QP-KIN-05', unitId:'1', subUnit:'물체의 운동', patternType:'OX판별형', situationArchetype:'등속 원운동, 진자 운동, 포물선 운동 등 다양한 운동 사례를 제시하고 속력 및 운동 방향이 일정한지 변하는지를 판별하게 하는 문제.', keyDiscriminator:'운동을 속력 일정/변화 여부와 운동 방향 일정/변화 여부의 조합으로 분류하여 등속 원운동은 속력 일정·방향 변화, 포물선/진자 운동은 속력과 방향이 모두 변함을 파악해야 한다.', commonTrap:'등속 원운동에서 속력이 일정하므로 속도(벡터)도 일정하다고 잘못 판단한다.', difficultyHint:'하' },
+  { id:'QP-KIN-06', unitId:'1', subUnit:'물체의 운동', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'같은 직선상에서 서로 다른 지점 또는 반대 방향에서 출발한 두 물체의 위치-시간(또는 속도-시간) 그래프를 제시하고, 두 물체가 만나는 시점, 상대적 이동 거리 비교, 평균 속력/속도 비교 등을 종합적으로 판단하게 하는 문제.', keyDiscriminator:'두 그래프의 교차 시점에서 위치가 같아짐을 이용해 만나는 시간을 구하고, 각 구간의 기울기 비교로 속력·속도의 대소를 판단한다.', commonTrap:'그래프가 교차하는 지점을 속도가 같아지는 지점으로 착각하거나, 평균 속력과 평균 속도의 차이를 구분하지 않고 비교한다.', difficultyHint:'중' },
+  { id:'QP-KIN-07', unitId:'1', subUnit:'물체의 운동', patternType:'서술형', situationArchetype:'일정한 속력으로 운동하던 물체가 특정 구간에서 등가속도로 속도가 변하는 상황을 제시하고, 전체 구간의 평균 속력과 평균 속도를 풀이 과정과 함께 구하게 하거나 속도-시간 그래프를 직접 그리게 하는 문제.', keyDiscriminator:'각 구간의 이동 거리(변위)를 따로 구해 합산한 뒤 전체 걸린 시간으로 나누어 평균 속력과 평균 속도를 각각 계산해야 한다.', commonTrap:'평균 속력과 평균 속도를 동일한 값으로 계산하거나 구간별 부호를 고려하지 않고 단순 평균을 낸다.', difficultyHint:'상' },
+  { id:'QP-KIN-08', unitId:'1', subUnit:'물체의 운동', patternType:'계산형', situationArchetype:'수평 방향으로 던진 물체(포물선 운동)나 원형 관을 빠져나온 물체의 운동 경로, 낙하 시간, 수평 도달 거리를 구하는 문제.', keyDiscriminator:'수평 방향은 등속 직선 운동, 연직 방향은 등가속도(자유 낙하) 운동으로 독립적으로 분해하여 각각 계산한 뒤 결합한다.', commonTrap:'수평 방향 운동에 중력 가속도를 적용하거나, 관을 벗어난 물체가 원운동을 유지한다고 착각한다.', difficultyHint:'상' },
+  // -- 뉴턴 운동 법칙 --------------------------------
+  { id:'QP-MOL-01', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'OX판별형', situationArchetype:'정지 관성/운동 관성과 관련된 일상 현상(버스 급정거·급출발, 망치 자루 박기, 종이 튕겨 동전 남기기 등)을 제시하고 관성 개념 적용의 타당성을 판별하는 문제.', keyDiscriminator:'관성은 물체가 원래의 운동 상태를 유지하려는 성질로 질량에 비례하며, 정지한 물체도 관성을 가진다는 점을 정확히 적용해야 한다.', commonTrap:'정지해 있는 물체는 관성이 없다거나, 관성의 크기가 속도에 비례한다고 잘못 이해한다.', difficultyHint:'하' },
+  { id:'QP-MOL-02', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'계산형', situationArchetype:'한 물체에 방향이 같거나 반대인 여러 힘이 동시에 작용하는 상황을 제시하고 알짜힘의 크기와 방향을 구하는 문제.', keyDiscriminator:'같은 방향의 힘은 더하고 반대 방향의 힘은 빼서 알짜힘을 구하며, 방향은 크기가 큰 힘 쪽으로 결정된다.', commonTrap:'힘의 방향을 고려하지 않고 크기만 단순 합산하거나 힘의 평형과 알짜힘 0을 혼동한다.', difficultyHint:'하' },
+  { id:'QP-MOL-03', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'계산형', situationArchetype:'실이나 접촉면으로 연결된 질량이 다른 두 물체(또는 세 물체)에 일정한 힘을 가하여 함께 운동시키는 상황에서 전체 가속도, 각 물체에 작용하는 알짜힘, 연결 지점에서 서로 미는 힘(또는 장력)을 구하는 문제.', keyDiscriminator:'전체 질량과 전체에 작용하는 알짜힘으로 공통 가속도를 먼저 구한 뒤, 각 물체에 운동 방정식 F=ma를 개별 적용해 접촉력/장력을 구한다.', commonTrap:'가한 힘 전체를 한 물체에만 작용하는 알짜힘으로 착각하거나, 작용 반작용 관계인 두 힘을 힘의 평형 관계와 혼동한다.', difficultyHint:'상' },
+  { id:'QP-MOL-04', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'계산형', situationArchetype:'도르래를 사이에 두고 실로 연결된 두 물체(하나는 수직으로 매달리거나 둘 다 매달린 형태)가 중력에 의해 함께 등가속도 운동하는 상황에서 가속도와 실의 장력을 구하는 문제.', keyDiscriminator:'두 물체 각각에 대해 장력과 중력을 이용한 운동 방정식을 세우고 연립하여 가속도와 장력을 동시에 구해야 한다.', commonTrap:'무거운 쪽 물체에만 중력을 고려하고 가벼운 쪽 물체의 중력이나 장력 방향을 빠뜨린다.', difficultyHint:'상' },
+  { id:'QP-MOL-05', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'책상 위에 물체를 쌓거나 물체가 정지해 있는 상황에서 물체에 작용하는 중력, 수직항력, 상호 접촉력 등을 나열하고 어느 두 힘이 작용-반작용 관계이고 어느 두 힘이 평형 관계인지 구분하는 문제.', keyDiscriminator:'작용-반작용은 서로 다른 두 물체 사이에서 작용점이 상대방에 있는 힘이고, 평형 관계는 한 물체에 작용하는 두 힘임을 구분해야 한다.', commonTrap:'물체에 작용하는 중력과 수직항력(둘 다 한 물체에 작용)을 작용-반작용 관계로 착각한다.', difficultyHint:'중' },
+  { id:'QP-MOL-06', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'그래프해석형', situationArchetype:'수레의 질량 또는 작용하는 힘의 크기를 변화시키면서 얻은 속도-시간 그래프나 가속도-질량/힘 그래프를 제시하고 가속도, 힘, 질량 사이의 비례·반비례 관계를 확인하는 문제.', keyDiscriminator:'질량이 일정할 때 가속도는 힘에 비례하고, 힘이 일정할 때 가속도는 질량에 반비례한다는 뉴턴 제2법칙의 그래프적 표현을 해석한다.', commonTrap:'가속도와 질량의 반비례 관계를 그래프 상에서 직선으로 잘못 예상한다(실제로는 반비례 곡선).', difficultyHint:'중' },
+  { id:'QP-MOL-07', unitId:'1', subUnit:'뉴턴 운동 법칙', patternType:'서술형', situationArchetype:'얼음판이나 무중력 우주공간처럼 마찰이 없는 곳에서 두 사람(또는 두 물체)이 서로 밀거나 당기는 상호 작용 상황을 제시하고, 두 대상이 받는 힘의 크기 관계 및 결과적인 운동(속도, 이동 거리)의 차이를 서술하게 하는 문제.', keyDiscriminator:'작용-반작용 법칙에 의해 두 대상이 받는 힘의 크기는 항상 같으므로, 가속도는 질량에 반비례하여 질량이 작은 쪽이 더 크게 움직인다는 점을 설명해야 한다.', commonTrap:'힘을 준 쪽만 힘을 받는다고 생각하거나 두 사람의 질량 차이를 무시하고 같은 가속도로 움직인다고 서술한다.', difficultyHint:'중' },
+  // -- 운동량과 충격량 --------------------------------
+  { id:'QP-MO-01', unitId:'2', subUnit:'운동량과 충격량', patternType:'계산형', situationArchetype:'질량과 속력이 주어진 물체(또는 여러 물체)의 운동량의 크기를 구하거나, 방향이 서로 다른 두 물체의 운동량을 부호를 고려해 합산하는 문제.', keyDiscriminator:'운동량 p=mv이며 방향이 있는 벡터양이므로 한쪽 방향을 (+)로 정하고 반대 방향은 (-)로 처리하여 계산해야 한다.', commonTrap:'반대 방향으로 운동하는 물체의 운동량 부호를 무시하고 크기만 단순히 더한다.', difficultyHint:'하' },
+  { id:'QP-MO-02', unitId:'2', subUnit:'운동량과 충격량', patternType:'계산형', situationArchetype:'직선상에서 한 물체가 정지해 있거나 운동 중인 다른 물체와 정면충돌(또는 충돌 후 한 덩어리가 되는 완전 비탄성 충돌)하는 상황에서 충돌 후 속도를 운동량 보존 법칙으로 구하는 문제.', keyDiscriminator:'외력이 없다는 조건 하에서 충돌 전 운동량의 총합과 충돌 후 운동량의 총합이 같다는 식을 세워 미지의 속도를 구한다.', commonTrap:'충돌 후 각 물체의 속도를 따로 구하지 않고 전체 운동 에너지도 보존된다고 잘못 가정한다(비탄성 충돌에서는 운동 에너지 비보존).', difficultyHint:'중' },
+  { id:'QP-MO-03', unitId:'2', subUnit:'운동량과 충격량', patternType:'그래프해석형', situationArchetype:'물체의 운동량-시간 그래프를 제시하고 특정 구간에서 물체가 받은 알짜힘의 크기, 가속도, 속력 등을 구하는 문제.', keyDiscriminator:'운동량-시간 그래프의 기울기가 물체에 작용한 알짜힘(F=Δp/Δt)을 의미함을 이용해 해석한다.', commonTrap:'운동량 그래프의 기울기를 가속도 자체로 착각하고 질량을 나누는 과정을 생략한다.', difficultyHint:'중' },
+  { id:'QP-MO-04', unitId:'2', subUnit:'운동량과 충격량', patternType:'그래프해석형', situationArchetype:'정지해 있거나 운동 중인 물체에 힘-시간 그래프로 나타낸 힘이 작용하는 상황을 제시하고, 특정 시각까지 물체가 받은 충격량과 그로 인한 운동량 변화, 속도를 구하는 문제.', keyDiscriminator:'힘-시간 그래프 아랫부분의 넓이가 충격량이며, 이는 운동량의 변화량(나중 운동량-처음 운동량)과 같다는 관계식을 적용한다.', commonTrap:'그래프의 넓이(충격량)를 힘의 최댓값으로 잘못 읽거나, 충격량과 운동량의 단위·개념을 동일한 물리량으로 혼동하지 못해 계산을 건너뛴다.', difficultyHint:'중' },
+  { id:'QP-MO-05', unitId:'2', subUnit:'운동량과 충격량', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'같은 높이에서 낙하한 공(또는 유리컵, 자동차)이 서로 다른 재질의 바닥(단단한 바닥 vs 푹신한 바닥/방석)에 충돌하는 상황을 비교하며 충격량, 충돌 시간, 충격력의 대소 관계를 판단하는 문제.', keyDiscriminator:'동일한 질량과 속도 변화라면 충격량(운동량 변화량)은 같지만, 충돌 시간이 길수록 충격력은 반비례하여 작아진다는 관계를 적용한다.', commonTrap:'충돌 시간이 다르면 충격량 자체도 다르다고 착각하거나, 충격력과 충격량을 같은 물리량으로 혼동한다.', difficultyHint:'중' },
+  { id:'QP-MO-06', unitId:'2', subUnit:'운동량과 충격량', patternType:'서술형', situationArchetype:'에어백, 범퍼, 보호대, 매트리스 등 충돌 시간을 늘려 충격을 완화하는 안전장치나 스포츠 동작의 원리를 서술하게 하거나, 같은 원리로 설명되는 다른 사례를 나열하게 하는 문제.', keyDiscriminator:'충격량이 일정할 때 힘을 받는 시간을 길게 하면 평균 충격력이 작아진다는 원리로 설명해야 한다.', commonTrap:'충돌 시간을 늘리면 충격량 자체가 줄어든다고 잘못 서술한다.', difficultyHint:'중' },
+  { id:'QP-MO-07', unitId:'2', subUnit:'운동량과 충격량', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'벽에 충돌 후 튕겨 나오는 물체(공, 자동차)의 충돌 전후 속력을 제시하고 운동량 변화량의 크기, 벽이 받은 충격량, 평균 힘의 크기를 비교하는 문제.', keyDiscriminator:'튕겨 나오는 경우 운동량 변화량은 \'나중 운동량-처음 운동량\'을 방향까지 고려해 계산해야 하며 방향이 반대이므로 두 운동량의 크기를 더해야 한다.', commonTrap:'튕겨 나올 때 운동량 변화량을 충돌 전후 속력의 차(단순 뺄셈)로 계산해 방향 反전 효과를 놓친다.', difficultyHint:'상' },
+  { id:'QP-MO-08', unitId:'2', subUnit:'운동량과 충격량', patternType:'계산형', situationArchetype:'정지 상태에서 두 물체(또는 사람)로 분리되는 상황(폭발, 밀어내기 등)에서 분리 후 각 물체의 속력 비나 질량 비를 운동량 보존으로 구하는 문제.', keyDiscriminator:'분리 전 전체 운동량이 0이므로 분리 후 두 물체의 운동량 크기는 같고 방향은 반대라는 관계(mAvA=-mBvB)를 이용한다.', commonTrap:'질량이 큰 쪽이 속력도 더 크다고 잘못 판단한다(실제로는 질량에 반비례).', difficultyHint:'중' },
+  // -- 역학적 에너지 보존 --------------------------------
+  { id:'QP-ENE-01', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'계산형', situationArchetype:'일정한 힘이 작용하여 물체를 특정 거리만큼 이동시키는 상황(마찰이 있거나 없는 수평면)에서 힘이 한 일의 양이나 일·운동 에너지 정리를 이용한 운동 에너지 변화량, 나중 속력을 구하는 문제.', keyDiscriminator:'알짜힘이 물체에 한 일은 물체의 운동 에너지 변화량과 같다는 일-운동 에너지 정리를 적용해야 한다.', commonTrap:'마찰력이 존재할 때 가해진 힘 전체가 한 일만을 계산하고 마찰력이 한 음의 일을 빼는 것을 누락한다.', difficultyHint:'중' },
+  { id:'QP-ENE-02', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'그래프해석형', situationArchetype:'물체에 작용하는 힘을 이동 거리에 따라 나타낸 힘-이동 거리 그래프(또는 용수철의 힘-변형 길이 그래프)를 제시하고, 그래프 아랫부분의 넓이로 한 일의 양이나 탄성 퍼텐셜 에너지를 구하는 문제.', keyDiscriminator:'힘-이동 거리(또는 힘-변형 길이) 그래프 아랫부분의 넓이가 한 일(또는 탄성 퍼텐셜 에너지)을 의미한다는 것을 이용한다.', commonTrap:'그래프가 원점을 지나지 않거나 기울기가 바뀌는 구간에서 넓이를 사다리꼴로 계산하지 않고 삼각형 공식만 적용한다.', difficultyHint:'중' },
+  { id:'QP-ENE-03', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'계산형', situationArchetype:'일정 높이에서 물체를 가만히 놓아 자유 낙하시키거나 빗면을 미끄러져 내려오는 상황(마찰 없음)에서 특정 높이·지점에서의 운동 에너지, 퍼텐셜 에너지, 속력을 역학적 에너지 보존으로 구하는 문제.', keyDiscriminator:'마찰이나 공기 저항이 없으면 운동 에너지와 퍼텐셜 에너지의 합(역학적 에너지)이 모든 지점에서 일정하다는 원리를 이용해 미지수를 구한다.', commonTrap:'기준면을 지면이 아닌 다른 위치로 설정했을 때 퍼텐셜 에너지 값을 재설정하지 않고 그대로 사용한다.', difficultyHint:'중' },
+  { id:'QP-ENE-04', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'롤러코스터, 곡면 트랙, 진자 등 여러 지점(A, B, C...)을 통과하는 물체의 운동에서 각 지점의 속력, 운동 에너지, 퍼텐셜 에너지, 역학적 에너지 중 어느 것이 서로 같은지 비교하는 문제.', keyDiscriminator:'역학적 에너지는 전 구간에서 일정하게 보존되지만 속력, 운동 에너지, 퍼텐셜 에너지는 높이에 따라 달라짐을 구분해야 한다.', commonTrap:'높이가 같은 두 지점에서 속력까지 같다고 판단하는 것은 맞지만, 그 논리를 확장해 운동량이나 다른 물리량까지 같다고 잘못 추론한다.', difficultyHint:'중' },
+  { id:'QP-ENE-05', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'OX판별형', situationArchetype:'빗면에서 마찰이 있는 구간과 없는 구간을 함께 지나가거나 수평면에서 마찰력을 받으며 이동해 결국 정지하는 물체의 상황을 제시하고, 역학적 에너지 보존 여부 및 에너지 전환(운동 에너지→열에너지 등)을 판별하는 문제.', keyDiscriminator:'마찰이나 공기 저항이 작용하는 구간에서는 역학적 에너지의 일부가 열에너지로 전환되어 보존되지 않음을 인식해야 한다.', commonTrap:'마찰 구간이 일부에만 있어도 전체 운동 과정에서 역학적 에너지가 항상 보존된다고 잘못 판단한다.', difficultyHint:'하' },
+  { id:'QP-ENE-06', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'계산형', situationArchetype:'도르래로 연결된 두 물체(하나는 수직으로 매달림)가 함께 운동할 때 낙하한 높이에 따른 두 물체의 운동 에너지 합이나 속력을 일-에너지 관계 또는 역학적 에너지 보존으로 구하는 문제.', keyDiscriminator:'매달린 물체에 작용하는 중력이 한 일이 전체 계(두 물체)의 운동 에너지 증가량과 같다는 에너지 보존 관계를 세운다.', commonTrap:'두 물체 중 한쪽의 운동 에너지만 고려하고 나머지 한 물체의 운동 에너지 증가분을 합산에서 빠뜨린다.', difficultyHint:'상' },
+  { id:'QP-ENE-07', unitId:'2', subUnit:'역학적 에너지 보존', patternType:'서술형', situationArchetype:'물체가 빗면이나 곡면을 따라 내려가는 동안(마찰 없음) 중력 퍼텐셜 에너지, 운동 에너지, 역학적 에너지가 각각 어떻게 변하는지 그 까닭과 함께 서술하게 하는 문제.', keyDiscriminator:'높이가 감소하며 퍼텐셜 에너지가 감소한 만큼 운동 에너지가 증가하여 둘의 합인 역학적 에너지는 일정하게 유지된다는 논리를 서술해야 한다.', commonTrap:'퍼텐셜 에너지와 운동 에너지가 각각 어떻게 변하는지만 설명하고 두 에너지 합이 보존된다는 결론을 명시하지 않는다.', difficultyHint:'중' },
+  // -- 열역학 법칙 --------------------------------
+  { id:'QP-THM-01', unitId:'2', subUnit:'열역학 법칙', patternType:'그래프해석형', situationArchetype:'실린더 속 기체가 일정한 압력을 유지하며 팽창하거나 압력-부피 그래프 위에서 상태가 변할 때, 기체가 외부에 한 일이나 흡수한 열량을 구하는 상황이 반복적으로 제시된다.', keyDiscriminator:'일정 압력 과정에서 일은 W=PΔV이며, 그래프에서는 곡선 아래 넓이가 기체가 한 일에 해당한다는 점을 적용해야 한다.', commonTrap:'부피가 감소하는 구간에서도 넓이를 무조건 양수로 취급하거나, 압력이 변하는 구간에서 처음-끝 압력만 단순히 곱해 계산하는 실수를 한다.', difficultyHint:'중' },
+  { id:'QP-THM-02', unitId:'2', subUnit:'열역학 법칙', patternType:'OX판별형', situationArchetype:'피스톤이 고정되거나 자유롭게 움직이는 실린더에 열을 가하는 여러 상황을 등적·등압·등온·단열 과정으로 분류하고, 각 과정에서 온도·압력·내부 에너지 변화가 옳은지 판단하게 한다.', keyDiscriminator:'열역학 제1법칙 Q=ΔU+W을 각 과정의 제약 조건(부피 일정, 압력 일정, 온도 일정, 열 출입 없음)에 대입해 어떤 항이 0이 되는지 구분해야 한다.', commonTrap:'등온 과정에서 온도가 일정하니 열 출입도 없다고 착각하거나, 단열 과정과 등적 과정을 혼동해 일이나 내부 에너지 변화량을 잘못 0으로 설정한다.', difficultyHint:'중' },
+  { id:'QP-THM-03', unitId:'2', subUnit:'열역학 법칙', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'동일한 열량을 서로 다른 조건(등적 대 등압, 또는 서로 다른 열원)에서 기체에 가했을 때 압력, 온도, 내부 에너지, 외부에 한 일 등의 물리량 크기를 비교하는 문제가 반복된다.', keyDiscriminator:'등적 과정은 받은 열이 모두 내부 에너지 증가에 쓰이므로, 같은 열량이라면 등적 과정의 온도·내부 에너지 증가가 등압 과정보다 크다는 관계를 이용해야 한다.', commonTrap:'등압 과정에서 일부 에너지가 외부에 한 일로 쓰인다는 사실을 놓치고 두 과정의 내부 에너지 증가량이 같다고 잘못 판단한다.', difficultyHint:'상' },
+  { id:'QP-THM-04', unitId:'2', subUnit:'열역학 법칙', patternType:'단답형', situationArchetype:'압력 밥솥, 자전거 타이어 펌프, 탄산음료 병 개봉, 높새바람, 구름 생성 등 일상 현상을 등적·단열 등 특정 열역학 과정과 연결 짓게 하는 문제가 반복 출제된다.', keyDiscriminator:'부피 변화 여부와 열 출입 여부를 기준으로 해당 현상이 등적/등압/등온/단열 중 어느 과정에 해당하는지 판단해야 한다.', commonTrap:'단열 팽창 시 온도가 내려가고 단열 압축 시 온도가 올라간다는 방향을 반대로 기억하여 현상과 과정을 잘못 연결한다.', difficultyHint:'하' },
+  { id:'QP-THM-05', unitId:'2', subUnit:'열역학 법칙', patternType:'그래프해석형', situationArchetype:'이상 기체가 순환 과정(예: A→B→C→D→A)을 거치는 압력-부피 그래프가 주어지고, 한 순환당 기체가 외부에 한 알짜일이나 내부 에너지 변화를 구하게 한다.', keyDiscriminator:'한 번의 순환 과정에서 내부 에너지 변화는 0이며, 외부에 한 알짜일은 그래프가 둘러싸는 폐곡선의 넓이와 같다는 원리를 적용해야 한다.', commonTrap:'순환 과정에서도 내부 에너지가 증가하거나 감소한다고 착각하거나, 폐곡선 넓이를 구할 때 팽창 구간과 압축 구간의 넓이를 상쇄하지 않고 단순 합산한다.', difficultyHint:'상' },
+  { id:'QP-THM-06', unitId:'2', subUnit:'열역학 법칙', patternType:'계산형', situationArchetype:'고열원에서 특정 열량을 흡수해 일을 하고 저열원으로 나머지 열을 방출하는 열기관이 제시되며, 방출 열량이나 열효율, 또는 고정된 효율에서 미지의 열량·일을 구하게 한다.', keyDiscriminator:'열효율 e = W/Q1 = (Q1-Q2)/Q1 관계식을 이용해 흡수열, 방출열, 한 일 중 두 값으로 나머지를 구해야 한다.', commonTrap:'방출 열량을 무시하거나 흡수한 열이 전부 일로 전환된다고 가정하여 효율을 1로 잘못 계산한다.', difficultyHint:'중' },
+  { id:'QP-THM-07', unitId:'2', subUnit:'열역학 법칙', patternType:'계산형', situationArchetype:'고열원과 저열원의 절대 온도가 주어진 이상적인(카르노) 열기관의 최대 열효율을 구하거나, 특정 효율을 달성하기 위한 온도 조건을 판단하게 한다.', keyDiscriminator:'카르노 기관의 열효율은 e=1-T2/T1이며 반드시 절대 온도(켈빈)로 환산하여 대입해야 한다.', commonTrap:'섭씨 온도를 그대로 대입하거나, 저열원 온도가 0K에 가까워야 효율이 100%에 근접한다는 조건을 반대로 이해한다.', difficultyHint:'중' },
+  { id:'QP-THM-08', unitId:'2', subUnit:'열역학 법칙', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'진자의 감쇠, 기체의 확산, 뜨거운 물과 차가운 물의 혼합, 잉크의 확산 등 자연현상을 제시하고 가역/비가역 과정 여부 및 엔트로피 증가 방향을 판단하게 한다.', keyDiscriminator:'고립계에서 자발적으로 일어나는 자연 현상은 항상 엔트로피(무질서도)가 증가하는, 즉 확률이 높은 방향으로만 진행한다는 열역학 제2법칙을 적용해야 한다.', commonTrap:'에너지가 보존되면 열역학 제1법칙에 어긋나지 않으니 그 반대 과정도 자발적으로 일어날 수 있다고 착각한다.', difficultyHint:'중' },
+  { id:'QP-THM-09', unitId:'2', subUnit:'열역학 법칙', patternType:'객관식(오지선다)', situationArchetype:'외부 에너지 공급 없이 영구히 일을 하는 기관이나 열효율이 100%인 기관(제1종/제2종 영구 기관)의 개념을 제시하고 어떤 법칙에 위배되어 제작이 불가능한지 구분하게 한다.', keyDiscriminator:'에너지 보존을 어기는 기관은 열역학 제1법칙에, 방출 열 없이 전부 일로 바꾸는 기관은 열역학 제2법칙에 위배됨을 구분해야 한다.', commonTrap:'두 종류의 영구 기관이 위배하는 법칙을 서로 바꾸어 기억하거나, 에너지 보존 위반과 방향성(비가역성) 위반을 같은 것으로 혼동한다.', difficultyHint:'중' },
+  { id:'QP-THM-10', unitId:'2', subUnit:'열역학 법칙', patternType:'서술형', situationArchetype:'동일한 기체량을 각각 부피 고정과 압력 고정 조건에서 가열했을 때, 어느 쪽의 내부 에너지 증가량이 더 큰지 그 까닭을 열역학 법칙에 근거하여 서술하게 하거나, 열효율 100% 열기관이 불가능한 이유를 서술하게 한다.', keyDiscriminator:'받은 열 Q가 내부 에너지 증가량과 외부에 한 일로 나뉘어 쓰인다는 열역학 제1법칙 및 제2법칙의 방향성 논리를 이용해 설명해야 한다.', commonTrap:'결론(어느 쪽이 크다/작다)만 쓰고 왜 그런지에 대한 물리 법칙적 근거(에너지가 일로도 쓰이는지 여부)를 제시하지 못한다.', difficultyHint:'상' },
+  { id:'QP-THM-11', unitId:'2', subUnit:'열역학 법칙', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'역학적 에너지 보존이나 운동량·힘 관련 문제와 열역학 제1법칙 문제를 함께 묶어 중단원 마무리 형태로 제시하며, 물체의 낙하·충돌 등과 기체의 상태 변화를 나란히 다룬다.', keyDiscriminator:'역학적 에너지 보존 법칙과 열역학 제1법칙이 형태는 다르지만 모두 에너지 보존이라는 동일한 원리의 적용임을 인식해야 한다.', commonTrap:'역학적 에너지 문제 풀이 방식을 기체 문제에 그대로 적용하거나, 마찰이 있는 경우 역학적 에너지가 열로 전환된다는 사실을 놓친다.', difficultyHint:'중' },
+  { id:'QP-THM-12', unitId:'2', subUnit:'열역학 법칙', patternType:'그래프해석형', situationArchetype:'단열된 실린더나 이중 실린더(칸막이로 나뉜 두 기체)에서 한쪽 기체에 열을 가하거나 압력을 조절했을 때, 반대쪽 기체의 압력·부피·내부 에너지 변화를 함께 추론하게 한다.', keyDiscriminator:'두 기체 사이의 피스톤이 정지 상태에 도달하면 양쪽의 압력이 같아진다는 역학적 평형 조건과 각 기체별 열역학 제1법칙을 함께 적용해야 한다.', commonTrap:'한쪽 기체에만 열역학 제1법칙을 적용하고 반대쪽 기체가 받는 일이나 내부 에너지 변화를 놓친다.', difficultyHint:'상' },
+  // -- 특수 상대성 이론 --------------------------------
+  { id:'QP-REL-01', unitId:'2', subUnit:'특수 상대성 이론', patternType:'계산형', situationArchetype:'직선 도로 위를 같은 방향 또는 반대 방향으로 움직이는 두 물체(자동차, 기차, 사람 등)가 제시되고 한 관찰자가 본 다른 물체의 상대 속도를 구하게 하는, 뉴턴 역학 수준의 상대 속도 문제이다.', keyDiscriminator:'상대 속도는 관찰 대상의 속도에서 관찰자의 속도를 벡터로 뺀 값(부호를 포함한 방향 고려)임을 적용해야 한다.', commonTrap:'반대 방향으로 움직이는 두 물체의 속력을 빼야 한다고 착각하거나 부호를 누락해 상대 속도의 크기를 잘못 계산한다.', difficultyHint:'하' },
+  { id:'QP-REL-02', unitId:'2', subUnit:'특수 상대성 이론', patternType:'OX판별형', situationArchetype:'마이컬슨·몰리 실험 장치와 그 예상 결과·실제 결과를 제시하고, 에테르의 존재 여부 및 이 실험이 특수 상대성 이론 성립에 어떤 의미를 주는지 판단하게 한다.', keyDiscriminator:'실험 결과 빛의 속력 차이가 관측되지 않아 에테르가 존재하지 않는다는 결론과 이것이 광속 불변 원리로 이어졌다는 논리 흐름을 이해해야 한다.', commonTrap:'실험 목적(에테르 확인 시도)과 실제 결론(에테르 부재)을 혼동하여 에테르가 존재한다고 잘못 판단한다.', difficultyHint:'중' },
+  { id:'QP-REL-03', unitId:'2', subUnit:'특수 상대성 이론', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'일정한 속도로 이동하는 교통수단(기차, 트럭 등) 안에서 화살이나 공을 던지는 경우와 빛(레이저)을 비추는 경우를 대비시켜, 관찰자마다 측정한 속도가 어떻게 다른지 비교하게 한다.', keyDiscriminator:'일반적인 물체의 속도는 갈릴레이 속도 합성을 따르지만 빛의 속력은 관찰자나 광원의 운동과 무관하게 항상 일정하다는 광속 불변 원리를 적용해야 한다.', commonTrap:'빛의 속력에도 이동수단의 속도를 더하거나 빼서 관찰자가 본 빛의 속력이 c보다 크거나 작다고 잘못 계산한다.', difficultyHint:'중' },
+  { id:'QP-REL-04', unitId:'2', subUnit:'특수 상대성 이론', patternType:'객관식(오지선다)', situationArchetype:'상대성 원리와 광속 불변 원리라는 특수 상대성 이론의 두 가정을 나열한 보기 중 옳은 설명을 고르거나, 관성 좌표계의 정의(정지 또는 등속도 좌표계)를 확인하게 한다.', keyDiscriminator:'모든 관성 좌표계에서 물리 법칙이 동일하게 성립한다는 상대성 원리와, 광원·관찰자의 속도와 무관하게 빛의 속력이 일정하다는 광속 불변 원리를 정확히 구분해 적용해야 한다.', commonTrap:'관성 좌표계에서 모든 관찰자가 자신의 절대 속도를 측정할 수 있다거나 시간이 모두에게 동일하게 흐른다는 뉴턴적 오개념을 정답으로 고른다.', difficultyHint:'하' },
+  { id:'QP-REL-05', unitId:'2', subUnit:'특수 상대성 이론', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'광속에 가까운 속도로 이동하는 우주선 내부의 사건(전구가 켜지고 빛이 검출기에 도달하는 등)을, 우주선 안의 관찰자와 우주선 밖의 정지 관찰자가 각각 관측할 때 두 사건이 동시에 일어나는지 여부를 비교하게 한다.', keyDiscriminator:'빛의 속력은 모든 관찰자에게 동일하지만 광원이 이동하는 동안 관찰자와의 상대적 위치가 달라지므로, 한 좌표계에서 동시인 사건이 다른 좌표계에서는 동시가 아닐 수 있다는 동시성의 상대성을 적용해야 한다.', commonTrap:'우주선 안에서 동시라고 관측되면 우주선 밖에서도 항상 동시로 관측된다고 잘못 일반화한다.', difficultyHint:'상' },
+  { id:'QP-REL-06', unitId:'2', subUnit:'특수 상대성 이론', patternType:'계산형', situationArchetype:'광속에 가까운 속도로 운동하는 우주선 안의 빛 시계를 우주선 안의 관찰자와 우주선 밖 정지 관찰자가 각각 관측하여, 두 관찰자가 측정한 시간(고유 시간 대 지연된 시간)을 비교하거나 계산하게 한다.', keyDiscriminator:'같은 위치에서 일어난 두 사건 사이의 시간 간격인 고유 시간이 가장 짧고, 상대적으로 운동하는 관찰자가 측정한 시간은 이보다 길게(느리게) 측정된다는 시간 지연 관계를 적용해야 한다.', commonTrap:'어느 쪽 시계가 고유 시간을 측정하는지 헷갈려 시간 지연의 방향(누구의 시간이 더 느리게 가는지)을 반대로 판단한다.', difficultyHint:'상' },
+  { id:'QP-REL-07', unitId:'2', subUnit:'특수 상대성 이론', patternType:'계산형', situationArchetype:'광속에 가까운 속도로 이동하는 우주선을 타고 한 지점에서 다른 지점(목적지 행성 등)까지 이동할 때, 우주선 안의 관찰자와 상대적으로 정지한 관찰자가 측정한 두 지점 사이의 거리(고유 길이 대 수축된 길이)를 비교·계산하게 한다.', keyDiscriminator:'상대적으로 정지한 관찰자가 측정한 두 지점 사이 거리가 고유 길이이며, 운동하는 관찰자가 측정한 거리는 고유 길이보다 짧게 수축되어 관측된다는 길이 수축 관계를 적용해야 한다.', commonTrap:'길이 수축이 운동 방향뿐 아니라 모든 방향으로 일어난다고 확대 해석하거나, 어느 관찰자 기준이 고유 길이인지 반대로 판단한다.', difficultyHint:'상' },
+  { id:'QP-REL-08', unitId:'2', subUnit:'특수 상대성 이론', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'대기 상층부에서 생성된 뮤온이 매우 빠른 속도로 지표면까지 이동하여 실제로 관측되는 현상을 제시하고, 이를 지상 관찰자의 관점(시간 지연)과 뮤온 자신의 관점(길이 수축)에서 각각 설명하게 한다.', keyDiscriminator:'동일한 현상(뮤온의 지표 도달)을 지상 관찰자는 뮤온의 시간이 느리게 가서 수명이 늘어난 것으로, 뮤온 좌표계에서는 이동 거리가 수축된 것으로 서로 다르게 설명함을 이해해야 한다.', commonTrap:'지상 관찰자 관점의 시간 지연 설명과 뮤온 관점의 길이 수축 설명을 뒤섞어, 같은 좌표계에서 두 효과가 동시에 필요하다고 잘못 서술한다.', difficultyHint:'상' },
+  { id:'QP-REL-09', unitId:'2', subUnit:'특수 상대성 이론', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'서로 다른 속도로 운동하는 여러 우주선(또는 관찰자)을 동시에 제시하여, 정지한 기준 관찰자가 측정하는 시간 지연 정도와 길이 수축 정도를 우주선들의 속력 순서와 함께 비교하게 한다.', keyDiscriminator:'물체의 속력이 빛의 속력에 가까워질수록 시간 지연과 길이 수축의 정도가 함께 커진다는 관계를 이용해 속력 순서로 비교해야 한다.', commonTrap:'속력이 클수록 시간 지연은 커지지만 길이 수축은 작아진다는 식으로 두 효과의 증감 방향을 반대로 엮어 이해한다.', difficultyHint:'상' },
+  { id:'QP-REL-10', unitId:'2', subUnit:'특수 상대성 이론', patternType:'서술형', situationArchetype:'정지 질량이 같은 물체가 빛의 속력에 가까운 속도로 운동할 때 질량이 어떻게 달라지는지, 그리고 이것이 질량-에너지 동등성과 어떻게 연결되는지 서술하게 한다.', keyDiscriminator:'물체의 속력이 빠를수록 관찰자가 측정하는 상대론적 질량이 정지 질량보다 커지며, 질량과 에너지가 서로 전환될 수 있다는 질량 에너지 동등성(E=mc²)을 함께 설명해야 한다.', commonTrap:'질량 증가를 물체 자체의 내재적 성질 변화로 서술하지 않고 단순히 힘이 세져서 무거워진다는 식의 비유적 오개념으로 설명한다.', difficultyHint:'중' },
+  { id:'QP-REL-11', unitId:'2', subUnit:'특수 상대성 이론', patternType:'계산형', situationArchetype:'무거운 원자핵이 중성자를 흡수해 더 가벼운 원자핵들과 중성자 여러 개로 쪼개지는 핵분열 반응식이 제시되고, 반응 전후 질량 변화 및 방출 에너지의 근원을 묻는다.', keyDiscriminator:'핵분열 후 생성된 입자들의 총 질량이 반응 전보다 줄어들며, 이 질량 결손이 질량 에너지 동등성에 의해 에너지로 방출된다는 원리를 적용해야 한다.', commonTrap:'핵반응에서 질량수와 전하량은 보존되므로 질량도 정확히 보존된다고 착각하여 질량 결손의 존재를 부정한다.', difficultyHint:'중' },
+  { id:'QP-REL-12', unitId:'2', subUnit:'특수 상대성 이론', patternType:'계산형', situationArchetype:'가벼운 원자핵 두 개(수소, 중수소, 삼중수소 등)가 초고온 상태에서 융합하여 더 무거운 원자핵과 입자를 생성하는 핵융합 반응식이 제시되고, 태양 내부나 핵융합로 상황과 연결지어 에너지 방출 원리를 묻는다.', keyDiscriminator:'핵융합 반응에서도 반응 전후 질량 합이 줄어드는 질량 결손이 발생하며 이 결손 질량이 에너지로 전환된다는 점, 그리고 핵자당 방출 에너지가 핵분열보다 큰 경향이 있음을 적용해야 한다.', commonTrap:'핵융합은 핵분열과 반대 방향의 반응이므로 질량이 오히려 증가한다고 착각하거나, 태양 내부 반응과 인공 핵융합로 반응의 원료(수소 대 중수소·삼중수소)를 혼동한다.', difficultyHint:'중' },
+  // -- 원자 모형과 전기력 --------------------------------
+  { id:'QP-AT-01', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'OX판별형', situationArchetype:'톰슨, 러더퍼드, 보어 세 원자 모형의 그림이나 설명을 제시하고 각 모형의 특징(전자 분포, 궤도의 유무, 원자핵 유무 등)을 판단하게 한다.', keyDiscriminator:'세 모형의 시대순 발전 순서와 각 모형이 설명하거나 설명하지 못하는 현상(원자의 안정성, 선 스펙트럼 등)을 구분해야 한다.', commonTrap:'러더퍼드 모형과 보어 모형을 혼동하여 \'특정한 궤도\'와 \'임의의 궤도\'의 차이를 반대로 기억하는 경우가 많다.', difficultyHint:'하' },
+  { id:'QP-AT-02', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'톰슨의 음극선 실험 또는 러더퍼드의 알파 입자 산란 실험 장치를 제시하고 실험 결과로부터 알아낸 사실을 추론하게 한다.', keyDiscriminator:'대부분의 입자가 직진한다는 것은 원자 내부가 비어 있음을, 소수가 크게 휘거나 되튀는 것은 원자핵이 좁은 공간에 (+)전하로 존재함을 의미한다는 논리 연결을 알아야 한다.', commonTrap:'산란 실험 결과를 전자의 존재 증명으로 착각하거나, 알파 입자와 원자핵의 전하 부호 관계를 반대로 판단한다.', difficultyHint:'중' },
+  { id:'QP-AT-03', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'계산형', situationArchetype:'일직선상에 고정된 여러 점전하(부호와 전하량이 다른 2~3개)를 제시하고 각 전하가 받는 전기력의 크기를 비교하거나 등호/부등호로 나열하게 한다.', keyDiscriminator:'쿨롱 법칙에 따라 전기력은 두 전하량의 곱에 비례하고 거리 제곱에 반비례하므로, 각 전하가 받는 알짜힘을 벡터적으로(방향 포함) 합산해야 한다.', commonTrap:'전하가 두 개 이상의 다른 전하로부터 힘을 받을 때 단순히 크기만 더하고 방향(인력/척력)을 고려하지 않아 부호 처리를 틀린다.', difficultyHint:'중' },
+  { id:'QP-AT-04', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'계산형', situationArchetype:'두 대전체 사이의 거리나 전하량을 변화시켰을 때(거리를 n배로, 접촉 후 전하량 재분배 등) 전기력의 세기가 어떻게 달라지는지 구하게 한다.', keyDiscriminator:'쿨롱 법칙의 거리 제곱 반비례, 전하량 곱 비례 관계를 이용해 변화 전후 비율을 계산해야 하며, 두 도체 접촉 시 전하량은 평균으로 재분배된다는 것을 알아야 한다.', commonTrap:'거리가 n배가 될 때 전기력이 1/n배가 된다고 착각하거나(제곱 반비례를 놓침), 접촉 후 전하량을 단순히 합만 하고 2로 나누는 것을 잊는다.', difficultyHint:'중' },
+  { id:'QP-AT-05', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'원자핵 주위를 원운동하는 전자를 깔때기에 비유한 그림이나 서로 다른 궤도의 전자를 제시하여, 원자핵으로부터 멀어질 때 전자의 에너지, 전기력, 속박 정도가 어떻게 변하는지 비교하게 한다.', keyDiscriminator:'무한히 먼 곳에서 전자의 역학적 에너지를 0으로 정하면 속박된 전자의 에너지는 음수이며, 원자핵에서 멀수록 에너지가 커지고(0에 가까워짐) 분리에 필요한 에너지는 작아진다는 개념을 적용한다.', commonTrap:'에너지가 \'크다\'는 것을 절댓값 기준으로 판단해 원자핵에 가까울수록 에너지가 크다고 잘못 결론짓는다(음수 부호를 고려하지 않음).', difficultyHint:'중' },
+  { id:'QP-AT-06', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'단답형', situationArchetype:'전자와 원자핵 사이에 전기력과 중력이 모두 작용함을 언급하며 왜 전자의 운동을 설명할 때 중력을 무시하는지 서술하게 한다.', keyDiscriminator:'전자와 원자핵 사이의 중력은 전기력에 비해 극히 작아(약 10^-39배 수준) 무시할 수 있다는 크기 비교 개념을 서술해야 한다.', commonTrap:'중력이 아예 작용하지 않는다고 서술하거나, 크기 비교 없이 단순히 \'전기력이 더 세다\'고만 답해 정량적 근거를 빠뜨린다.', difficultyHint:'중' },
+  { id:'QP-AT-07', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'OX판별형', situationArchetype:'연속 스펙트럼, 방출 스펙트럼, 흡수 스펙트럼을 그림으로 제시하고 광원의 종류(백열등, 기체 방전관, 저온 기체를 통과한 빛)와 스펙트럼 종류를 짝짓게 한다.', keyDiscriminator:'고온 기체는 방출 스펙트럼(밝은 선), 백색광이 저온 기체를 통과하면 흡수 스펙트럼(검은 선)이 나타난다는 발생 조건의 차이를 구분해야 한다.', commonTrap:'방출 스펙트럼과 흡수 스펙트럼에서 나타나는 선의 파장 위치가 같다는 사실을 놓치거나, 연속 스펙트럼의 광원을 기체 방전관으로 잘못 연결한다.', difficultyHint:'하' },
+  { id:'QP-AT-08', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'계산형', situationArchetype:'보어 모형의 에너지 준위 도표나 전자의 전이 화살표(㉠, ㉡, ㉢ 등)를 제시하고, 각 전이에서 방출 또는 흡수하는 광자의 에너지·진동수·파장의 크기를 비교하거나 계산하게 한다.', keyDiscriminator:'광자의 에너지는 두 궤도의 에너지 준위 차이와 같고 E=hf=hc/λ 관계에 따라 에너지가 클수록 진동수가 크고 파장이 짧다는 것을 적용해야 한다.', commonTrap:'에너지 준위 차이가 큰 전이가 파장도 길다고 반대로 판단하거나, 여러 전이의 에너지를 단순 덧셈/뺄셈할 때 준위 부호(음수)를 고려하지 않는다.', difficultyHint:'상' },
+  { id:'QP-AT-09', unitId:'3', subUnit:'원자 모형과 전기력', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'수소 원자의 라이먼·발머·파셴 계열을 그래프나 도표로 제시하고, 계열별 전자 전이 대상 궤도, 방출되는 빛의 영역(자외선/가시광선/적외선), 파장·에너지의 대소 관계를 판단하게 한다.', keyDiscriminator:'n=1로 전이(라이먼)는 에너지가 가장 크고 파장이 가장 짧으며, n=3으로 전이(파셴)는 에너지가 가장 작고 파장이 가장 길다는 계열 간 순서를 알아야 한다.', commonTrap:'발머 계열만 가시광선이라는 것을 모르고 모든 계열에서 가시광선이 나온다고 착각하거나, 계열 내에서 파장이 가장 긴/짧은 경우의 전이 궤도를 반대로 짚는다.', difficultyHint:'상' },
+  // -- 에너지 띠와 반도체 --------------------------------
+  { id:'QP-EB-01', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'OX판별형', situationArchetype:'기체 원자와 고체(다수 원자)의 에너지 준위 그림을 비교 제시하며, 원자 수가 많아질수록 에너지 준위가 어떻게 에너지띠로 변하는지 판단하게 한다.', keyDiscriminator:'파울리 배타 원리에 의해 원자가 가까워지면 에너지 준위가 미세하게 갈라지고, 원자 수가 매우 많아지면 준위들이 촘촘해져 사실상 연속적인 띠를 형성한다는 원리를 적용한다.', commonTrap:'에너지띠 내부의 준위가 완전히 연속적이라고 오해하거나, 띠 간격 영역에도 전자가 존재할 수 있다고 잘못 판단한다.', difficultyHint:'중' },
+  { id:'QP-EB-02', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'객관식(오지선다)', situationArchetype:'도체, 절연체, 반도체 세 가지의 에너지띠 구조(원자가 띠·전도띠·띠 간격)를 그림으로 제시하고 순서 없이 나열한 뒤 어느 것이 어느 물질인지, 혹은 전기 전도성의 크기 순서를 판단하게 한다.', keyDiscriminator:'띠 간격이 없거나 원자가 띠와 전도띠가 겹치면 도체, 띠 간격이 매우 넓으면 절연체, 좁으면 반도체라는 구조적 차이를 적용해야 한다.', commonTrap:'반도체와 절연체의 에너지띠 구조가 근본적으로 다르다고 착각하지만 실제로는 정도(띠 간격의 크기)의 차이일 뿐이라는 점을 놓친다.', difficultyHint:'중' },
+  { id:'QP-EB-03', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'그래프해석형', situationArchetype:'여러 물질(구리, 규소, 유리 등)의 전기 전도도 또는 비저항 수치를 표나 로그 축 그래프로 제시하고 물질 간 전도성, 비저항, 띠 간격의 대소 관계를 비교하게 한다.', keyDiscriminator:'전기 전도도는 비저항의 역수이므로 전도도가 클수록 비저항이 작고, 띠 간격이 좁을수록(도체에 가까울수록) 전도도가 크다는 관계를 적용한다.', commonTrap:'전기 전도도와 비저항을 같은 방향으로 비례한다고 착각해 대소 관계를 반대로 답한다.', difficultyHint:'중' },
+  { id:'QP-EB-04', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'규소나 저마늄 결정에 원자가 전자 수가 다른 불순물 원소(붕소, 인, 비소 등)를 도핑한 원자 배열 그림을 제시하고, 생성된 반도체가 p형인지 n형인지, 주요 전하 나르개가 무엇인지 판단하게 한다.', keyDiscriminator:'원자가 전자가 3개인 불순물을 첨가하면 양공이 생겨 p형이 되고, 5개인 불순물을 첨가하면 남는 전자로 인해 n형이 된다는 원리를 적용해야 한다.', commonTrap:'p형/n형 반도체의 이름을 전하 나르개의 부호와 반대로 연결하거나(p형이 전자를 나른다고 착각), 불순물 자체의 전하 상태(이온화 여부)와 전하 나르개를 혼동한다.', difficultyHint:'중' },
+  { id:'QP-EB-05', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'p-n 접합 다이오드가 포함된 회로에서 전원의 극을 스위치로 바꿔가며 연결하고, 순방향/역방향 바이어스 여부와 전류가 흐르는지, 접합면에서 전자·양공이 어떻게 이동하는지 판단하게 한다.', keyDiscriminator:'p형에 (+)극, n형에 (-)극을 연결하면 순방향 바이어스로 전류가 흐르고, 반대로 연결하면 역방향 바이어스로 전류가 흐르지 않는다는 규칙을 적용한다.', commonTrap:'순방향/역방향 바이어스의 극 연결 방향을 반대로 기억하거나, 역방향에서도 아주 약한 전류가 흐른다고 잘못 판단한다.', difficultyHint:'중' },
+  { id:'QP-EB-06', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'서술형', situationArchetype:'발광 다이오드(LED)나 광 다이오드가 포함된 회로를 제시하고 전류가 흐를 때 빛이 방출되는 원리, 혹은 빛을 비추면 전류가 흐르는 원리를 서술하게 한다.', keyDiscriminator:'LED는 전자와 양공이 접합면에서 결합할 때 띠 간격에 해당하는 에너지만큼의 빛(광자)을 방출한다는 원리를 설명해야 한다.', commonTrap:'빛의 색이 전류의 세기에 따라 달라진다고 서술하지만 실제로는 반도체 물질의 띠 간격에 따라 방출되는 빛의 파장(색)이 결정된다는 점을 놓친다.', difficultyHint:'중' },
+  { id:'QP-EB-07', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'OX판별형', situationArchetype:'고유(순수) 반도체와 비고유(불순물) 반도체의 결합 구조 그림을 제시하고 원자가 전자 개수, 공유 결합 여부, 자유 전자·양공 존재 여부를 판별하게 한다.', keyDiscriminator:'고유 반도체는 원자가 전자 4개가 모두 공유 결합에 참여해 자유 전자나 양공이 거의 없고, 도핑 후에는 여분의 전자 또는 부족한 전자(양공)가 생긴다는 차이를 적용한다.', commonTrap:'고유 반도체도 상온에서 자유 전자나 양공이 전혀 없다고 극단적으로 판단하거나, 도핑에 의해 새로운 에너지 준위가 띠 간격 \'내부\'에 생긴다는 사실을 놓친다.', difficultyHint:'중' },
+  { id:'QP-EB-08', unitId:'3', subUnit:'에너지 띠와 반도체', patternType:'단답형', situationArchetype:'고체의 에너지띠 구조 그림에서 원자가 띠, 전도띠, 띠 간격 각 영역에 빈칸(A, B, C 등)을 표시하고 각각의 명칭이나 특징을 채우게 한다.', keyDiscriminator:'전자가 채워진 가장 위 띠가 원자가 띠, 그 바로 위 비어 있는 띠가 전도띠, 그 사이 전자가 존재할 수 없는 영역이 띠 간격이라는 구조적 정의를 적용한다.', commonTrap:'원자가 띠와 전도띠의 위치(에너지의 높고 낮음)를 반대로 표시하거나 띠 간격을 하나의 \'띠\'로 착각한다.', difficultyHint:'하' },
+  // -- 전류의 자기 작용 --------------------------------
+  { id:'QP-MF-01', unitId:'3', subUnit:'전류의 자기 작용', patternType:'단답형', situationArchetype:'직선 도선에 전류가 흐를 때 도선 주위 특정 지점에서 자기장의 방향을 나침반이나 화살표로 나타내게 한다.', keyDiscriminator:'오른손 엄지손가락을 전류 방향으로 향하게 하고 나머지 네 손가락이 감아쥐는 방향이 자기장 방향이라는 오른나사 법칙(앙페르 법칙)을 적용한다.', commonTrap:'전류 방향이 반대로 바뀌었을 때 자기장 방향도 반대로 바뀐다는 것을 놓치거나, 도선 위쪽과 아래쪽에서 자기장 방향이 반대임을 착각한다.', difficultyHint:'하' },
+  { id:'QP-MF-02', unitId:'3', subUnit:'전류의 자기 작용', patternType:'계산형', situationArchetype:'평행한 두 개(또는 세 개)의 무한 직선 도선에 전류가 흐를 때, 특정 지점에서 각 도선에 의한 자기장을 합성하여 세기와 방향을 비교하거나 계산하게 한다.', keyDiscriminator:'각 도선이 만드는 자기장은 전류 세기에 비례하고 거리에 반비례하며, 두 자기장이 같은 방향이면 더하고 반대 방향이면 빼서 합성해야 한다는 중첩 원리를 적용한다.', commonTrap:'두 도선에 의한 자기장의 방향을 따로 구하지 않고 세기만 단순히 더하거나, 전류 방향이 같을 때와 반대일 때 합성 규칙을 혼동한다.', difficultyHint:'상' },
+  { id:'QP-MF-03', unitId:'3', subUnit:'전류의 자기 작용', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'동심원을 이루는 두 개의 원형 도선(반지름이 다름)에 전류가 서로 같은 방향 또는 반대 방향으로 흐를 때, 중심에서 합성 자기장의 세기와 방향을 판단하게 한다.', keyDiscriminator:'원형 전류가 중심에 만드는 자기장의 세기는 전류 세기에 비례하고 반지름에 반비례하므로, 두 도선의 기여분을 방향까지 고려해 벡터로 합성해야 한다.', commonTrap:'반지름이 큰 도선의 자기장 기여가 작다는 것을 놓치고 모든 도선의 기여도를 동일하게 취급한다.', difficultyHint:'상' },
+  { id:'QP-MF-04', unitId:'3', subUnit:'전류의 자기 작용', patternType:'그래프해석형', situationArchetype:'솔레노이드에 흐르는 전류의 세기, 코일의 감은 수, 길이를 바꾸었을 때 내부 자기장의 세기가 어떻게 변하는지 비교하거나, 나침반의 회전 방향으로 전류 방향을 추론하게 한다.', keyDiscriminator:'솔레노이드 내부 자기장의 세기는 전류의 세기와 단위 길이당 감은 수(N/l)의 곱에 비례한다는 식을 적용해야 한다.', commonTrap:'감은 수(N)만 보고 단위 길이당 감은 수(N/l)를 고려하지 않아 길이가 다른 솔레노이드의 자기장 세기를 잘못 비교한다.', difficultyHint:'중' },
+  { id:'QP-MF-05', unitId:'3', subUnit:'전류의 자기 작용', patternType:'객관식(오지선다)', situationArchetype:'전자석, 전동기, 스피커, 자기 부상 열차 등 전류에 의한 자기장이나 자기력을 이용하는 실생활 장치를 나열하고 원리가 다른 것을 고르게 한다.', keyDiscriminator:'전자석은 전류가 흐를 때만 자석이 되는 원리, 전동기·스피커 등은 자기장 속 전류가 받는 힘(자기력)을 이용하는 원리라는 두 원리를 구분해야 한다.', commonTrap:'전자기 유도(자석의 운동으로 전류가 발생)를 이용하는 장치와 전류에 의한 자기장을 이용하는 장치를 혼동한다.', difficultyHint:'중' },
+  { id:'QP-MF-06', unitId:'3', subUnit:'전류의 자기 작용', patternType:'OX판별형', situationArchetype:'강자성체, 상자성체, 반자성체에 외부 자기장을 가하기 전/가했을 때/제거했을 때의 원자 자석 배열을 그림으로 제시하고 각 자성체의 종류와 자기화 특징을 판단하게 한다.', keyDiscriminator:'강자성체와 상자성체는 외부 자기장과 같은 방향으로, 반자성체는 반대 방향으로 자기화되며, 강자성체만 자기화 상태가 오래 유지된다는 차이를 적용한다.', commonTrap:'상자성체도 강자성체처럼 외부 자기장 제거 후에도 자기화가 오래 유지된다고 착각하거나, 반자성체가 자석에 끌린다고 잘못 판단한다.', difficultyHint:'중' },
+  { id:'QP-MF-07', unitId:'3', subUnit:'전류의 자기 작용', patternType:'단답형', situationArchetype:'실에 매달린 물체(구리, 유리, 알루미늄, 클립 등)에 강한 자석을 가까이 했을 때 끌려오는지 밀려나는지를 관찰한 실험 결과로부터 자성체의 종류를 분류하게 한다.', keyDiscriminator:'강하게 끌리면 강자성체, 약하게 끌리면 상자성체, 밀려나면 반자성체라는 자기화 반응 세기와 방향의 차이로 분류해야 한다.', commonTrap:'약하게 끌리는 상자성체와 강하게 끌리는 강자성체의 반응 세기 차이를 무시하고 \'끌리면 모두 같은 자성\'이라고 뭉뚱그려 판단한다.', difficultyHint:'하' },
+  { id:'QP-MF-08', unitId:'3', subUnit:'전류의 자기 작용', patternType:'서술형', situationArchetype:'전자의 궤도 운동이나 스핀 운동이 만드는 자기장의 방향, 혹은 원자 자석이 짝을 이루어 자성이 상쇄되는 원리를 설명하게 한다.', keyDiscriminator:'전자의 회전(궤도 운동, 스핀)은 전류가 흐르는 것과 같은 효과를 내어 자기장을 만들며, 반대 방향 회전을 하는 전자쌍은 자기장이 서로 상쇄된다는 원리를 서술해야 한다.', commonTrap:'전자의 운동 방향과 그로 인한 전류의 방향(전하가 음수이므로 반대)을 혼동하여 자기장 방향을 반대로 판단한다.', difficultyHint:'상' },
+  // -- 전자기 유도 --------------------------------
+  { id:'QP-EMI-01', unitId:'3', subUnit:'전자기 유도', patternType:'OX판별형', situationArchetype:'막대자석을 코일에 가까이 하거나 멀리 할 때(혹은 극을 바꿔서) 검류계에 흐르는 유도 전류의 방향을 판단하게 한다.', keyDiscriminator:'렌츠 법칙에 따라 유도 전류는 코일을 통과하는 자기 선속의 변화를 방해하는 방향으로 흐른다는 원리를 적용해 코일에 유도되는 자기장의 극을 먼저 구해야 한다.', commonTrap:'자석이 가까워질 때와 멀어질 때 유도 전류의 방향이 반대라는 것을 놓치거나, 자석의 극과 무관하게 항상 같은 방향으로 전류가 흐른다고 착각한다.', difficultyHint:'중' },
+  { id:'QP-EMI-02', unitId:'3', subUnit:'전자기 유도', patternType:'그래프해석형', situationArchetype:'일정 영역을 지나는 도선 내부의 자기장 세기-시간 그래프(계단형 또는 기울기가 있는 형태)를 제시하고 각 구간에서 유도 전류의 유무, 방향, 세기를 비교하게 한다.', keyDiscriminator:'유도 기전력은 자기 선속의 시간적 변화율에 비례하므로 그래프의 기울기가 클수록 유도 전류가 세고, 기울기가 0인 구간(자기장 일정)에서는 유도 전류가 흐르지 않는다는 것을 적용한다.', commonTrap:'자기장의 세기 자체가 크면 유도 전류도 크다고 착각하며, 실제로는 자기장의 \'변화율\'이 중요하다는 것을 놓친다.', difficultyHint:'상' },
+  { id:'QP-EMI-03', unitId:'3', subUnit:'전자기 유도', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'정사각형(혹은 원형) 도선이 일정한 속력으로 균일한 자기장 영역에 들어가거나 통과하거나 빠져나오는 여러 단계를 제시하고 각 단계에서 유도 전류의 유무·방향·세기를 비교하게 한다.', keyDiscriminator:'도선이 자기장 영역의 경계를 통과하며 자기 선속이 변하는 구간에서만 유도 전류가 발생하고, 완전히 안이나 밖에 있어 선속 변화가 없는 구간에서는 전류가 흐르지 않는다는 것을 적용한다.', commonTrap:'도선이 자기장 영역 \'내부\'를 등속으로 이동하는 동안에도 유도 전류가 계속 흐른다고 착각한다(실제로는 선속 변화가 없어 전류가 0).', difficultyHint:'상' },
+  { id:'QP-EMI-04', unitId:'3', subUnit:'전자기 유도', patternType:'계산형', situationArchetype:'코일의 감은 수, 자기 선속의 변화량, 걸린 시간을 제시하고 패러데이 전자기 유도 법칙을 이용해 유도 기전력을 구하게 한다.', keyDiscriminator:'유도 기전력은 코일의 감은 수와 자기 선속의 시간적 변화율의 곱과 같다는 V=NΔΦ/Δt 관계식을 적용한다.', commonTrap:'감은 수를 곱하는 것을 빠뜨리거나, 자기 선속의 변화량과 자기장 세기 자체를 혼동하여 대입한다.', difficultyHint:'중' },
+  { id:'QP-EMI-05', unitId:'3', subUnit:'전자기 유도', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'자석이 코일이나 금속 고리(관)를 낙하하여 통과하는 상황에서, 자석이 다가올 때와 멀어질 때 유도 전류의 방향, 자석이 받는 자기력의 방향, 역학적 에너지의 증감을 판단하게 한다.', keyDiscriminator:'코일에 다가오는 자석은 코일이 밀어내는 힘(같은 극 유도)을, 멀어지는 자석은 끌어당기는 힘(반대 극 유도)을 받아 항상 자석의 운동을 방해하는 방향으로 자기력이 작용하며 자석의 역학적 에너지는 감소한다는 것을 적용한다.', commonTrap:'자석이 다가올 때와 멀어질 때 받는 자기력의 방향이 둘 다 운동을 방해하는 방향(즉 서로 다른 절대 방향)이라는 것을 놓치고 항상 같은 방향이라 착각한다.', difficultyHint:'상' },
+  { id:'QP-EMI-06', unitId:'3', subUnit:'전자기 유도', patternType:'객관식(오지선다)', situationArchetype:'절연체(플라스틱)관과 도체(구리, 알루미늄)관 속으로 자석을 낙하시켜 낙하 시간을 비교하는 실험을 제시하고 유도 전류 발생 여부와 관의 저항에 따른 낙하 속력 차이를 판단하게 한다.', keyDiscriminator:'도체 관에서는 자석의 운동을 방해하는 맴돌이 전류(유도 전류)가 흘러 자석이 느리게 낙하하며, 저항이 작을수록(전도도가 클수록) 유도 전류가 세져 더 느리게 떨어진다는 것을 적용한다.', commonTrap:'전기 저항이 작은 도체일수록 자석이 더 빨리 떨어질 것이라 직관적으로 착각하지만, 실제로는 저항이 작을수록 유도 전류가 세져 제동 효과가 커진다.', difficultyHint:'중' },
+  { id:'QP-EMI-07', unitId:'3', subUnit:'전자기 유도', patternType:'서술형', situationArchetype:'발전기의 기본 구조(자석 사이에서 회전하는 코일)를 제시하고 회전에 따라 통과하는 자기 선속이 어떻게 변하는지, 그리고 이때 발생하는 에너지 전환 과정을 서술하게 한다.', keyDiscriminator:'코일이 회전하면서 자기장에 수직인 넓이가 주기적으로 변해 자기 선속이 계속 변하고, 이에 따라 교류 형태의 유도 기전력이 발생하며 운동 에너지가 전기 에너지로 전환된다는 과정을 설명해야 한다.', commonTrap:'발전기에서 발생하는 전류를 직류로 착각하거나, 코일 면이 자기장과 나란할 때 선속이 최대라고 반대로 서술한다.', difficultyHint:'중' },
+  { id:'QP-EMI-08', unitId:'3', subUnit:'전자기 유도', patternType:'OX판별형', situationArchetype:'무선 충전기, 교통 카드, 인덕션 레인지, 금속 탐지기, 다이나믹 마이크 등 전자기 유도를 응용한 일상 기기들을 제시하고 자석을 이용하는 방식인지 코일(교류)만 이용하는 방식인지 구분하게 한다.', keyDiscriminator:'자석과 코일의 상대 운동을 이용하는 장치(마이크, 발전기 등)와 1차 코일의 교류 전류가 만드는 자기장 변화를 이용하는 장치(무선 충전기, 인덕션 등)를 원리별로 구분해야 한다.', commonTrap:'모든 전자기 유도 응용 장치에 반드시 영구자석이 필요하다고 오해하여 코일만으로 작동하는 장치를 자석 이용 장치로 잘못 분류한다.', difficultyHint:'중' },
+  // -- 파동의 진동과 굴절 --------------------------------
+  { id:'QP-WR-01', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'OX판별형', situationArchetype:'변위-위치 그래프와 변위-시간 그래프를 동시에 제시하고 파동의 진폭, 파장, 주기, 진동수, 속력 등 기본 요소들의 정의와 상호 관계를 옳고 그름으로 판별하게 한다.', keyDiscriminator:'변위-위치 그래프에서는 진폭과 파장을, 변위-시간 그래프에서는 진폭과 주기를 읽어내고 속력=파장/주기(또는 파장×진동수) 관계식을 적용해야 한다.', commonTrap:'파장과 주기, 혹은 진폭과 파장을 혼동하거나 두 그래프의 가로축(위치 vs 시간)이 다르다는 점을 놓쳐 값을 잘못 대응시킨다.', difficultyHint:'하' },
+  { id:'QP-WR-02', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'객관식(오지선다)', situationArchetype:'굵기나 재질이 다른 두 줄을 연결해 파동을 발생시키거나, 서로 다른 매질에서 발생한 파동의 모습을 비교 제시하여 진동수·파장·속력의 대소 관계를 묻는다.', keyDiscriminator:'한 파원에서 만들어진 파동이 매질을 이동해도 진동수는 변하지 않는다는 원리를 이용해 파장과 속력의 비례 관계를 유도해야 한다.', commonTrap:'매질이 달라지면 진동수도 달라진다고 착각하거나, 속력 차이를 파장 차이가 아닌 진동수 차이로 설명한다.', difficultyHint:'중' },
+  { id:'QP-WR-03', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'계산형', situationArchetype:'빛이 한 매질에서 다른 매질로 비스듬히 입사할 때 입사각과 굴절각(또는 굴절률 표)을 제시하고, 굴절률·속력·파장 중 일부를 구하거나 비교하게 한다.', keyDiscriminator:'스넬 법칙(n1 sin i = n2 sin r)과 굴절률 n=c/v 정의를 이용해 속력·파장·굴절률 사이의 관계를 계산한다.', commonTrap:'굴절률이 클수록 속력이 빨라진다고 반대로 기억하거나, 입사각과 굴절각의 비가 사인값의 비와 같다는 것을 각도 자체의 비로 오인한다.', difficultyHint:'중' },
+  { id:'QP-WR-04', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'물결파가 깊은 물과 얕은 물 사이 경계면을 통과하는 상황(또는 여러 구간)을 제시하고 각 구간에서의 속력·파장·주기·굴절각의 크기 관계를 판단하게 한다.', keyDiscriminator:'물의 깊이가 깊을수록 물결파 속력이 빠르다는 사실과, 진동수는 매질이 바뀌어도 일정하다는 원리를 결합해 파장 변화를 추론한다.', commonTrap:'깊이와 속력의 비례 관계를 반대로 적용하거나, 진동수가 매질에 따라 변한다고 착각하여 파장 비교를 잘못한다.', difficultyHint:'중' },
+  { id:'QP-WR-05', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'서술형', situationArchetype:'장난감 자동차가 아스팔트에서 잔디로 비스듬히 진입할 때 방향이 꺾이는 비유를 제시하고, 이를 파동이 매질 경계면에서 굴절하는 원리와 연결지어 설명하도록 한다.', keyDiscriminator:'매질마다 파동의 속력이 다르기 때문에 경계면에 비스듬히 입사할 때 파면의 각 부분이 먼저/나중에 속력 변화를 겪어 진행 방향이 꺾인다는 점을 서술해야 한다.', commonTrap:'굴절의 원인을 속력 차이가 아니라 단순히 \'매질이 다르기 때문\'이라고만 서술하여 구체적 인과 관계를 빠뜨린다.', difficultyHint:'중' },
+  { id:'QP-WR-06', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'신기루, 아지랑이, 물속 물체가 굽어 보이는 현상, 낮과 밤의 소리 전달 차이 등 생활 속 굴절 현상을 제시하고 그 원인이 되는 매질 특성(밀도·온도)과 속력 변화를 연결짓게 한다.', keyDiscriminator:'공기의 밀도(또는 온도)가 달라지면 빛이나 소리의 속력이 연속적으로 변하여 진행 경로가 휘어진다는 원리를 적용해야 한다.', commonTrap:'온도와 밀도가 클수록 속력이 어떻게 변하는지의 방향을 반대로 적용하거나, 신기루의 굴절 방향을 실제와 반대로 추론한다.', difficultyHint:'중' },
+  { id:'QP-WR-07', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'객관식(오지선다)', situationArchetype:'여러 매질(공기, 물, 유리, 다이아몬드 등)의 굴절률을 표로 제시하고, 같은 입사각에서 굴절각의 크기 순서나 빛의 속력 순서를 비교하게 한다.', keyDiscriminator:'굴절률이 클수록 그 매질에서 빛의 속력이 느리고 굴절이 더 크게(법선 쪽으로) 일어난다는 관계를 이용한다.', commonTrap:'굴절률이 큰 매질일수록 굴절각도 커진다고 잘못 판단한다(실제로는 굴절각이 작아짐).', difficultyHint:'중' },
+  { id:'QP-WR-08', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'빛이 굴절률이 다른 두 매질 사이 경계면을 여러 차례 통과하는 다단계 상황(매질 1→2→3)을 제시하고 전반사가 일어나는 조건과 임계각의 크기 비교를 묻는다.', keyDiscriminator:'전반사는 굴절률이 큰 매질에서 작은 매질로 진행할 때 입사각이 임계각보다 클 때만 일어나며, sin(임계각)=n2/n1 관계를 적용해야 한다.', commonTrap:'굴절률이 작은 매질에서 큰 매질로 진행할 때도 전반사가 일어날 수 있다고 착각한다.', difficultyHint:'상' },
+  { id:'QP-WR-09', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'객관식(오지선다)', situationArchetype:'광섬유(코어-클래딩 구조)를 통해 빛이 전반사하며 진행하는 모습을 제시하고, 코어와 클래딩의 굴절률 대소, 입사각과 임계각의 관계, 빛의 속력 비교를 묻는다.', keyDiscriminator:'광섬유 내부에서 전반사가 계속 일어나려면 코어의 굴절률이 클래딩보다 커야 하고 경계면 입사각이 임계각보다 커야 한다는 조건을 적용한다.', commonTrap:'코어와 클래딩의 굴절률 대소 관계를 반대로 파악하거나, 코어에서 빛의 속력이 클래딩보다 빠르다고 잘못 판단한다.', difficultyHint:'중' },
+  { id:'QP-WR-10', unitId:'4', subUnit:'파동의 진동과 굴절', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'전자기파를 파장(또는 진동수) 순서로 배열한 스펙트럼 그림을 제시하고 특정 영역(전파, 적외선, 가시광선, 자외선, X선, 감마선)의 성질과 활용 사례를 연결짓게 한다.', keyDiscriminator:'전자기파는 진동수가 클수록 에너지가 크고, 파장/진동수 영역에 따라 투과력·열작용·살균작용 등 성질이 달라진다는 것을 근거로 판단해야 한다.', commonTrap:'파장이 길수록 에너지가 크다고 반대로 기억하거나, 전자기파의 진공 중 속력이 파장에 따라 달라진다고 착각한다.', difficultyHint:'중' },
+  // -- 파동의 간섭 --------------------------------
+  { id:'QP-WI-01', unitId:'4', subUnit:'파동의 간섭', patternType:'OX판별형', situationArchetype:'두 파동이 겹쳐지는 순간의 그래프나 모식도를 주고 중첩 원리(합성파 변위=각 파동 변위의 합)와 파동의 독립성(중첩 후 원래 파형 유지)에 대한 진술을 판별하게 한다.', keyDiscriminator:'합성파의 변위는 각 파동 변위를 대수적으로 더한 값이며, 중첩이 끝나면 각 파동은 본래 모양대로 독립적으로 계속 진행한다는 원리를 적용한다.', commonTrap:'같은 방향 변위가 겹치면 상쇄된다거나, 중첩 후 파동이 서로 모양을 바꾼 채로 진행한다고 잘못 이해한다.', difficultyHint:'하' },
+  { id:'QP-WI-02', unitId:'4', subUnit:'파동의 간섭', patternType:'계산형', situationArchetype:'진폭이 다른 두 파동이 서로 반대 방향으로 진행하다가 만나는 순간의 그래프를 주고, 두 파동이 겹쳐졌을 때 합성파의 최대(또는 특정 지점) 변위를 구하게 한다.', keyDiscriminator:'같은 위치에서 두 파동의 변위를 각각 읽어 부호를 고려해 더하는 중첩 원리를 그대로 적용해야 한다.', commonTrap:'두 파동의 진폭을 단순히 더하지 않고 곱하거나 평균을 내는 등 엉뚱한 연산을 적용한다.', difficultyHint:'중' },
+  { id:'QP-WI-03', unitId:'4', subUnit:'파동의 간섭', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'두 점파원에서 진폭·파장·진동수가 같은 물결파(또는 두 스피커의 소리)를 같은 위상으로 발생시켰을 때 나타나는 마디선·보강선 무늬를 제시하고 특정 지점에서의 간섭 종류와 경로차를 판단하게 한다.', keyDiscriminator:'두 파원으로부터의 경로차가 반파장의 짝수 배이면 보강 간섭, 홀수 배이면 상쇄 간섭이 일어난다는 조건을 적용해야 한다.', commonTrap:'보강 간섭과 상쇄 간섭이 일어나는 경로차 조건(짝수 배/홀수 배)을 서로 바꿔 적용한다.', difficultyHint:'중' },
+  { id:'QP-WI-04', unitId:'4', subUnit:'파동의 간섭', patternType:'객관식(오지선다)', situationArchetype:'두 스피커 사이를 이동하며 소리 크기를 측정하는 실험을 제시하고, 진동수를 변화시키거나 스피커 위치를 바꿀 때 소리가 크게/작게 들리는 지점 간격이 어떻게 달라지는지 묻는다.', keyDiscriminator:'진동수가 클수록 파장이 짧아져 보강·상쇄 간섭이 일어나는 인접 지점 사이의 간격이 좁아진다는 관계를 적용한다.', commonTrap:'진동수와 무늬 간격의 관계를 반대로 이해하여 진동수가 커지면 간격도 커진다고 판단한다.', difficultyHint:'중' },
+  { id:'QP-WI-05', unitId:'4', subUnit:'파동의 간섭', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'비눗방울이나 얇은 기름막 표면이 여러 색으로 보이는 현상, 또는 무반사 코팅 렌즈를 제시하고 얇은 막의 위·아래 면에서 반사한 두 빛의 간섭 원리를 묻는다.', keyDiscriminator:'얇은 막의 두께와 보는 각도에 따라 두 반사광의 경로차가 달라지고, 이에 따라 보강 간섭하는 파장(색)이 달라진다는 원리, 무반사 코팅은 상쇄 간섭을 이용한다는 점을 적용한다.', commonTrap:'무반사 코팅이 보강 간섭을 이용해 반사를 줄인다고 반대로 이해하거나, 막 두께와 무관하게 색이 고정된다고 착각한다.', difficultyHint:'중' },
+  { id:'QP-WI-06', unitId:'4', subUnit:'파동의 간섭', patternType:'서술형', situationArchetype:'소음 제거 헤드폰이나 비행기 내부 소음 저감 장치의 구조(마이크-회로-스피커)를 제시하고 소음을 없애는 원리를 설명하도록 한다.', keyDiscriminator:'외부 소음을 마이크로 감지한 뒤 위상이 반대인 소리를 스피커로 발생시켜 원래 소음과 상쇄 간섭을 일으킨다는 점을 서술해야 한다.', commonTrap:'소음 제거 원리를 상쇄 간섭이 아니라 소리를 물리적으로 차단(방음)하는 것으로 잘못 서술한다.', difficultyHint:'중' },
+  { id:'QP-WI-07', unitId:'4', subUnit:'파동의 간섭', patternType:'객관식(오지선다)', situationArchetype:'홀로그램, 지폐의 색변환 잉크, 공연장 설계, 모르포 나비 날개 등 실생활 속 간섭 활용 사례를 나열하고 그중 간섭 원리와 무관한(또는 해당하는) 사례를 고르게 한다.', keyDiscriminator:'각 사례가 보강/상쇄 간섭 중 어느 원리로 색이나 소리 세기의 변화를 만들어내는지 파악해야 한다.', commonTrap:'굴절이나 반사 등 다른 파동 현상과 간섭 현상을 혼동하여 사례를 잘못 분류한다.', difficultyHint:'중' },
+  // -- 빛의 이중성 --------------------------------
+  { id:'QP-LD-01', unitId:'4', subUnit:'빛의 이중성', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'금속판에 진동수와 세기가 다른 단색광 여러 개를 비추는 광전 효과 실험 결과(그래프나 표)를 제시하고, 광전자 방출 여부·최대 운동 에너지·방출 개수가 빛의 어떤 물리량에 의해 결정되는지 판단하게 한다.', keyDiscriminator:'광전자 방출 여부와 최대 운동 에너지는 빛의 진동수에 의해 결정되고, 단위 시간당 방출되는 광전자의 수는 빛의 세기(광자 수)에 비례한다는 광양자설의 해석을 적용한다.', commonTrap:'빛의 세기를 키우면 광전자의 최대 운동 에너지도 커진다고 파동설적으로 잘못 추론한다.', difficultyHint:'중' },
+  { id:'QP-LD-02', unitId:'4', subUnit:'빛의 이중성', patternType:'계산형', situationArchetype:'특정 금속의 일함수와 비추는 빛의 광자 에너지(또는 진동수)를 제시하고, 방출되는 광전자의 최대 운동 에너지를 구하거나 조건이 바뀔 때 값이 어떻게 변하는지 비교하게 한다.', keyDiscriminator:'광전자의 최대 운동 에너지는 (광자 에너지 hf) − (일함수 W)로 계산된다는 아인슈타인의 광전 방정식을 적용해야 한다.', commonTrap:'일함수를 더하거나 광자 에너지와 일함수의 비를 잘못 계산하여 운동 에너지를 구한다.', difficultyHint:'중' },
+  { id:'QP-LD-03', unitId:'4', subUnit:'빛의 이중성', patternType:'객관식(오지선다)', situationArchetype:'여러 금속(또는 여러 파장의 빛)에 대해 광전자 검출 여부를 표로 제시하고, 한계 진동수·일함수의 대소 관계를 비교하게 한다.', keyDiscriminator:'특정 파장(진동수)에서 광전자가 검출되지 않았다는 것은 그 진동수가 해당 금속의 한계 진동수보다 작다는 의미임을 이용해 한계 진동수 크기 순서를 역산해야 한다.', commonTrap:'한계 진동수가 클수록 일함수가 작다고 반대로 판단하거나, 검출 여부 표를 진동수 크기 순서와 반대로 해석한다.', difficultyHint:'상' },
+  { id:'QP-LD-04', unitId:'4', subUnit:'빛의 이중성', patternType:'서술형', situationArchetype:'광전 효과의 두 가지 실험 결과(한계 진동수 이하에서는 세기와 무관하게 방출되지 않음, 한계 진동수 이상이면 즉시 방출됨)를 제시하고 이를 빛의 파동설로 설명할 수 없는 이유를 서술하게 한다.', keyDiscriminator:'파동설은 에너지가 세기에만 비례한다고 예측하지만 실험은 진동수가 방출 여부를 결정한다는 모순을 짚어, 광양자설(에너지가 불연속적 입자 단위 hf)의 필요성을 서술해야 한다.', commonTrap:'파동설과 입자설의 예측 차이를 세기 문제로만 언급하고 진동수 임계값(한계 진동수) 개념을 빠뜨린다.', difficultyHint:'상' },
+  { id:'QP-LD-05', unitId:'4', subUnit:'빛의 이중성', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'디지털카메라의 CCD(전하 결합 소자) 구조나 화소 작동 과정을 그림으로 제시하고, 광전 효과와의 관련성, 색 필터의 필요성, 화소 수와 화질의 관계를 판단하게 한다.', keyDiscriminator:'CCD는 각 화소(광 다이오드)에서 빛의 세기에 비례하는 전자를 발생시키는 광전 효과를 이용하며, 색 구분을 위해서는 별도의 색 필터가 필요하다는 점을 적용한다.', commonTrap:'CCD가 빛의 파동성을 이용한다고 착각하거나, 화소 수가 적을수록 해상도가 높아진다고 반대로 판단한다.', difficultyHint:'중' },
+  { id:'QP-LD-06', unitId:'4', subUnit:'빛의 이중성', patternType:'단답형', situationArchetype:'빛의 파동성 증거(회절, 간섭)와 입자성 증거(광전 효과)를 나열한 뒤 빈칸 채우기 형태로 각 용어(광전 효과, 광자, 일함수, 빛의 이중성 등)를 완성하게 한다.', keyDiscriminator:'빛이 상황에 따라 파동성 또는 입자성 중 하나로만 관측되며 동시에 나타나지 않는다는 빛의 이중성 개념과 관련 용어를 정확히 대응시켜야 한다.', commonTrap:'회절·간섭을 입자성의 증거로, 광전 효과를 파동성의 증거로 뒤바꿔 서술한다.', difficultyHint:'하' },
+  // -- 물질의 이중성 --------------------------------
+  { id:'QP-MD-01', unitId:'4', subUnit:'물질의 이중성', patternType:'계산형', situationArchetype:'질량과 속력(또는 운동 에너지)이 다른 두 입자(전자, 양성자, 야구공 등)를 제시하고 드브로이 물질파 파장의 비를 구하거나 비교하게 한다.', keyDiscriminator:'물질파 파장 λ=h/(mv)이며 운동량(mv) 또는 운동 에너지로부터 파장을 유도하는 관계식을 적용해야 한다.', commonTrap:'파장이 질량과 속력에 비례한다고 반대로 기억하거나, 운동 에너지에서 운동량을 잘못 환산한다.', difficultyHint:'상' },
+  { id:'QP-MD-02', unitId:'4', subUnit:'물질의 이중성', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'데이비슨-거머 실험이나 톰슨의 전자 회절 실험, 이중 슬릿에 전자선을 통과시키는 실험 결과(회절·간섭 무늬)를 제시하고 이로부터 확인할 수 있는 전자(물질)의 성질을 추론하게 한다.', keyDiscriminator:'전자가 결정이나 슬릿을 통과할 때 회절·간섭 무늬를 만든다는 사실이 전자의 파동성을 입증하는 근거임을 이해해야 한다.', commonTrap:'전자의 회절 무늬를 단순히 입자들이 무작위로 흩어진 결과로 오인하거나, 이 실험이 입자성만을 보여준다고 잘못 결론짓는다.', difficultyHint:'중' },
+  { id:'QP-MD-03', unitId:'4', subUnit:'물질의 이중성', patternType:'OX판별형', situationArchetype:'전자 현미경(주사 전자 현미경, 투과 전자 현미경)과 광학 현미경의 구조도를 나란히 제시하고 사용하는 렌즈의 종류, 분해능, 시료 준비 방식에 대한 진술을 판별하게 한다.', keyDiscriminator:'전자 현미경은 자기렌즈를 사용하고 물질파 파장이 가시광선보다 훨씬 짧아 분해능이 더 우수하다는 원리를 적용해야 한다.', commonTrap:'전자 현미경의 물질파 파장이 가시광선보다 길다고 반대로 기억하거나, 분해능과 파장의 관계(파장이 짧을수록 분해능 우수)를 거꾸로 이해한다.', difficultyHint:'중' },
+  { id:'QP-MD-04', unitId:'4', subUnit:'물질의 이중성', patternType:'보기조합형(ㄱㄴㄷ)', situationArchetype:'주사 전자 현미경(SEM)과 투과 전자 현미경(TEM)의 원리와 시료 준비 방식을 비교 제시하고, 두 현미경의 분해능·상의 형태(입체상 vs 단면상)·가속 전압 차이를 판단하게 한다.', keyDiscriminator:'TEM은 전자선이 얇은 시료를 투과하여 단면 구조 상을 얻고 SEM보다 대체로 분해능이 좋으며, SEM은 표면에서 튀어나온 전자를 검출해 입체상을 얻는다는 차이를 적용한다.', commonTrap:'SEM과 TEM이 얻는 상의 종류(입체상 vs 단면상)나 시료 준비 조건(표면 코팅 vs 박편화)을 서로 바꿔 판단한다.', difficultyHint:'상' },
+  { id:'QP-MD-05', unitId:'4', subUnit:'물질의 이중성', patternType:'서술형', situationArchetype:'일상의 거시적 물체(야구공 등)에서는 물질파가 관찰되지 않지만 전자와 같은 미시 입자에서는 파동성이 관찰되는 이유를 설명하도록 한다.', keyDiscriminator:'드브로이 파장 공식에서 플랑크 상수가 매우 작으므로 질량과 속력(운동량)이 큰 물체는 파장이 극히 짧아져 파동성을 관측하기 어렵다는 점을 서술해야 한다.', commonTrap:'물질파가 아예 존재하지 않는다고 서술하거나, 파장이 짧아지는 이유를 질량과 무관하게 설명한다.', difficultyHint:'중' },
+  { id:'QP-MD-06', unitId:'4', subUnit:'물질의 이중성', patternType:'그래프해석형', situationArchetype:'전자가 전기력을 받아 가속되는 상황이나 가속 전압이 변하는 상황을 제시하고, 운동량 또는 속력 변화에 따라 물질파 파장이 어떻게 달라지는지 그래프나 비율로 나타내게 한다.', keyDiscriminator:'물질파 파장은 운동량에 반비례하므로, 가속되어 운동량(또는 운동 에너지)이 커지면 파장은 짧아진다는 반비례 관계를 적용해야 한다.', commonTrap:'가속 전압이 커지면 파장도 함께 길어진다고 반대로 판단하거나, 운동 에너지와 운동량의 관계식을 잘못 세운다.', difficultyHint:'상' },
 ];
 
 /* ============================================================
@@ -1029,33 +1234,37 @@ async function batchUpload(collectionName, items, idField) {
 async function seed() {
   console.log('🌱 PhysiClinic Firestore 완전 시딩 시작...\n');
 
-  console.log('1/7 📚 units...');
+  console.log('1/8 📚 units...');
   await batchUpload('units', units, 'id');
   console.log(`    ✅ ${units.length}개`);
 
-  console.log('2/7 📐 misconception_dimensions...');
+  console.log('2/8 📐 misconception_dimensions...');
   await batchUpload('misconception_dimensions', dims, 'id');
   console.log(`    ✅ ${dims.length}개`);
 
-  console.log('3/7 🧠 misconceptions (전체 49개)...');
+  console.log('3/8 🧠 misconceptions (전체 49개)...');
   await batchUpload('misconceptions', misconceptions, 'id');
   console.log(`    ✅ ${misconceptions.length}개`);
 
-  console.log('4/7 📝 misconception_sentences...');
+  console.log('4/8 📝 misconception_sentences...');
   await batchUpload('misconception_sentences', sentences, null);
   console.log(`    ✅ ${sentences.length}개`);
 
-  console.log('5/7 🔑 scoring_keywords...');
+  console.log('5/8 🔑 scoring_keywords...');
   await batchUpload('scoring_keywords', keywords, null);
   console.log(`    ✅ ${keywords.length}개`);
 
-  console.log('6/7 📋 fci_fmce_items (FMCE 43 + FCI 30)...');
+  console.log('6/8 📋 fci_fmce_items (FMCE 43 + FCI 30)...');
   await batchUpload('fci_fmce_items', fciItems, 'id');
   console.log(`    ✅ ${fciItems.length}개`);
 
-  console.log('7/7 🗺️  item_misconception_map...');
+  console.log('7/8 🗺️  item_misconception_map...');
   await batchUpload('item_misconception_map', itemMap, null);
   console.log(`    ✅ ${itemMap.length}개`);
+
+  console.log('8/8 📑 question_patterns (완자 물리학Ⅰ 기출 유형 패턴)...');
+  await batchUpload('question_patterns', questionPatterns, 'id');
+  console.log(`    ✅ ${questionPatterns.length}개`);
 
   console.log('\n🎉 시딩 완료!');
   console.log('   https://console.firebase.google.com → Firestore Database\n');
@@ -1068,6 +1277,7 @@ async function seed() {
   console.log(`   scoring_keywords          | ${keywords.length}`);
   console.log(`   fci_fmce_items            | ${fciItems.length}  ← FMCE 43 + FCI 30`);
   console.log(`   item_misconception_map    | ${itemMap.length}`);
+  console.log(`   question_patterns         | ${questionPatterns.length}  ← 완자 물리학Ⅰ 기출 유형 (검증용, 원문 미포함)`);
   process.exit(0);
 }
 
