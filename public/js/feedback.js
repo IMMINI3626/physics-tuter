@@ -242,14 +242,22 @@ const FeedbackScreen = {
       btnEl.textContent = '문제 생성 중...';
     }
     try {
+      const level = AppState.session.currentLevel;
+      const mode = pickQuizMode(level);
+      AppState.session.quizMode = mode;
+
       const result = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
-        AppState.session.currentLevel
+        level,
+        mode
       );
       AppState.session.isRetry = false;
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
+      if (result.misconceptionCount) {
+        AppState.session.misconceptionCount = result.misconceptionCount;
+      }
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
       if (result.calcQuestion) {

@@ -73,6 +73,23 @@ const AppState = {
   _consecutiveModeCount: parseInt(localStorage.getItem('pc_consecutive_mode_count') || '0'),
 };
 
+// Level 2 출제 시 A/B 모드를 랜덤으로 고르되, 같은 모드가 2회 연속이면 강제 전환.
+// 새 문제를 요청하는 모든 호출 지점(keyword.js 최초 출제, feedback.js 다음 문제 풀기 등)이
+// 이 함수 하나만 공유해서 써야 A/B anti-repeat 로직이 어긋나지 않는다.
+function pickQuizMode(level) {
+  if (level !== 2) return null;
+  const last = AppState._lastQuizMode;
+  const count = AppState._consecutiveModeCount;
+  const mode = (count >= 2 && last)
+    ? (last === 'A' ? 'B' : 'A')
+    : (Math.random() < 0.5 ? 'A' : 'B');
+  AppState._consecutiveModeCount = (mode === last) ? count + 1 : 1;
+  AppState._lastQuizMode = mode;
+  localStorage.setItem('pc_last_quiz_mode', mode);
+  localStorage.setItem('pc_consecutive_mode_count', AppState._consecutiveModeCount);
+  return mode;
+}
+
 /* ────────────────────────────────────────
    Router
 ──────────────────────────────────────── */
