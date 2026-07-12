@@ -179,12 +179,7 @@ const QuizScreen = {
       Router.go('feedback');
     } catch (err) {
       console.error('Grading failed:', err);
-      // 더미 피드백으로 폴백
-      const dummy = this._getDummyFeedback();
-      AppState.session.score = dummy.score;
-      AppState.session.feedbackData = dummy;
-      FeedbackScreen.render(dummy);
-      Router.go('feedback');
+      Toast.show('채점하는 데 실패했어요. 다시 시도해주세요.');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '제출하고 채점받기'; }
     }
@@ -291,39 +286,6 @@ const QuizScreen = {
     if (stepEl) stepEl.textContent = step === 1 ? '틀린 문장 찾기' : '개념 서술하기';
   },
 
-  /* 개발용 더미 피드백 */
-  _getDummyFeedback() {
-    return {
-      score: 70,
-      title: '잘 하셨어요! 🎉',
-      subtitle: '2개 오개념 중 1개 완벽 이해',
-      misconceptions: [
-        { text: '관성의 법칙 오개념', type: 'wrong' },
-        { text: '작용·반작용 이해', type: 'correct' },
-      ],
-      items: [
-        {
-          id: 1,
-          text: '물체에 힘이 작용하지 않으면 반드시 정지한다.',
-          isWrong: true,
-          isCorrectAnswer: false,
-          userReason: '힘이 없으면 멈춘다고 생각했어요',
-          explanation: '학생의 답변처럼 생각할 수 있지만, 뉴턴 제1법칙(관성의 법칙)에 따르면 외력이 작용하지 않을 때 운동하던 물체는 계속 등속직선운동을 유지합니다.',
-        },
-        {
-          id: 2,
-          text: '작용·반작용은 같은 물체에 작용하는 힘의 쌍이다.',
-          isWrong: true,
-          isCorrectAnswer: true,
-          userReason: '서로 다른 물체에 작용한다고 했어요',
-          explanation: '학생의 답변이 정확합니다! 작용·반작용은 항상 서로 다른 두 물체 사이에서 상호작용하는 힘이므로 하나의 물체에 합력을 구할 수 없습니다.',
-        },
-        { id: 3, text: '알짜힘이 0이면 물체는 등속직선운동을 유지한다.', isWrong: false },
-        { id: 4, text: '힘이 클수록 가속도가 크고, 질량이 클수록 가속도는 작다.', isWrong: false },
-        { id: 5, text: 'A가 B에 힘을 가하면 B도 A에 크기는 같고 방향은 반대인 힘을 가한다.', isWrong: false },
-      ],
-    };
-  },
 };
 
 /* ============================================================

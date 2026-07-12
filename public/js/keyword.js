@@ -140,29 +140,12 @@ const KeywordScreen = {
       }
     } catch (err) {
       console.error('Question generation failed:', err);
-      const dummy = this._getDummyQuestions();
-      AppState.session.questions = dummy;
-      AppState.session.calcQuestion = null;
-      AppState.session.hint1 = null;
-      AppState.session.hint2 = null;
-      QuizScreen.init(dummy);
-      Router.go('step1');
+      Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');
     } finally {
       if (btn) {
         btn.disabled = false;
         btn.textContent = '문제 풀기 시작';
       }
     }
-  },
-
-  /* 개발용 더미 문제 */
-  _getDummyQuestions() {
-    return [
-      { id: 1, text: '물체에 힘이 작용하지 않으면 반드시 정지한다.',                         isWrong: true  },
-      { id: 2, text: '작용·반작용은 같은 물체에 작용하는 힘의 쌍이다.',                       isWrong: true  },
-      { id: 3, text: '알짜힘이 0이면 물체는 등속직선운동을 유지한다.',                        isWrong: false },
-      { id: 4, text: '힘이 클수록 가속도가 크고, 질량이 클수록 가속도는 작다.',               isWrong: false },
-      { id: 5, text: 'A가 B에 힘을 가하면 B도 A에 크기는 같고 방향은 반대인 힘을 가한다.',   isWrong: false },
-    ];
   },
 };
