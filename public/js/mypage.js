@@ -35,7 +35,10 @@ const MypageScreen = {
     const container = document.getElementById('chapter-list');
     if (!container) return;
 
-    container.innerHTML = Object.entries(UNIT_MAP).map(([chapter, data]) => `
+    const matchedNames = new Set();
+    Object.values(UNIT_MAP).forEach(data => data.subUnits.forEach(su => matchedNames.add(su)));
+
+    const chapterCards = Object.entries(UNIT_MAP).map(([chapter, data]) => `
       <div class="chapter-card">
         <div class="chapter-card-title">${chapter}</div>
         ${data.subUnits.map((su, i) => {
@@ -50,9 +53,37 @@ const MypageScreen = {
         }).join('')}
       </div>
     `).join('');
+
+    // 🔑 안전장치: AI가 14개 소단원명과 다르게 저장한 진행 상황도 놓치지 않고 "기타"로 표시
+    const unmatchedNames = Object.keys(allProgress).filter(name => !matchedNames.has(name));
+    const etcCard = unmatchedNames.length ? `
+      <div class="chapter-card">
+        <div class="chapter-card-title">기타</div>
+        ${unmatchedNames.map((name) => {
+          const p = allProgress[name];
+          return `
+          <button class="subunit-row" data-etc-name="${this._escapeAttr(name)}" onclick="MypageScreen._onSubunitClick(this)">
+            <span class="subunit-name">${name}</span>
+            ${this._progressDots(p.sessionCount || 0)}
+            ${this._levelBadge(p)}
+            <svg class="subunit-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>`;
+        }).join('')}
+      </div>
+    ` : '';
+
+    container.innerHTML = chapterCards + etcCard;
+  },
+
+  _escapeAttr(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   },
 
   _onSubunitClick(btnEl) {
+    if (btnEl.dataset.etcName != null) {
+      this.goDetail('기타', btnEl.dataset.etcName);
+      return;
+    }
     const chapters = Object.keys(UNIT_MAP);
     const chapter = chapters[Number(btnEl.dataset.chapterIdx)];
     const subUnit = UNIT_MAP[chapter].subUnits[Number(btnEl.dataset.subIdx)];

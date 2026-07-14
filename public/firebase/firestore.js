@@ -1,6 +1,6 @@
 import {
   collection, doc, setDoc, addDoc, getDoc, getDocs,
-  query, orderBy, limit, where, serverTimestamp,
+  query, orderBy, limit, where, serverTimestamp, runTransaction,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { db } from './config.js';
 
@@ -51,16 +51,20 @@ const LearningService = {
 
     // unitProgress 업데이트 (bestScore, sessionCount — 마이페이지 카드용)
     // 🔑 level/completed 필드는 setUnitLevel()만 갱신함 (동시 저장 시 레이스로 인한 덮어쓰기 방지)
+    // 🔑 트랜잭션으로 처리 — 문제를 연달아 빠르게 풀어 saveSession()이 거의 동시에 여러 번
+    //    호출돼도 sessionCount 증가분이 서로 씹히지 않도록 함 (읽고-쓰기 사이 레이스 방지)
     if (sessionData.detectedUnit) {
       const unitRef = doc(db, 'users', uid, 'unitProgress', sessionData.detectedUnit);
-      const unitSnap = await getDoc(unitRef);
-      const prev = unitSnap.exists() ? unitSnap.data() : {};
-      await setDoc(unitRef, {
-        chapter:      window.getChapter?.(sessionData.detectedUnit) || null,
-        bestScore:    Math.max(prev.bestScore || 0, feedbackData.score),
-        sessionCount: (prev.sessionCount || 0) + 1,
-        lastStudied:  serverTimestamp(),
-      }, { merge: true });
+      await runTransaction(db, async (transaction) => {
+        const unitSnap = await transaction.get(unitRef);
+        const prev = unitSnap.exists() ? unitSnap.data() : {};
+        transaction.set(unitRef, {
+          chapter:      window.getChapter?.(sessionData.detectedUnit) || null,
+          bestScore:    Math.max(prev.bestScore || 0, feedbackData.score),
+          sessionCount: (prev.sessionCount || 0) + 1,
+          lastStudied:  serverTimestamp(),
+        }, { merge: true });
+      });
     }
 
     console.log('Session saved:', sessionRef.id);
