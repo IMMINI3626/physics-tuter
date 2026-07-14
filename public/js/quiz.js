@@ -292,7 +292,7 @@ const QuizScreen = {
    Level3Screen — 다단계 복합 계산 문제
    ============================================================ */
 const Level3Screen = {
-  _tool: 'pen',        // 'pen' | 'eraser' (풀이 과정/답 캔버스 공용)
+  _tool: 'pen',        // 'pen' | 'eraser' (풀이 과정 캔버스 전용 — 답 캔버스는 항상 펜)
   _ctx: null,           // 풀이 과정 캔버스 컨텍스트
   _answerCtx: null,      // 답 캔버스 컨텍스트
   _photoBase64: null,   // 업로드된 사진 base64 (풀이 과정용)
@@ -552,8 +552,10 @@ const Level3Screen = {
       e.preventDefault();
       const { x, y } = getPos(e);
       const ctx = this[ctxKey];
-      ctx.globalCompositeOperation = this._tool === 'eraser' ? 'destination-out' : 'source-over';
-      ctx.lineWidth = this._tool === 'eraser' ? 20 : 2;
+      // 답 캔버스는 지우개 개념이 없는 펜 전용 — 풀이과정 캔버스의 지우개 상태가 새어들지 않도록 분리
+      const tool = ctxKey === '_answerCtx' ? 'pen' : this._tool;
+      ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.lineWidth = tool === 'eraser' ? 20 : 2;
       ctx.strokeStyle = '#111018'; // --text1과 동일한 검정 (밝은 캔버스 배경 위에서 잘 보이도록)
       ctx.lineCap = 'round';
       ctx.lineTo(x, y);
