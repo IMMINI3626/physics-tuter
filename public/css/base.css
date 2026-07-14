@@ -156,6 +156,12 @@ body {
   box-shadow: var(--shadow-accent);
 }
 .primary-btn:active { transform: translateY(0); }
+.primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 .primary-btn svg {
   width: 17px;
   height: 17px;

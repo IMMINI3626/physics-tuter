@@ -263,6 +263,9 @@ L3 목표: Math.min(Math.max(Math.round(오개념수 × 1.0), 5),  10)
 
 ## (2) 마이페이지 단원별 학습 현황 시각화
 
+> ✅ 구현 완료 (2026-07). 아래는 원래 설계안이며, 실제 구현에서 달라진 부분은
+> [2-5](#2-5-실제-구현-시-달라진-점--발견된-이슈)에 정리.
+
 ### 2-1. 현재 상태 vs 목표 상태
 
 | 항목 | 현재 | 목표 |
@@ -289,15 +292,22 @@ L3 목표: Math.min(Math.max(Math.round(오개념수 × 1.0), 5),  10)
 
 - `●●●○`: 학습 횟수 점 표시 (최대 4개, 이후 숫자로)
 - 레벨 배지: L1 / L2 / L3 / ✓ 완료
-- "자세히 보기" 클릭 → 소단원 상세 화면
+- (구현) "자세히 보기" 버튼 대신 소단원 행 자체를 클릭하면 상세 화면으로 이동
 
 **소단원 상세 화면 (screen-mypage-detail)**
 
 1. **점수 추이 꺾은선 그래프** — X축: 학습 회차, Y축: 점수(0~100), 첫/최근 세션 마커 강조
 2. **개념 향상도 비교 배너** — 첫 세션 점수 vs 최근 세션 점수 차이 표시 (동일 소단원 기준)
-3. **반복 오개념 유형 목록** — 2회 이상 틀린 오개념 ID 집계, 교정 완료 항목은 취소선 + 초록 체크
-4. **과거 피드백 이력** — 날짜 / 점수 / 틀린 문장 수, 클릭 시 explanation 펼쳐보기
-5. **추가 문제 풀기 버튼** — 화면 최하단 또는 우측 상단에 배치, 클릭 시 해당 소단원의 새 문제를 generateQuestions로 생성하여 추가 학습
+3. **반복 오개념 유형 목록** — 2회 이상 반복된 오개념만 표시 (id → 실제 한글 이름은
+   `MisconceptionDB.getMisconceptionById`로 조회). (구현) "교정 완료" 취소선 표시는 뺐음 —
+   세션에는 "이 세션이 다룬 오개념"만 기록되고 "그 문항을 맞았는지"는 별도 연결이 없어서,
+   교정 여부를 정확히 판단할 근거가 없었음. 잘못된 정보를 보여주느니 반복 횟수만 정확히 표시.
+4. **과거 문제 풀이 이력** — 날짜 / 점수 / 틀린 문항 수, "문제 보기" 버튼 클릭 시 새 화면을
+   만들지 않고 기존 `viewSessionLog()` + `FeedbackScreen.render(data, true, 'mypage-detail')`를
+   재사용해 실제 채점 화면과 동일한 방식으로 문항별 피드백을 보여줌
+5. **추가 문제 풀기 버튼** — (구현) 화면 최하단에 배치. 클릭 시 `pickQuizMode()`로 모드를
+   고르고 `generateQuestions([], subUnit, level, mode)` 호출 → 결과에 따라 step1/calc/level3
+   화면으로 분기 (keyword.js의 최초 출제, feedback.js의 다음 문제 풀기와 동일한 패턴 재사용)
 
 - 소단원 상세 화면 진입 경로는 마이페이지에서만 허용 (다른 화면에서 바로가기 없음)
 - 메인 카드 목록 자체에서 레벨/학습 횟수가 보이므로 상세 화면 진입 없이도 진척도 한눈에 파악 가능
@@ -305,30 +315,50 @@ L3 목표: Math.min(Math.max(Math.round(오개념수 × 1.0), 5),  10)
 ### 2-3. Firestore 조회 로직
 
 ```js
-// 소단원별 세션 목록 조회
-const sessions = await db
-  .collection('users').doc(uid)
-  .collection('sessions')
-  .where('unit', '==', unitId)
-  .orderBy('createdAt', 'asc')
-  .get();
+// (구현) where + orderBy를 같이 쓰면 복합 인덱스가 필요해지므로,
+// where만 쿼리하고 정렬은 클라이언트에서 처리해 인덱스 배포 없이 바로 동작하게 함
+const sessions = await fetchSessionsByUnit(uid, unitName); // where('unit','==',unitName)만 사용, 이후 .sort()
 
 // 개념 향상도 계산 (첫 세션 vs 최근 세션)
-const scores = sessions.docs.map(d => d.data().score);
+const scores = sessions.map(s => s.score);
 const improvement = scores.at(-1) - scores[0];
 ```
 
-### 2-4. 변경 파일
+### 2-4. 변경 파일 (실제)
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `public/js/mypage.js` | 대단원 카드 뷰 렌더링, UNIT_MAP 기반 그룹핑, 레벨 배지 표시 |
-| `public/js/feedback.js` | 세션 종료 시 unitProgress 업데이트 로직 추가 |
-| `index.html` | screen-mypage-detail 화면 추가 |
-| `feedback.css` | 상세 화면 스타일 (그래프, 배너, 이력 목록) |
-| `public/js/app.js` | Router.navMap에 mypage-detail 추가 |
+| `public/firebase/firestore.js` | `fetchAllUnitProgress`, `fetchSessionsByUnit` 추가, `fetchWeakMisconceptions`에 소단원 필터 추가, `MisconceptionDB.getMisconceptionById` 추가, `saveSession`에 `wrongCount` 필드 저장 |
+| `public/js/mypage.js` | 전면 재작성 — 대단원 카드 뷰, 소단원 상세(SVG 그래프 직접 구현), 추가 문제 풀기 |
+| `public/index.html` | 메인 화면을 카드 목록으로 교체, `screen-mypage-detail` 신규 추가 |
+| `public/css/feedback.css` | 안 쓰던 취약오개념 막대바/이력 리스트 스타일을 카드형으로 교체 |
+| `public/js/app.js` | Router.navMap/authRequired에 `mypage-detail` 추가 |
 
-꺾은선 그래프는 외부 라이브러리 없이 SVG로 직접 구현하거나, index.html에 포함된 라이브러리가 있다면 그것을 활용한다.
+꺾은선 그래프는 외부 라이브러리 없이 SVG로 직접 구현함 (그리드선 + 영역 채우기 그라디언트 + 첫/최근 지점 강조).
+
+### 2-5. 실제 구현 시 달라진 점 / 발견된 이슈
+
+마이페이지를 실제로 붙이면서 기존 `saveSession()`/`unitProgress` 쪽에서 이 기능과 무관하게
+존재하던 데이터 정합성 문제 두 가지를 발견해서 같이 고쳤다:
+
+1. **`sessionCount` 레이스 컨디션** — `saveSession()`이 `unitProgress`의 `sessionCount`를
+   "읽고 → +1 해서 쓰기" 방식으로 갱신하고 있어서, 문제를 연달아 빠르게 풀면(초 단위 간격)
+   동시 저장 요청끼리 서로의 증가분을 덮어써서 실제 세션 수보다 적게 기록되는 버그가 있었음
+   (실제 계정에서 세션 22개인데 `sessionCount: 8`로 기록된 사례로 확인). Firestore
+   트랜잭션(`runTransaction`)으로 전환해 해결 — 동시 저장 20개로 재현 테스트해서 정확히
+   20으로 기록되는 것 확인.
+2. **AI가 반환하는 unit 값이 UNIT_MAP 14개 소단원명과 다를 수 있음** — 실제 계정들에서
+   `"힘과 운동"`(대단원명을 그대로 반환), `"전기장과 전위"`(목록에 없는 이름) 같은 사례
+   발견. 카드 목록에서 14개 소단원명과 정확히 일치하는 것만 보여주면 이런 세션은 영원히
+   안 보이게 되므로, 마이페이지에 "기타" 카드를 추가해서 이름이 안 맞는 unitProgress도
+   최소한 어딘가엔 표시되도록 안전장치를 넣음.
+3. **레벨 시스템 도입 이전(대략 2026-04~05) 세션은 `unitProgress` 문서 자체가 없음** —
+   `unitProgress` 갱신 코드가 레벨 시스템과 함께 나중에 추가된 것이라, 그 전에 풀고 이후
+   한 번도 안 돌아온 단원은 세션 기록은 있어도 진행 상태 문서가 없어서 카드에 "시작 전"으로
+   나옴. 과거 세션을 기반으로 `unitProgress`를 소급 생성하는 백필 스크립트도 검토했으나,
+   레벨 시스템이 없던 시절 데이터라 "레벨"을 정확히 복원할 근거가 없어 **의도적으로 보류**함.
+   (2번·3번 이슈 모두 앞으로 새로 푸는 세션에는 영향 없음 — 지금 코드는 항상 unitProgress를
+   정상적으로 생성/갱신함)
 
 ---
 
@@ -348,8 +378,8 @@ const improvement = scores.at(-1) - scores[0];
               + L3는 별도 완료 흐름 없이 동일 로직으로 completed 처리
 [x] 7. index.html — screen-calc, Level 3 화면, 캔버스 UI 추가
 [x] 8. quiz.css — 계산 input, 단위 드롭다운, 캔버스, 탭 스타일 추가
-[ ] 9. mypage.js — 대단원 카드 뷰, 소단원 상세 화면 구현
-[ ] 10. feedback.css — 마이페이지 상세 화면 스타일 추가
+[x] 9. mypage.js — 대단원 카드 뷰, 소단원 상세 화면 구현 (2026-07)
+[x] 10. feedback.css — 마이페이지 상세 화면 스타일 추가 (2026-07)
 ```
 
 ---
@@ -512,11 +542,11 @@ const improvement = scores.at(-1) - scores[0];
 
 ## 미결 사항
 
-- **마이페이지 리뉴얼** (다음 작업) — 대단원 카드 뷰, 소단원별 레벨 배지, 진행 표시
+- ~~마이페이지 리뉴얼~~ → 완료 (2026-07). [2-5](#2-5-실제-구현-시-달라진-점--발견된-이슈) 참고
 - Level 3 풀이 과정 채점 정확도는 실제 구현 후 확인하며 필요 시 B안(피드백만 제공)으로 교체
-- ~~misconceptionProgress 컬렉션 활용 방안 확정~~ → 별도 컬렉션 불필요로 결론.
-  `firestore.js`의 `fetchWeakMisconceptions(uid)`가 이미 세션마다 저장되는 `misconceptions` id 배열을
-  전체 세션에서 집계해 취약 오개념을 뽑아주고 있음(현재는 전체 합산 버전). 마이페이지 리뉴얼에서
-  "소단원별로 분리 표시"하려면 이 함수에 `where('unit', '==', unitId)` 필터만 추가하면 됨
-- 마이페이지 메인 카드에 취약도(반복 오개념)까지 요약 표시할지는 카드 UI 설계 시 추가 결정 필요
-- screen-mypage-detail의 "추가 문제 풀기" 버튼 위치 (최하단 vs 우측 상단) 확정 필요
+- ~~misconceptionProgress 컬렉션 활용 방안~~ → 별도 컬렉션 없이 `fetchWeakMisconceptions(uid, unitName)`에
+  소단원 필터를 추가해서 해결 (완료)
+- 마이페이지 메인 카드에는 취약도 요약을 넣지 않기로 함 — 소단원 상세 화면의 "반복 오개념 유형"에서만 확인
+- **레벨 시스템 도입 이전 세션의 `unitProgress` 백필** — 과거 세션을 근거로 소급 생성하는 방안을
+  검토했으나, 그 시절엔 레벨 개념이 없어 정확한 레벨을 복원할 수 없어 보류하기로 함 (사용자 확인,
+  2026-07). 필요해지면 세션 개수·최고점·마지막 학습일만 채우고 레벨은 1로 시작하는 방식으로 재검토.

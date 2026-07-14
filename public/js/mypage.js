@@ -3,6 +3,10 @@ const MypageScreen = {
   _currentSubUnit: null,
   _currentLevel: 1,
   _currentCorrectCount: 0,
+  _currentSessionCount: 0,
+  _currentSessions: [],
+  _historyPage: 0,
+  HISTORY_PAGE_SIZE: 10,
 
   async init() {
     // Router.go('mypage')가 비로그인 시 이미 진입 자체를 막아주므로 여기선 방어적으로만 체크
@@ -125,10 +129,12 @@ const MypageScreen = {
 
       this._currentLevel = progress.level || 1;
       this._currentCorrectCount = progress.correctCount || 0;
+      this._currentSessionCount = sessions.length;
 
       this._renderChart(sessions);
       await this._renderMisconceptions(weakList);
       this._renderHistory(sessions);
+      this._updateRetryButton();
     } catch (e) {
       console.error('소단원 상세 로드 실패:', e);
       Toast.show('데이터를 불러오지 못했어요');
@@ -138,6 +144,24 @@ const MypageScreen = {
   goMain() {
     Router.go('mypage');
     this.init();
+  },
+
+  /* 사진으로 한 번도 진단 안 된 소단원은 바로 문제 풀기로 못 들어가게 하고
+     사진 업로드로 유도 — "사진 찍어서 올리면 그 부분을 공부한다"는 앱의 핵심 전제를
+     마이페이지에서 우회하지 않도록 함 */
+  _updateRetryButton() {
+    const btn = document.getElementById('d-retry-btn');
+    const cta = document.getElementById('d-no-photo-cta');
+    if (!btn || !cta) return;
+
+    if (this._currentSessionCount > 0) {
+      btn.style.display = '';
+      cta.style.display = 'none';
+      btn.textContent = `L${this._currentLevel} 이어서 풀기`;
+    } else {
+      btn.style.display = 'none';
+      cta.style.display = '';
+    }
   },
 
   /* 점수 추이 그래프 + 개념 향상도 배너 */
@@ -228,18 +252,31 @@ const MypageScreen = {
     card.style.display = '';
   },
 
-  /* 과거 문제 풀이 이력 (최신순) */
+  /* 과거 문제 풀이 이력 (최신순, 10개씩 페이지네이션) */
   _renderHistory(sessions) {
+    this._currentSessions = [...sessions].reverse(); // 최신순으로 뒤집어서 보관
+    this._historyPage = 0;
+    this._renderHistoryPage();
+  },
+
+  _renderHistoryPage() {
     const el = document.getElementById('d-history');
+    const pagEl = document.getElementById('d-history-pagination');
     if (!el) return;
 
+    const sessions = this._currentSessions;
     if (!sessions.length) {
       el.innerHTML = '<div style="padding:10px 0;color:var(--text3);font-size:12.5px">아직 학습 기록이 없어요</div>';
+      if (pagEl) pagEl.innerHTML = '';
       return;
     }
 
-    const reversed = [...sessions].reverse();
-    el.innerHTML = reversed.map(s => {
+    const pageSize = this.HISTORY_PAGE_SIZE;
+    const totalPages = Math.ceil(sessions.length / pageSize);
+    const page = this._historyPage;
+    const pageSessions = sessions.slice(page * pageSize, page * pageSize + pageSize);
+
+    el.innerHTML = pageSessions.map(s => {
       const dateStr = s.createdAt && s.createdAt.toDate
         ? s.createdAt.toDate().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
         : '-';
@@ -260,6 +297,26 @@ const MypageScreen = {
         </div>
       `;
     }).join('');
+
+    if (pagEl) pagEl.innerHTML = this._buildPagination(page, totalPages);
+  },
+
+  _buildPagination(page, totalPages) {
+    if (totalPages <= 1) return '';
+    const btn = (label, target, disabled, active) =>
+      `<button class="hist-page-btn ${active ? 'active' : ''}" ${disabled ? 'disabled' : ''} onclick="MypageScreen._goHistoryPage(${target})">${label}</button>`;
+
+    const buttons = [btn('‹', page - 1, page === 0, false)];
+    for (let i = 0; i < totalPages; i++) {
+      buttons.push(btn(i + 1, i, false, i === page));
+    }
+    buttons.push(btn('›', page + 1, page === totalPages - 1, false));
+    return buttons.join('');
+  },
+
+  _goHistoryPage(page) {
+    this._historyPage = page;
+    this._renderHistoryPage();
   },
 
   /* 이 소단원 추가 문제 풀기 → 새 문제 생성 후 해당 레벨 화면으로 이동 */
@@ -306,7 +363,8 @@ const MypageScreen = {
       console.error('문제 생성 실패:', err);
       Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');
     } finally {
-      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '이 소단원 추가 문제 풀기'; }
+      if (btnEl) { btnEl.disabled = false; }
+      this._updateRetryButton();
     }
   },
 };

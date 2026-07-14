@@ -323,3 +323,31 @@
   padding: 5px 2px 5px 8px;
 }
 .hist-view-btn:disabled { color: var(--text3); cursor: default; }
+
+.hist-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding-top: 12px; margin-top: 4px; border-top: 0.5px solid var(--border);
+}
+.hist-page-btn {
+  min-width: 26px; height: 26px; padding: 0 6px;
+  border-radius: var(--r-sm); border: none; background: none;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text2);
+  cursor: pointer;
+}
+.hist-page-btn:hover { background: var(--surface2); }
+.hist-page-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+.hist-page-btn:disabled { color: var(--text3); cursor: default; background: none; }
+
+/* 사진 진단 이력이 없는 소단원 안내 */
+.mp-empty-cta {
+  margin: 18px 20px 0;
+  padding: 18px 16px;
+  background: var(--surface);
+  border: 0.5px dashed var(--border2);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+.mp-empty-cta p {
+  font-size: 13px; color: var(--text2); line-height: 1.6;
+  margin: 0 0 14px;
+}

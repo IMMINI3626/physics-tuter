@@ -53,7 +53,7 @@
       </svg>
     </div>
     <h3>사진을 업로드하세요</h3>
-    <p>교과서, 필기, 참고서 사진을<br>AI가 분석해 헷갈리는 개념을 맞춤형 문제로 제공합니다.</p>
+    <p>교과서, 필기, 참고서 사진을<br>분석해 헷갈리는 개념을 맞춤형 문제로 제공합니다.</p>
     <br>
     <div class="upload-btns">
       <button class="upload-btn" id="btn-camera">
@@ -90,13 +90,13 @@
   </header>
 
   <section class="home-hero" style="padding-bottom:8px">
-    <h1 class="home-title" style="font-size:22px">나만의 학습 보관함</h1>
-    <p class="home-sub">사진을 업로드하면 학습 기록이 여기에 쌓여요.</p>
+    <h1 class="home-title" style="font-size:22px">빠르게 확인하는 최근 학습</h1>
+    <p class="home-sub">최근 학습 기록을 볼 수 있어요.</p>
   </section>
 
   <!-- 비로그인 안내 -->
   <div id="library-login-banner" style="display:none;margin:0 20px 16px;padding:14px 16px;background:rgba(108,99,255,0.06);border:0.5px solid rgba(108,99,255,0.2);border-radius:var(--r-md);font-size:13px;color:var(--text2);line-height:1.6">
-    🔒 <strong style="color:var(--accent2)">로그인</strong>하고 내 학습 기록을 모아보세요!<br>
+    🔒 <strong style="color:var(--accent2)">로그인</strong>하고 내 학습 기록을 저장해보세요!<br>
     <span style="font-size:12px;color:var(--text3)">비로그인은 문제 3회까지 체험 가능해요.</span>
     <br><br>
     <button onclick="Modal.open('login-modal')" style="padding:8px 18px;background:var(--accent);border:none;border-radius:100px;color:#fff;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer">
@@ -270,7 +270,7 @@
   </div>
 
   <div class="guide-banner" style="margin-bottom:20px">
-    💡 두 가지 이상의 물리 법칙을 결합해 풀어야 하는 심화 문제입니다.
+    💡 개념과 계산 모두 필요한 심화 문제입니다.
   </div>
 
   <div class="calc-question-card">
@@ -281,8 +281,8 @@
   <div class="l3-process-area">
     <div class="l3-process-label">풀이 과정</div>
     <div class="l3-tab-row">
-      <button class="l3-tab active" id="l3-tab-text" onclick="Level3Screen.switchProcessTab('text')">✏️ 텍스트 입력</button>
-      <button class="l3-tab" id="l3-tab-draw" onclick="Level3Screen.switchProcessTab('draw')">🖊️ 직접 쓰기</button>
+      <button class="l3-tab active" id="l3-tab-text" onclick="Level3Screen.switchProcessTab('text')"></button>텍스트 입력</button>
+      <button class="l3-tab" id="l3-tab-draw" onclick="Level3Screen.switchProcessTab('draw')">직접 쓰기</button>
     </div>
 
     <!-- 텍스트 탭 -->
@@ -298,11 +298,11 @@
     <!-- 직접 쓰기 탭 -->
     <div id="l3-panel-draw" class="l3-panel hidden">
       <div class="l3-draw-toolbar">
-        <button class="l3-tool-btn active" id="l3-tool-pen" onclick="Level3Screen.setTool('pen')">🖊️ 펜</button>
-        <button class="l3-tool-btn" id="l3-tool-eraser" onclick="Level3Screen.setTool('eraser')">🧹 지우개</button>
-        <button class="l3-tool-btn" onclick="Level3Screen.clearCanvas()">🗑️ 전체 지우기</button>
+        <button class="l3-tool-btn active" id="l3-tool-pen" onclick="Level3Screen.setTool('pen')">펜</button>
+        <button class="l3-tool-btn" id="l3-tool-eraser" onclick="Level3Screen.setTool('eraser')">지우개</button>
+        <button class="l3-tool-btn" onclick="Level3Screen.clearCanvas()">🗑️</button>
         <label class="l3-tool-btn" style="cursor:pointer">
-          📷 사진 업로드
+          사진 업로드
           <input type="file" id="l3-photo-input" accept="image/*" style="display:none" onchange="Level3Screen.handlePhotoUpload(event)">
         </label>
       </div>
@@ -338,7 +338,7 @@
     <!-- 직접 쓰기 탭 -->
     <div id="l3-answer-panel-draw" class="l3-panel hidden">
       <div class="l3-draw-toolbar">
-        <button class="l3-tool-btn" onclick="Level3Screen.clearAnswerCanvas()">🗑️ 지우기</button>
+        <button class="l3-tool-btn" onclick="Level3Screen.clearAnswerCanvas()">🗑️</button>
       </div>
       <div class="l3-canvas-wrap l3-answer-canvas-wrap" id="l3-answer-canvas-wrap">
         <canvas id="l3-answer-canvas" class="l3-canvas l3-answer-canvas"></canvas>
@@ -386,7 +386,7 @@
     <div class="l3-process-label" style="margin-top:14px"> 작성한 답 확인</div>
     <input type="text" id="l3-review-answer-input" class="l3-answer-text-input" />
     <button class="primary-btn" style="margin-top:12px" onclick="Level3Screen.confirmGrade(this)">
-      이 내용으로 채점받기
+      제출하기
     </button>
   </div>
 </div><!-- /screen-level3 -->
@@ -485,7 +485,7 @@
   <div class="progress-bar">
     <div class="progress-info">
       <span class="progress-info-label">STEP 2 / 2</span>
-      <span class="progress-info-step">개념 서술하기</span>
+      <span class="progress-info-step">틀린 이유 서술하기</span>
     </div>
     <div class="progress-track">
       <div class="progress-fill" style="width:100%"></div>
@@ -494,13 +494,13 @@
 
   <div class="step2-header">
     <h2 class="step2-title">왜 틀렸는지 설명해보세요</h2>
-    <p class="step2-sub">선택한 문장이 틀린 이유나 올바른 물리 개념을 자유롭게 적어주세요.<br>AI가 채점해드려요.</p>
+    <p class="step2-sub">선택한 문장이 틀린 이유나 올바른 물리 개념을 자유롭게 적어주세요.</p>
   </div>
 
   <div class="step2-list" id="step2-list"></div>
 
   <button class="primary-btn" id="btn-submit" onclick="QuizScreen.submitStep2()">
-    제출하고 채점받기
+    제출하기
     <svg viewBox="0 0 24 24">
       <polyline points="9 11 12 14 22 4"/>
       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
@@ -596,7 +596,7 @@
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-val" id="mp-total">—</div>
-      <div class="stat-lbl">총 세션</div>
+      <div class="stat-lbl">총 학습 횟수</div>
     </div>
     <div class="stat-card">
       <div class="stat-val" id="mp-avgscore">—</div>
@@ -656,11 +656,18 @@
   <div class="mp-card">
     <div class="mp-card-title">과거 문제 풀이 이력</div>
     <div id="d-history"></div>
+    <div class="hist-pagination" id="d-history-pagination"></div>
   </div>
 
   <button class="primary-btn" id="d-retry-btn" onclick="MypageScreen.retryUnit(this)">
-    이 소단원 추가 문제 풀기
+    이어서 풀기
   </button>
+
+  <div class="mp-empty-cta" id="d-no-photo-cta" style="display:none">
+    <p>아직 이 개념을 학습하지 않았어요.</p>
+    <button class="primary-btn" style="margin:0" disabled>학습한 적 없음</button>
+  </div>
+
   <div style="height:20px"></div>
 </div><!-- /screen-mypage-detail -->
 
