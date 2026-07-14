@@ -12,6 +12,11 @@ const LearningService = {
 
     const sessionData = window.AppState.session;
 
+    // 마이페이지 소단원 상세의 "틀린 문항 개수" 표시용
+    const wrongCount = feedbackData.items.filter(
+      item => !(item.isCorrectAnswer ?? !item.isWrong)
+    ).length;
+
     const sessionRef = await addDoc(
       collection(db, 'users', uid, 'sessions'),
       {
@@ -19,6 +24,7 @@ const LearningService = {
         keywords:       sessionData.extractedKeywords,
         misconceptions: sessionData.misconceptions.map(m => m.id),
         score:          feedbackData.score,
+        wrongCount,
         hintUsed:       sessionData.hintUsed,
         checkedCount:   sessionData.checkedStatements.size,
         createdAt:      serverTimestamp(),
@@ -83,8 +89,13 @@ const LearningService = {
     return { total, avgScore, correctedMisconceptions: Math.floor(total * 0.4) };
   },
 
-  async fetchWeakMisconceptions(uid) {
-    const q    = query(collection(db, 'users', uid, 'sessions'));
+  /**
+   * 오개념 반복 집계. unitName을 주면 그 소단원 세션만 대상으로 필터링.
+   * 2회 이상 반복된 오개념만 반환 (한 번 나온 건 "반복 오개념"이 아님)
+   */
+  async fetchWeakMisconceptions(uid, unitName = null) {
+    let q = collection(db, 'users', uid, 'sessions');
+    if (unitName) q = query(q, where('unit', '==', unitName));
     const snap = await getDocs(q);
     const countMap = {};
 
@@ -93,12 +104,23 @@ const LearningService = {
       mc.forEach(id => { countMap[id] = (countMap[id] || 0) + 1; });
     });
 
-    const entries = Object.entries(countMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    return entries.map(([id, cnt]) => ({
-      id,
-      name: id,
-      pct: Math.min(100, Math.round(cnt / snap.docs.length * 100)),
-    }));
+    return Object.entries(countMap)
+      .filter(([, cnt]) => cnt >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, count]) => ({ id, count }));
+  },
+
+  /**
+   * 소단원 기준 세션 목록 조회 (점수 추이 그래프·과거 이력용)
+   * 🔑 where + orderBy 복합 인덱스를 피하려고 정렬은 클라이언트에서 처리
+   */
+  async fetchSessionsByUnit(uid, unitName) {
+    const q = query(collection(db, 'users', uid, 'sessions'), where('unit', '==', unitName));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
   },
 
   async fetchSessionLogs(uid, sessionId) {
@@ -186,6 +208,17 @@ const LearningService = {
       lastStudied: serverTimestamp(),
     }, { merge: true });
   },
+
+  /**
+   * 전체 소단원 진행 상태 한 번에 조회 (마이페이지 대단원 카드 뷰용)
+   * @returns {[unitName]: {level, completed, correctCount, sessionCount, bestScore, ...}}
+   */
+  async fetchAllUnitProgress(uid) {
+    const snap = await getDocs(collection(db, 'users', uid, 'unitProgress'));
+    const map = {};
+    snap.docs.forEach(d => { map[d.id] = d.data(); });
+    return map;
+  },
 };
 
 const MisconceptionDB = {
@@ -204,6 +237,11 @@ const MisconceptionDB = {
     const docRef = doc(db, 'misconceptions', misconceptionId);
     const snap   = await getDoc(docRef);
     return snap.exists() ? snap.data().scoringKeywords || [] : [];
+  },
+
+  async getMisconceptionById(id) {
+    const snap = await getDoc(doc(db, 'misconceptions', id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 };
 

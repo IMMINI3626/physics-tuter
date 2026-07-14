@@ -608,16 +608,61 @@
     </div>
   </div>
 
-  <div class="weak-section">
-    <p class="section-subtitle">취약 오개념 분석</p>
-    <div id="weak-list"></div>
+  <p class="section-subtitle" style="padding:0 20px 12px">단원별 학습 현황</p>
+  <div class="chapter-list" id="chapter-list"></div>
+  <div style="height:12px"></div>
+</div><!-- /screen-mypage -->
+
+
+<!-- ============================================================
+     SCREEN 7-B: MYPAGE DETAIL (소단원 상세)
+     ============================================================ -->
+<div id="screen-mypage-detail" class="screen">
+  <header class="topbar">
+    <button class="back-btn" onclick="MypageScreen.goMain()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      마이페이지
+    </button>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <div class="question-header">
+    <div class="question-unit" id="d-chapter">-</div>
+    <h2 class="question-title" id="d-title">-</h2>
   </div>
 
-  <div class="history-section">
-    <p class="section-subtitle">학습 이력</p>
-    <div id="history-list"></div>
+  <div class="mp-card chart-wrap">
+    <div class="mp-card-title">점수 추이</div>
+    <div class="chart-meta">
+      <div class="cur-score" id="d-curscore">—</div>
+      <div class="trend up" id="d-trend" style="display:none"></div>
+    </div>
+    <div id="d-chart"></div>
   </div>
-</div><!-- /screen-mypage -->
+
+  <div class="improve-banner" id="d-improve" style="display:none">
+    <div class="improve-col"><div class="lbl">첫 세션</div><div class="val" id="d-first">-</div></div>
+    <svg class="improve-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    <div class="improve-col"><div class="lbl">최근 세션</div><div class="val" id="d-last">-</div></div>
+    <div class="improve-delta"><div class="val" id="d-delta">-</div><div class="lbl">점</div></div>
+  </div>
+
+  <div class="mp-card" id="d-mc-card" style="display:none">
+    <div class="mp-card-title">반복 오개념 유형</div>
+    <div id="d-misconceptions"></div>
+  </div>
+
+  <div class="mp-card">
+    <div class="mp-card-title">과거 문제 풀이 이력</div>
+    <div id="d-history"></div>
+  </div>
+
+  <button class="primary-btn" id="d-retry-btn" onclick="MypageScreen.retryUnit(this)">
+    이 소단원 추가 문제 풀기
+  </button>
+  <div style="height:20px"></div>
+</div><!-- /screen-mypage-detail -->
 
 
 <!-- ============================================================

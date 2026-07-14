@@ -108,9 +108,10 @@ const Router = {
     step2:    'nav-quiz',
     feedback: 'nav-quiz',
     mypage:   'nav-mypage',
+    'mypage-detail': 'nav-mypage',
   },
 
-  authRequired: ['quiz-library', 'mypage'],
+  authRequired: ['quiz-library', 'mypage', 'mypage-detail'],
 
   go(screenId) {
     if (this.authRequired.includes(screenId) && !AppState.isLoggedIn) {

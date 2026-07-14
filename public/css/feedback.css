@@ -203,10 +203,6 @@
   line-height: 1.3;
 }
 
-/* ── Weak Concepts ── */
-.weak-section {
-  padding: 0 20px 16px;
-}
 .section-subtitle {
   font-size: 14px;
   font-weight: 500;
@@ -214,82 +210,116 @@
   margin-bottom: 12px;
 }
 
-.weak-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-bottom: 11px;
+/* ── 대단원 카드 (마이페이지 메인) ── */
+.chapter-list { display: flex; flex-direction: column; gap: 12px; padding: 0 20px; }
+.chapter-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 16px 6px;
 }
-.weak-name {
-  font-size: 12px;
-  color: var(--text2);
-  flex: 0 0 90px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.chapter-card-title {
+  font-size: 15px; font-weight: 600; margin: 0 0 8px;
 }
-.weak-track {
-  flex: 1;
-  height: 5px;
-  background: var(--surface2);
-  border-radius: 10px;
+.subunit-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 6px; margin: 0 -6px; width: calc(100% + 12px);
+  border-top: 0.5px solid var(--border);
+  background: none; border-left: none; border-right: none; border-bottom: none;
+  border-radius: var(--r-sm);
+  cursor: pointer; text-align: left; font-family: var(--font); color: inherit;
 }
-.weak-fill {
-  height: 100%;
-  border-radius: 10px;
-  transition: width 0.7s ease;
+.subunit-row:first-of-type { border-top: none; }
+.subunit-row:hover { background: var(--surface2); }
+.subunit-name {
+  flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.weak-pct {
+.subunit-name.dim { color: var(--text3); font-weight: 400; }
+.progress-dots { display: flex; gap: 3.5px; flex-shrink: 0; }
+.progress-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
+.progress-dots span.filled { background: var(--accent); }
+.progress-count {
   font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text3);
-  /* width: 30px; */
-  text-align: right;
+  font-size: 11px; color: var(--text3); flex-shrink: 0; width: 20px;
+}
+.level-badge {
+  font-size: 10.5px; font-weight: 700;
+  padding: 3px 8px; border-radius: 100px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.level-badge.l1   { background: var(--surface3); color: var(--text2); }
+.level-badge.l2   { background: rgba(108,99,255,0.12); color: var(--accent2); }
+.level-badge.l3   { background: rgba(217,119,6,0.12); color: var(--amber); }
+.level-badge.done { background: rgba(52,211,153,0.12); color: var(--green); }
+.level-badge.new  { background: var(--surface2); color: var(--text3); }
+.subunit-chev { color: var(--text3); flex-shrink: 0; }
+
+/* ── 소단원 상세 화면 ── */
+.mp-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  margin: 14px 20px 0;
+  padding: 16px;
+}
+.mp-card-title {
+  font-size: 12.5px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  margin: 0 0 12px;
 }
 
-/* ── History ── */
-.history-section {
-  padding: 0 20px;
-}
+.chart-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.chart-meta .cur-score { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--text1); }
+.chart-meta .cur-score span { font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--text3); margin-left: 3px; }
+.chart-meta .trend { font-size: 12.5px; font-weight: 600; padding: 4px 9px; border-radius: 100px; }
+.chart-meta .trend.up   { background: rgba(52,211,153,0.12); color: var(--green); }
+.chart-meta .trend.down { background: rgba(248,113,113,0.12); color: var(--red); }
 
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 0;
-  border-bottom: 0.5px solid var(--border);
+.improve-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); margin: 14px 20px 0; padding: 14px 16px;
 }
-.history-item:last-child { border-bottom: none; }
+.improve-col { flex: 1; text-align: center; }
+.improve-col .lbl { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.improve-col .val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+.improve-arrow { color: var(--text3); flex-shrink: 0; }
+.improve-delta {
+  flex: 0 0 auto; text-align: center; padding: 8px 12px;
+  background: rgba(52,211,153,0.12); border-radius: var(--r-md);
+}
+.improve-delta .val { color: var(--green); font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+.improve-delta .lbl { font-size: 10.5px; color: var(--green); opacity: 0.85; }
 
-.history-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--surface2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
+/* 반복 오개념 */
+.mc-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-top: 0.5px solid var(--border);
 }
-.history-info { flex: 1; min-width: 0; }
-.history-unit {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.mc-row:first-of-type { border-top: none; padding-top: 0; }
+.mc-icon {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(217,119,6,0.12); color: var(--amber);
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
 }
-.history-date {
-  font-size: 11px;
-  color: var(--text3);
+.mc-text { flex: 1; min-width: 0; font-size: 13px; color: var(--text2); }
+.mc-count { font-family: var(--font-mono); font-size: 11.5px; color: var(--text3); flex-shrink: 0; }
+
+/* 과거 문제 풀이 이력 */
+.hist-item { border-top: 0.5px solid var(--border); }
+.hist-item:first-of-type { border-top: none; }
+.hist-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; }
+.hist-date { font-family: var(--font-mono); font-size: 12px; color: var(--text3); width: 68px; flex-shrink: 0; }
+.hist-score { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; width: 42px; flex-shrink: 0; }
+.hist-score.good { color: var(--green); }
+.hist-score.mid  { color: var(--amber); }
+.hist-score.bad  { color: var(--red); }
+.hist-wrong { flex: 1; font-size: 12.5px; color: var(--text2); }
+.hist-view-btn {
+  display: flex; align-items: center; gap: 3px; flex-shrink: 0;
+  background: none; border: none; cursor: pointer; font-family: var(--font);
+  font-size: 12px; font-weight: 600; color: var(--accent2);
+  padding: 5px 2px 5px 8px;
 }
-.history-score {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.history-score.good { color: var(--green); }
-.history-score.mid  { color: var(--amber); }
-.history-score.bad  { color: var(--red); }
+.hist-view-btn:disabled { color: var(--text3); cursor: default; }
