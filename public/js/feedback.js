@@ -302,18 +302,6 @@ const FeedbackScreen = {
     document.getElementById('score-subtitle').textContent = subtitle || '';
   },
 
-  /* 오개념 태그 렌더링 */
-  _renderMisconceptions(list) {
-    const container = document.getElementById('mis-tags');
-    if (!container || !list) return;
-
-    container.innerHTML = list.map(mc => `
-      <span class="mis-tag ${mc.type}">
-        ${mc.type === 'wrong' ? '⚠' : '✓'} ${mc.text}
-      </span>
-    `).join('');
-  },
-
   /* 피드백 카드 목록 렌더링 */
   _renderFeedbackList(items) {
     const container = document.getElementById('feedback-list');

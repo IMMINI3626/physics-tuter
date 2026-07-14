@@ -50,39 +50,6 @@
   color: var(--text2);
 }
 
-/* ── Misconception Tags ── */
-.mis-tag-area {
-  padding: 0 20px 18px;
-}
-.mis-tag-title {
-  font-size: 11px;
-  color: var(--text3);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-weight: 500;
-  margin-bottom: 9px;
-}
-.mis-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.mis-tag {
-  padding: 5px 13px;
-  border-radius: 100px;
-  font-size: 12px;
-}
-.mis-tag.wrong {
-  background: rgba(251,191,36,0.08);
-  border: 0.5px solid rgba(251,191,36,0.2);
-  color: var(--amber);
-}
-.mis-tag.correct {
-  background: rgba(52,211,153,0.08);
-  border: 0.5px solid rgba(52,211,153,0.2);
-  color: var(--green);
-}
-
 /* ── Feedback Cards ── */
 .feedback-list {
   padding: 0 20px;

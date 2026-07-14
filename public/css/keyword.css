@@ -118,25 +118,3 @@
   color: var(--accent2);
 }
 
-/* ── Misconception Preview Card ── */
-.misconception-card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-left: 3px solid var(--amber);
-  border-radius: var(--r-sm);
-  padding: 13px 15px;
-  margin-bottom: 9px;
-}
-.misconception-card .mc-label {
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  color: var(--amber);
-  text-transform: uppercase;
-  font-weight: 500;
-  margin-bottom: 5px;
-}
-.misconception-card p {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.55;
-}
