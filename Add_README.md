@@ -497,6 +497,15 @@ const improvement = scores.at(-1) - scores[0];
 [x] 전체 87개 오개념에 subUnit 필드 추가 (소단원 기반 필터링용)
 [x] serviceAccountKey.json 재발급 후 node seed.js 실행 (2026-07)
     → misconceptions 87개, misconception_sentences 166개 시딩 완료
+[x] question_patterns 컬렉션 추가 — 완자 물리학Ⅰ 기출 유형 116개 (2026-07)
+    → 상황 설정/함정 포인트만 추상화, 문제 원문·숫자는 포함하지 않음
+    → generateQuestions가 소단원 기준으로 조회해 문제 스타일 참고자료로 프롬프트에 주입
+[x] item_misconception_map을 FCI_FMCE_extracted.xlsx 원본과 100% 일치하도록 보완 (2026-07)
+    → 6개 오개념 코드 누락 + 12개 부분 누락 수정, 74건 → 130건
+    → 현재 앱 로직에서는 미사용, 향후 "FCI 문항 그대로 풀리는 정식 진단평가" 기능용으로 정확도만 확보
+[x] misconception_sentences / scoring_keywords / item_misconception_map에 고유 id 부여 (2026-07)
+    → batchUpload를 id 기반 덮어쓰기(upsert) 방식으로 전환, node seed.js를 몇 번 재실행해도 중복 안 쌓임
+    → 기존에 반복 실행으로 3배씩 쌓여있던 중복 데이터는 삭제 후 재시딩으로 정리 완료
 ```
 
 ---
@@ -505,6 +514,9 @@ const improvement = scores.at(-1) - scores[0];
 
 - **마이페이지 리뉴얼** (다음 작업) — 대단원 카드 뷰, 소단원별 레벨 배지, 진행 표시
 - Level 3 풀이 과정 채점 정확도는 실제 구현 후 확인하며 필요 시 B안(피드백만 제공)으로 교체
-- misconceptionProgress 컬렉션 활용 방안 확정 (마이페이지 "취약 개념" 표시용으로 부활 여부)
+- ~~misconceptionProgress 컬렉션 활용 방안 확정~~ → 별도 컬렉션 불필요로 결론.
+  `firestore.js`의 `fetchWeakMisconceptions(uid)`가 이미 세션마다 저장되는 `misconceptions` id 배열을
+  전체 세션에서 집계해 취약 오개념을 뽑아주고 있음(현재는 전체 합산 버전). 마이페이지 리뉴얼에서
+  "소단원별로 분리 표시"하려면 이 함수에 `where('unit', '==', unitId)` 필터만 추가하면 됨
 - 마이페이지 메인 카드에 취약도(반복 오개념)까지 요약 표시할지는 카드 UI 설계 시 추가 결정 필요
 - screen-mypage-detail의 "추가 문제 풀기" 버튼 위치 (최하단 vs 우측 상단) 확정 필요

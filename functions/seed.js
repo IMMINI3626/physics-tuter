@@ -11,11 +11,12 @@
  * 시딩 대상:
  *   ✅ units                    (4개)
  *   ✅ misconception_dimensions  (17개)
- *   ✅ misconceptions            (84개 — unit1 30개 + unit2 16개 + unit3 24개 + unit4 14개)
- *   ✅ misconception_sentences   (70개+)
- *   ✅ scoring_keywords          (40개+, unit1 전용)
+ *   ✅ misconceptions            (87개 — unit1/2/3/4 전체)
+ *   ✅ misconception_sentences   (166개)
+ *   ✅ scoring_keywords          (54개, unit1 전용)
  *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
- *   ✅ item_misconception_map    (80개+, unit1 전용)
+ *   ✅ item_misconception_map    (130개, unit1 전용 — 현재 앱 로직 미사용, 향후 정식 진단평가용)
+ *   ✅ question_patterns         (116개 — 완자 물리학Ⅰ 기출 유형, 상황유형만 추상화)
  *
  * 제외 (동적 데이터):
  *   ❌ users / assessments / learning_sessions / learning_logs
