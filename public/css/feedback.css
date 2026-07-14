@@ -241,7 +241,7 @@
 .progress-dots span.filled { background: var(--accent); }
 .progress-count {
   font-family: var(--font-mono);
-  font-size: 11px; color: var(--text3); flex-shrink: 0; width: 20px;
+  font-size: 11px; color: var(--text3); flex-shrink: 0; white-space: nowrap;
 }
 .level-badge {
   font-size: 10.5px; font-weight: 700;
@@ -349,5 +349,13 @@
 }
 .mp-empty-cta p {
   font-size: 13px; color: var(--text2); line-height: 1.6;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
+}
+.mp-empty-tag {
+  display: inline-block;
+  padding: 7px 16px;
+  background: var(--surface2);
+  color: var(--text3);
+  font-size: 12.5px; font-weight: 500;
+  border-radius: 100px;
 }
