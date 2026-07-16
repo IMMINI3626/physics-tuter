@@ -43,10 +43,12 @@ const LearningService = {
         explanation:     item.explanation || null,
         createdAt:       serverTimestamp(),
       };
-      // 🔑 계산형 문제(Level 2 방식B)일 때만 존재 — 있으면 같이 저장해서 나중에 "다시 풀기"가 가능하게 함
+      // 🔑 계산형 문제(Level 2 방식B, Level 3)일 때만 존재 — 있으면 같이 저장해서 나중에 "다시 풀기"가 가능하게 함
       if (item.correctAnswer !== undefined) log.correctAnswer = item.correctAnswer;
       if (item.unit !== undefined)          log.unit          = item.unit;
       if (item.unitOptions !== undefined)   log.unitOptions   = item.unitOptions;
+      if (item.solutionSteps !== undefined) log.solutionSteps = item.solutionSteps;
+      if (item.isLevel3 !== undefined)      log.isLevel3      = item.isLevel3;
       return log;
     });
 
@@ -151,10 +153,12 @@ const LearningService = {
         isCorrectAnswer: data.isCorrectAnswer,
         userReason: data.userReason,
         explanation: data.explanation || '과거 데이터라 해설이 저장되지 않았습니다.',
-        // 🔑 계산형 문제(Level 2 방식B)일 때만 존재 — "다시 풀기" 복원에 사용
+        // 🔑 계산형 문제(Level 2 방식B, Level 3)일 때만 존재 — "다시 풀기" 복원에 사용
         correctAnswer: data.correctAnswer,
         unit: data.unit,
         unitOptions: data.unitOptions,
+        solutionSteps: data.solutionSteps,
+        isLevel3: data.isLevel3,
       };
     });
   },

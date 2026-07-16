@@ -503,6 +503,11 @@ const Level3Screen = {
         userReason: processText || `[답] ${answerText}`,
         explanation,
         solutionSteps: calcQuestion.solutionSteps || [],
+        // 🔑 마이페이지 기록에서 "다시 풀기"로 이 Level 3 문제를 복원할 수 있도록 원본 데이터도 같이 넘김
+        correctAnswer: calcQuestion.correctAnswer,
+        unit: calcQuestion.unit,
+        unitOptions: calcQuestion.unitOptions,
+        isLevel3: true,
       }],
     };
 

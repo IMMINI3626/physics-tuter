@@ -42,14 +42,14 @@ const FeedbackScreen = {
     await this._handleLevelProgress(data);
   },
 
-  /* 과거 기록 뷰: 상단바를 "< 마이페이지/문제풀기" 형태의 back-btn으로 전환 */
+  /* 과거 기록 뷰: 상단바를 "< 학습 현황/문제풀기" 형태의 back-btn으로 전환 */
   _setHistoryHeader(returnTo) {
     const backBtn = document.getElementById('feedback-back-btn');
     const backLabel = document.getElementById('feedback-back-label');
     const actions = document.getElementById('feedback-topbar-actions');
     if (!backBtn || !actions) return;
 
-    backLabel.textContent = returnTo === 'quiz-library' ? '문제풀기' : '마이페이지';
+    backLabel.textContent = returnTo === 'quiz-library' ? '문제풀기' : '학습 현황';
     backBtn.style.display = '';
     backBtn.onclick = () => {
       window.Router.go(returnTo);
@@ -80,13 +80,16 @@ const FeedbackScreen = {
 
   /* "다시 풀기" 제공 가능 여부 판단.
      - STEP1/2(문장 5개) 방식: items.length > 1이면 항상 가능 (문항 자체가 정답/오답 여부뿐이라 원본 그대로 복원됨)
-     - 계산형 단일 문항: correctAnswer/unit/unitOptions가 로그에 저장되어 있을 때만 가능
-       (Level 2 방식B부터 저장하기 시작함 — Level 3는 아직 저장 안 해서 여기서 자동으로 걸러짐) */
+     - 계산형 단일 문항(Level 2 방식B, Level 3): correctAnswer/unit/unitOptions가 로그에 저장되어
+       있을 때만 가능. Level 3는 모범 풀이 단계(solutionSteps)까지 있어야 재현 가능
+       (예전 기록엔 이 필드들이 없어서 여기서 자동으로 걸러짐 — 하위 호환) */
   _canRetryHistory(items) {
     if (!Array.isArray(items) || !items.length) return false;
     if (items.length > 1) return true;
     const it = items[0];
-    return it.correctAnswer !== undefined && !!it.unit && Array.isArray(it.unitOptions);
+    const hasCalcData = it.correctAnswer !== undefined && !!it.unit && Array.isArray(it.unitOptions);
+    if (!hasCalcData) return false;
+    return it.isLevel3 ? Array.isArray(it.solutionSteps) : true;
   },
 
   /* 과거 기록 화면 하단 버튼: [다시 풀기] [목록으로 돌아가기] 양옆으로 반반. */
@@ -136,6 +139,8 @@ const FeedbackScreen = {
     // 과거 기록에는 세션이 다뤘던 원래 오개념 id 목록이 없음 — 직전 세션(다른 단원일 수 있음)의
     // misconceptions가 그대로 남아있으면 이 재시도가 엉뚱한 오개념을 다룬 것으로 잘못 저장되므로 비움
     AppState.session.misconceptions = [];
+    // 문제 화면 상단 뒤로가기를 "분석 결과"가 아니라 "학습 현황"(마이페이지 상세)으로 돌아가게 함
+    setQuizBackTarget('mypage-detail');
 
     if (items.length > 1) {
       // STEP1/2 방식 — 문장 5개 그대로 복원
@@ -144,7 +149,7 @@ const FeedbackScreen = {
       QuizScreen.init(AppState.session.questions);
       Router.go('step1');
     } else {
-      // 계산형(Level 2 방식B) — 문제·정답·단위 그대로 복원
+      // 계산형(Level 2 방식B, Level 3) — 문제·정답·단위 그대로 복원
       const it = items[0];
       AppState.session.questions = null;
       AppState.session.calcQuestion = {
@@ -152,9 +157,16 @@ const FeedbackScreen = {
         correctAnswer: it.correctAnswer,
         unit: it.unit,
         unitOptions: it.unitOptions,
+        solutionSteps: it.solutionSteps || [],
+        isLevel3: !!it.isLevel3,
       };
-      QuizScreen.initCalc(AppState.session.calcQuestion);
-      Router.go('calc');
+      if (it.isLevel3) {
+        Level3Screen.init(AppState.session.calcQuestion);
+        Router.go('level3');
+      } else {
+        QuizScreen.initCalc(AppState.session.calcQuestion);
+        Router.go('calc');
+      }
     }
   },
 
