@@ -31,17 +31,24 @@ const LearningService = {
       }
     );
 
-    const logs = feedbackData.items.map(item => ({
-      questionId:      item.id,
-      questionText:    item.text,
-      isWrongQ:        item.isWrong,
-      userSelected:    sessionData.checkedStatements.has(item.id),
-      isCorrectAnswer: item.isCorrectAnswer ?? !item.isWrong,
-      userReason:      item.userReason || null,
-      // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
-      explanation:     item.explanation || null, 
-      createdAt:       serverTimestamp(),
-    }));
+    const logs = feedbackData.items.map(item => {
+      const log = {
+        questionId:      item.id,
+        questionText:    item.text,
+        isWrongQ:        item.isWrong,
+        userSelected:    sessionData.checkedStatements.has(item.id),
+        isCorrectAnswer: item.isCorrectAnswer ?? !item.isWrong,
+        userReason:      item.userReason || null,
+        // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
+        explanation:     item.explanation || null,
+        createdAt:       serverTimestamp(),
+      };
+      // 🔑 계산형 문제(Level 2 방식B)일 때만 존재 — 있으면 같이 저장해서 나중에 "다시 풀기"가 가능하게 함
+      if (item.correctAnswer !== undefined) log.correctAnswer = item.correctAnswer;
+      if (item.unit !== undefined)          log.unit          = item.unit;
+      if (item.unitOptions !== undefined)   log.unitOptions   = item.unitOptions;
+      return log;
+    });
 
     await Promise.all(
       logs.map(log =>
@@ -143,7 +150,11 @@ const LearningService = {
         isWrong: data.isWrongQ,                // DB의 isWrongQ -> UI의 isWrong
         isCorrectAnswer: data.isCorrectAnswer,
         userReason: data.userReason,
-        explanation: data.explanation || '과거 데이터라 해설이 저장되지 않았습니다.', 
+        explanation: data.explanation || '과거 데이터라 해설이 저장되지 않았습니다.',
+        // 🔑 계산형 문제(Level 2 방식B)일 때만 존재 — "다시 풀기" 복원에 사용
+        correctAnswer: data.correctAnswer,
+        unit: data.unit,
+        unitOptions: data.unitOptions,
       };
     });
   },

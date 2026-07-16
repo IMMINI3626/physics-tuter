@@ -78,15 +78,23 @@ const FeedbackScreen = {
     }
   },
 
-  /* 과거 기록 화면 하단 버튼: [다시 풀기] [목록으로 돌아가기] 양옆으로 반반.
-     "다시 풀기"는 그 세션이 STEP1/2(문장 5개) 방식이었을 때만 제공 —
-     계산형(Level 2 방식B/Level3) 기록은 정답·단위 등 원본 데이터가 로그에 저장되어 있지 않아
-     그대로 다시 풀게 해줄 수 없음 (문제 문항이 정말 5개짜리 문장형일 때만 items.length > 1) */
+  /* "다시 풀기" 제공 가능 여부 판단.
+     - STEP1/2(문장 5개) 방식: items.length > 1이면 항상 가능 (문항 자체가 정답/오답 여부뿐이라 원본 그대로 복원됨)
+     - 계산형 단일 문항: correctAnswer/unit/unitOptions가 로그에 저장되어 있을 때만 가능
+       (Level 2 방식B부터 저장하기 시작함 — Level 3는 아직 저장 안 해서 여기서 자동으로 걸러짐) */
+  _canRetryHistory(items) {
+    if (!Array.isArray(items) || !items.length) return false;
+    if (items.length > 1) return true;
+    const it = items[0];
+    return it.correctAnswer !== undefined && !!it.unit && Array.isArray(it.unitOptions);
+  },
+
+  /* 과거 기록 화면 하단 버튼: [다시 풀기] [목록으로 돌아가기] 양옆으로 반반. */
   _renderHistoryActions(items, returnTo) {
     const area = document.getElementById('level-progress-area');
     if (!area) return;
 
-    const canRetrySame = Array.isArray(items) && items.length > 1;
+    const canRetrySame = this._canRetryHistory(items);
     const backLabel = returnTo === 'quiz-library' ? '문제풀기로 돌아가기' : '목록으로 돌아가기';
 
     const retryBtn = canRetrySame ? `
@@ -113,16 +121,15 @@ const FeedbackScreen = {
     }
   },
 
-  /* 과거 기록 화면에서 "다시 풀기" — 그때 그 5개 문장을 그대로 복원해서 STEP1부터 다시 풀게 함.
+  /* 과거 기록 화면에서 "다시 풀기" — 그때 그 문제를 그대로 복원해서 다시 풀게 함
+     (STEP1/2 방식은 5문장 전체를, 계산형은 문제·정답·단위를 복원).
      실제 라이브 세션의 retrySame()과 동일하게 isRetry=true로 표시되어, 다시 제출해도
      승급 카운터에는 반영되지 않음 (채점/저장 자체는 새로 일어남 — 라이브 재시도와 동일 동작) */
   retrySameHistory() {
     const items = this._historyItems;
-    if (!Array.isArray(items) || items.length <= 1) return;
+    if (!this._canRetryHistory(items)) return;
 
-    AppState.session.questions = items.map(it => ({ id: it.id, text: it.text, isWrong: it.isWrong }));
     AppState.session.detectedUnit = this._historyUnit || AppState.session.detectedUnit;
-    AppState.session.calcQuestion = null;
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
     AppState.session.isRetry = true;
@@ -130,8 +137,25 @@ const FeedbackScreen = {
     // misconceptions가 그대로 남아있으면 이 재시도가 엉뚱한 오개념을 다룬 것으로 잘못 저장되므로 비움
     AppState.session.misconceptions = [];
 
-    QuizScreen.init(AppState.session.questions);
-    Router.go('step1');
+    if (items.length > 1) {
+      // STEP1/2 방식 — 문장 5개 그대로 복원
+      AppState.session.questions = items.map(it => ({ id: it.id, text: it.text, isWrong: it.isWrong }));
+      AppState.session.calcQuestion = null;
+      QuizScreen.init(AppState.session.questions);
+      Router.go('step1');
+    } else {
+      // 계산형(Level 2 방식B) — 문제·정답·단위 그대로 복원
+      const it = items[0];
+      AppState.session.questions = null;
+      AppState.session.calcQuestion = {
+        text: it.text,
+        correctAnswer: it.correctAnswer,
+        unit: it.unit,
+        unitOptions: it.unitOptions,
+      };
+      QuizScreen.initCalc(AppState.session.calcQuestion);
+      Router.go('calc');
+    }
   },
 
   /* 레벨 승급 카운터 처리 + 화면 분기 */

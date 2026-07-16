@@ -270,6 +270,10 @@ const QuizScreen = {
         explanation: isCorrect
           ? `정확합니다! ${correct} ${calcQuestion.unit}이 맞습니다.`
           : `정답은 ${correct} ${calcQuestion.unit}입니다. 공식과 단위를 다시 확인해보세요.`,
+        // 🔑 나중에 마이페이지 기록에서 "다시 풀기"로 이 문제를 복원할 수 있도록 원본 데이터도 같이 넘김
+        correctAnswer: calcQuestion.correctAnswer,
+        unit: calcQuestion.unit,
+        unitOptions: calcQuestion.unitOptions,
       }],
     };
 
