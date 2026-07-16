@@ -104,10 +104,12 @@ const AuthService = {
     if (avatarEl) avatarEl.textContent = '?';
     if (nameEl)   nameEl.textContent   = '로그인 필요';
     if (emailEl)  emailEl.textContent  = '로그인 후 이용해주세요';
-    ['mp-total', 'mp-avgscore', 'mp-corrected'].forEach(id => {
+    ['mp-total', 'mp-avgscore'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = '—';
     });
+    const weakList = document.getElementById('weak-list');
+    if (weakList) weakList.innerHTML = '';
 
     // 🔑 상단 버튼들 → 전부 로그인 아이콘으로 복원
     const loginBtns = document.querySelectorAll('.login-icon-btn');

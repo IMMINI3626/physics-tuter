@@ -86,11 +86,11 @@ const LearningService = {
     const snap = await getDocs(q);
     const sessions = snap.docs.map(d => d.data());
 
-    if (!sessions.length) return { total: 0, avgScore: 0, correctedMisconceptions: 0 };
+    if (!sessions.length) return { total: 0, avgScore: 0 };
 
     const total    = sessions.length;
     const avgScore = Math.round(sessions.reduce((s, x) => s + (x.score || 0), 0) / total);
-    return { total, avgScore, correctedMisconceptions: Math.floor(total * 0.4) };
+    return { total, avgScore };
   },
 
   /**

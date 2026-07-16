@@ -14,12 +14,14 @@ const MypageScreen = {
 
     try {
       const uid = AppState.user.uid;
-      const [stats, allProgress] = await Promise.all([
+      const [stats, allProgress, recentSessions] = await Promise.all([
         LearningService.fetchStats(uid),
         LearningService.fetchAllUnitProgress(uid),
+        LearningService.fetchRecentSessions(uid, 20),
       ]);
 
       this._renderStats(stats);
+      this._renderWeakUnits(recentSessions);
       this._renderChapterList(allProgress);
     } catch (e) {
       console.error('마이페이지 로드 실패:', e);
@@ -29,9 +31,47 @@ const MypageScreen = {
 
   _renderStats(stats) {
     const el = (id) => document.getElementById(id);
-    if (el('mp-total'))     el('mp-total').textContent     = stats.total;
-    if (el('mp-avgscore'))  el('mp-avgscore').textContent  = stats.avgScore;
-    if (el('mp-corrected')) el('mp-corrected').textContent = stats.correctedMisconceptions;
+    if (el('mp-total'))    el('mp-total').textContent    = stats.total;
+    if (el('mp-avgscore')) el('mp-avgscore').textContent = stats.avgScore;
+  },
+
+  /* 마이페이지 메인에서, 소단원 상세 화면에 들어가지 않아도 어디가 취약한지 바로 보여주는
+     단원별 평균 점수 기반 막대 (점수가 낮을수록 취약도가 높게 표시됨) */
+  _renderWeakUnits(sessions) {
+    const container = document.getElementById('weak-list');
+    if (!container) return;
+
+    if (!sessions.length) {
+      container.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:8px 0">아직 학습 데이터가 없어요</p>';
+      return;
+    }
+
+    const unitStats = {};
+    sessions.forEach(s => {
+      const unitName = s.unit || '기타 단원';
+      if (!unitStats[unitName]) unitStats[unitName] = { sum: 0, count: 0 };
+      unitStats[unitName].sum += (s.score || 0);
+      unitStats[unitName].count += 1;
+    });
+
+    const weakList = Object.entries(unitStats)
+      .map(([name, data]) => {
+        const avg = Math.round(data.sum / data.count);
+        return { name, pct: 100 - avg }; // 점수가 낮을수록 취약도(바 길이)가 커짐
+      })
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 5);
+
+    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
+    container.innerHTML = weakList.map((item, i) => `
+      <div class="weak-row">
+        <span class="weak-name">${item.name}</span>
+        <div class="weak-track">
+          <div class="weak-fill" style="width:${item.pct}%;background:${colors[i % colors.length]}"></div>
+        </div>
+        <span class="weak-pct">취약도 ${item.pct}%</span>
+      </div>
+    `).join('');
   },
 
   /* 대단원 카드 목록 렌더링 */
