@@ -27,28 +27,111 @@ const FeedbackScreen = {
     if (!nextBtn) return;
 
     if (isHistory) {
-      // 과거 기록 뷰: 들어온 곳(마이페이지 or 문제풀기 탭)으로 돌아가기
-      const label = returnTo === 'quiz-library' ? '문제풀기로 돌아가기' : '목록으로 돌아가기';
-      nextBtn.style.display = '';
-      nextBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        ${label}
-      `;
-      nextBtn.onclick = () => {
-        window.Router.go(returnTo);
-        if (returnTo === 'quiz-library' && window.QuizLibraryScreen) {
-          window.QuizLibraryScreen.init();
-        }
-      };
-      this._clearLevelArea();
+      // 과거 기록 뷰: 다시 풀기 위해 필요한 데이터를 기억해둠 (retrySameHistory에서 사용)
+      this._historyItems = data.items;
+      this._historyUnit = data.unit || null;
+
+      this._setHistoryHeader(returnTo);
+      nextBtn.style.display = 'none';
+      this._renderHistoryActions(data.items, returnTo);
       return;
     }
 
+    this._resetHeader();
     // 🆕 일반 학습 완료 뷰: 레벨 시스템 적용 (승급 처리 + 버튼 분기)
     await this._handleLevelProgress(data);
+  },
+
+  /* 과거 기록 뷰: 상단바를 "< 마이페이지/문제풀기" 형태의 back-btn으로 전환 */
+  _setHistoryHeader(returnTo) {
+    const backBtn = document.getElementById('feedback-back-btn');
+    const backLabel = document.getElementById('feedback-back-label');
+    const actions = document.getElementById('feedback-topbar-actions');
+    if (!backBtn || !actions) return;
+
+    backLabel.textContent = returnTo === 'quiz-library' ? '문제풀기' : '마이페이지';
+    backBtn.style.display = '';
+    backBtn.onclick = () => {
+      window.Router.go(returnTo);
+      if (returnTo === 'quiz-library' && window.QuizLibraryScreen) {
+        window.QuizLibraryScreen.init();
+      }
+    };
+    // back-btn과 균형 맞추는 자리 — 다른 화면들의 back-btn+spacer 패턴과 동일
+    actions.innerHTML = '<div style="width:72px"></div>';
+  },
+
+  /* 일반(방금 막 푼) 피드백 뷰: 상단바를 원래의 로고 + 홈 아이콘으로 복원 */
+  _resetHeader() {
+    const backBtn = document.getElementById('feedback-back-btn');
+    const actions = document.getElementById('feedback-topbar-actions');
+    if (backBtn) backBtn.style.display = 'none';
+    if (actions) {
+      actions.innerHTML = `
+        <div class="icon-btn" onclick="Router.go('home')" aria-label="홈으로">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+      `;
+    }
+  },
+
+  /* 과거 기록 화면 하단 버튼: [다시 풀기] [목록으로 돌아가기] 양옆으로 반반.
+     "다시 풀기"는 그 세션이 STEP1/2(문장 5개) 방식이었을 때만 제공 —
+     계산형(Level 2 방식B/Level3) 기록은 정답·단위 등 원본 데이터가 로그에 저장되어 있지 않아
+     그대로 다시 풀게 해줄 수 없음 (문제 문항이 정말 5개짜리 문장형일 때만 items.length > 1) */
+  _renderHistoryActions(items, returnTo) {
+    const area = document.getElementById('level-progress-area');
+    if (!area) return;
+
+    const canRetrySame = Array.isArray(items) && items.length > 1;
+    const backLabel = returnTo === 'quiz-library' ? '문제풀기로 돌아가기' : '목록으로 돌아가기';
+
+    const retryBtn = canRetrySame ? `
+      <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.retrySameHistory()">
+        다시 풀기
+      </button>
+    ` : '';
+
+    area.style.display = 'block';
+    area.innerHTML = `
+      <div style="display:flex;gap:10px;margin:0 20px 20px;">
+        ${retryBtn}
+        <button class="primary-btn green-btn" style="margin:0;flex:1" onclick="FeedbackScreen._historyGoBack('${returnTo}')">
+          ${backLabel}
+        </button>
+      </div>
+    `;
+  },
+
+  _historyGoBack(returnTo) {
+    window.Router.go(returnTo);
+    if (returnTo === 'quiz-library' && window.QuizLibraryScreen) {
+      window.QuizLibraryScreen.init();
+    }
+  },
+
+  /* 과거 기록 화면에서 "다시 풀기" — 그때 그 5개 문장을 그대로 복원해서 STEP1부터 다시 풀게 함.
+     실제 라이브 세션의 retrySame()과 동일하게 isRetry=true로 표시되어, 다시 제출해도
+     승급 카운터에는 반영되지 않음 (채점/저장 자체는 새로 일어남 — 라이브 재시도와 동일 동작) */
+  retrySameHistory() {
+    const items = this._historyItems;
+    if (!Array.isArray(items) || items.length <= 1) return;
+
+    AppState.session.questions = items.map(it => ({ id: it.id, text: it.text, isWrong: it.isWrong }));
+    AppState.session.detectedUnit = this._historyUnit || AppState.session.detectedUnit;
+    AppState.session.calcQuestion = null;
+    AppState.session.checkedStatements = new Set();
+    AppState.session.step2Answers = [];
+    AppState.session.isRetry = true;
+    // 과거 기록에는 세션이 다뤘던 원래 오개념 id 목록이 없음 — 직전 세션(다른 단원일 수 있음)의
+    // misconceptions가 그대로 남아있으면 이 재시도가 엉뚱한 오개념을 다룬 것으로 잘못 저장되므로 비움
+    AppState.session.misconceptions = [];
+
+    QuizScreen.init(AppState.session.questions);
+    Router.go('step1');
   },
 
   /* 레벨 승급 카운터 처리 + 화면 분기 */

@@ -420,6 +420,7 @@ window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'm
       score: score,
       title: '과거 학습 복기',
       subtitle: `${unitName} 단원`,
+      unit: unitName,
       items: logs,
     };
 

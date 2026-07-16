@@ -514,8 +514,12 @@
      ============================================================ -->
 <div id="screen-feedback" class="screen">
   <header class="topbar">
+    <button class="back-btn" id="feedback-back-btn" style="display:none">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      <span id="feedback-back-label">돌아가기</span>
+    </button>
     <div class="topbar-logo">Physi<span>Clinic</span></div>
-    <div class="topbar-actions">
+    <div class="topbar-actions" id="feedback-topbar-actions">
       <div class="icon-btn" onclick="Router.go('home')" aria-label="홈으로">
         <svg viewBox="0 0 24 24">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
