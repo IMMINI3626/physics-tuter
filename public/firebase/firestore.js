@@ -226,23 +226,6 @@ const LearningService = {
 };
 
 const MisconceptionDB = {
-  async getUnits() {
-    const snap = await getDocs(collection(db, 'units'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async getMisconceptionsByUnit(unitId) {
-    const q = query(collection(db, 'misconceptions'), where('unitId', '==', unitId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async getScoringKeywords(misconceptionId) {
-    const docRef = doc(db, 'misconceptions', misconceptionId);
-    const snap   = await getDoc(docRef);
-    return snap.exists() ? snap.data().scoringKeywords || [] : [];
-  },
-
   async getMisconceptionById(id) {
     const snap = await getDoc(doc(db, 'misconceptions', id));
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;

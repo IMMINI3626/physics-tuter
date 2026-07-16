@@ -108,10 +108,6 @@ const AuthService = {
       const el = document.getElementById(id);
       if (el) el.textContent = '—';
     });
-    const weakList = document.getElementById('weak-list');
-    if (weakList) weakList.innerHTML = '';
-    const historyList = document.getElementById('history-list');
-    if (historyList) historyList.innerHTML = '';
 
     // 🔑 상단 버튼들 → 전부 로그인 아이콘으로 복원
     const loginBtns = document.querySelectorAll('.login-icon-btn');

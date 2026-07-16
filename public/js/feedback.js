@@ -122,14 +122,6 @@ const FeedbackScreen = {
     }
   },
 
-  /* 맞춘 문항에서 오개념 ID 추정 (questions 배열에 misconceptionId가 없으므로 1번째 오개념으로 대체 매핑) */
-  _guessMisconceptionId(item, misconceptions) {
-    if (misconceptions && misconceptions.length > 0) {
-      return misconceptions[0].id;
-    }
-    return 'ETC';
-  },
-
   /* 승급 안내 배너 표시 */
   _showPromotionBanner(newLevel) {
     const area = document.getElementById('level-progress-area');

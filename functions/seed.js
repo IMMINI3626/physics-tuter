@@ -66,7 +66,7 @@ const dims = [
    ============================================================ */
 const misconceptions = [
   // Kinematics
-  { id:'K1', unitId:'1', subUnit:'물체의 운동', subUnit:'물체의 운동', dimensionCode:'K', code:'K1', name_ko:'위치-속도 미분화', name_en:'Position-velocity undiscriminated',
+  { id:'K1', unitId:'1', subUnit:'물체의 운동', dimensionCode:'K', code:'K1', name_ko:'위치-속도 미분화', name_en:'Position-velocity undiscriminated',
     description:'위치와 속도를 동일하거나 유사한 개념으로 혼동함',
     correctConcept:'위치는 공간상 좌표, 속도는 위치 변화율로 서로 독립적인 물리량',
     sourcePaper:'Hestenes, Wells & Swackhamer (1992), The Physics Teacher 30(3)' },
