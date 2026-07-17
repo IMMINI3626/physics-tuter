@@ -38,8 +38,10 @@ const QuizLibraryScreen = {
       const score = s.score ?? 0;
       const badgeClass = score >= 80 ? 'badge-green' : score >= 60 ? 'badge-amber' : 'badge-red';
 
+      const rootId = s.retryOf || s.id;
+
       return `
-        <div class="recent-card" onclick="QuizLibraryScreen.openSession('${s.id}', '${s.unit || '물리'}', ${score})">
+        <div class="recent-card" onclick="QuizLibraryScreen.openSession('${s.id}', '${s.unit || '물리'}', ${score}, '${rootId}')">
           <div class="recent-info">
             <div class="recent-unit">${s.unit || '개념 학습'}</div>
             <div class="recent-meta">${dateStr} · 5문제</div>
@@ -59,8 +61,8 @@ const QuizLibraryScreen = {
   },
 
   /* 클릭 시 과거 피드백 재생 (mypage.js의 viewSessionLog와 동일 로직, 복귀처는 quiz-library) */
-  async openSession(sessionId, unitName, score) {
-    await window.viewSessionLog(sessionId, unitName, score, 'quiz-library');
+  async openSession(sessionId, unitName, score, rootId) {
+    await window.viewSessionLog(sessionId, unitName, score, 'quiz-library', rootId);
   },
 };
 

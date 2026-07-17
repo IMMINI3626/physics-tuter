@@ -20,7 +20,12 @@ const FeedbackScreen = {
 
     // isHistory가 아닐 때(방금 막 푼 새 문제일 때)만 DB에 저장
     if (!isHistory && window.AppState.isLoggedIn && window.AppState.user) {
-      window.LearningService.saveSession(data).catch(console.error);
+      window.LearningService.saveSession(data).then(newId => {
+        // 재도전이 아니라 새 문제였다면, 이 문제가 앞으로의 재도전들이 묶일 "원본"이 됨
+        if (!window.AppState.session.isRetry) {
+          window.AppState.session._rootSessionId = newId;
+        }
+      }).catch(console.error);
     }
 
     const nextBtn = document.getElementById('btn-feedback-next');
@@ -31,6 +36,7 @@ const FeedbackScreen = {
       this._historyItems = data.items;
       this._historyUnit = data.unit || null;
       this._historyReturnTo = returnTo;
+      this._historyRootId = data.rootId || null;
 
       this._setHistoryHeader(returnTo);
       nextBtn.style.display = 'none';
@@ -161,6 +167,8 @@ const FeedbackScreen = {
     AppState.session.isRetry = true;
     // 채점 후 결과 화면을 "레벨/승급 없는 간단 버전"으로 보여주기 위한 표시
     AppState.session.isHistoryRetry = true;
+    // 이 재도전이 저장될 때 원본 문제와 묶일 수 있도록 원본 id를 표시
+    AppState.session._rootSessionId = this._historyRootId || null;
     // 과거 기록에는 세션이 다뤘던 원래 오개념 id 목록이 없음 — 직전 세션(다른 단원일 수 있음)의
     // misconceptions가 그대로 남아있으면 이 재시도가 엉뚱한 오개념을 다룬 것으로 잘못 저장되므로 비움
     AppState.session.misconceptions = [];

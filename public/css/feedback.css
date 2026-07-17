@@ -348,6 +348,18 @@
 .hist-score.mid  { color: var(--amber); }
 .hist-score.bad  { color: var(--red); }
 .hist-level { flex: 1; display: flex; align-items: center; }
+.hist-ordinal { font-size: 11.5px; color: var(--text3); width: 44px; flex-shrink: 0; }
+.hist-group-header { cursor: pointer; }
+.hist-retry-badge { flex: 1; font-size: 11.5px; color: var(--text3); white-space: nowrap; }
+.hist-toggle-chev { flex-shrink: 0; color: var(--text3); transition: transform 0.2s ease; }
+.hist-attempts {
+  display: none;
+  margin: 0 0 8px 4px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+.hist-attempts.open { display: block; }
+.hist-attempts .hist-row { padding: 8px 0; }
 .hist-view-btn {
   display: flex; align-items: center; gap: 3px; flex-shrink: 0;
   background: none; border: none; cursor: pointer; font-family: var(--font);

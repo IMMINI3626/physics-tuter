@@ -292,11 +292,70 @@ const MypageScreen = {
     card.style.display = '';
   },
 
-  /* 과거 문제 풀이 이력 (최신순, 10개씩 페이지네이션) */
+  /* 과거 문제 풀이 이력 — 같은 문제(원본 + 다시 풀기들)는 하나로 묶어서, 그룹 단위로
+     최신순 10개씩 페이지네이션. 각 그룹은 최근 시도를 대표로 보여주고, 재도전이 있으면
+     펼쳐서 1차/2차/3차... 시도를 개별로 볼 수 있음 */
   _renderHistory(sessions) {
-    this._currentSessions = [...sessions].reverse(); // 최신순으로 뒤집어서 보관
+    // sessions는 fetchSessionsByUnit 결과로 오름차순(오래된 순) 정렬되어 있음 —
+    // 그 순서를 그대로 유지해야 그룹 안에서 1차/2차/3차 번호가 맞게 매겨짐
+    const groups = {};
+    const order = [];
+    sessions.forEach(s => {
+      const rootId = s.retryOf || s.id; // 이 기능 이전 데이터는 retryOf가 없어 자기 자신이 원본이 됨
+      if (!groups[rootId]) { groups[rootId] = []; order.push(rootId); }
+      groups[rootId].push(s);
+    });
+
+    // 그룹 안에서 가장 최근 시도의 시각 기준으로 그룹 자체를 최신순 정렬
+    this._historyGroups = order
+      .map(rootId => groups[rootId])
+      .sort((a, b) => {
+        const at = a[a.length - 1].createdAt?.toMillis?.() || 0;
+        const bt = b[b.length - 1].createdAt?.toMillis?.() || 0;
+        return bt - at;
+      });
+
     this._historyPage = 0;
     this._renderHistoryPage();
+  },
+
+  _fmtHistDate(createdAt) {
+    return createdAt && createdAt.toDate
+      ? createdAt.toDate().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+      : '-';
+  },
+
+  _histScoreCls(score) {
+    return score >= 90 ? 'good' : score >= 70 ? 'mid' : 'bad';
+  },
+
+  /* 이력 한 줄(원본 단독, 또는 펼친 상태의 1차/2차 등 개별 시도) 렌더링 */
+  _renderHistAttemptRow(s, ordinalLabel) {
+    // level은 이 기능을 만들기 전에 저장된 과거 세션엔 없을 수 있음 — 그런 경우는 배지 없이 표시
+    const levelBadge = s.level ? `<span class="level-badge l${s.level}">L${s.level}</span>` : '';
+    const ordinal = ordinalLabel ? `<span class="hist-ordinal">${ordinalLabel}</span>` : '';
+    const rootId = s.retryOf || s.id;
+
+    return `
+      <div class="hist-row">
+        ${ordinal}
+        <span class="hist-date">${this._fmtHistDate(s.createdAt)}</span>
+        <span class="hist-score ${this._histScoreCls(s.score)}">${s.score}점</span>
+        <span class="hist-level">${levelBadge}</span>
+        <button class="hist-view-btn" onclick="event.stopPropagation(); viewSessionLog('${s.id}', '${this._currentSubUnit}', ${s.score}, 'mypage-detail', '${rootId}')">
+          문제 보기
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    `;
+  },
+
+  _toggleHistGroup(groupId) {
+    const attemptsEl = document.getElementById(groupId);
+    const chevEl = document.getElementById(`chev-${groupId}`);
+    if (!attemptsEl) return;
+    const isOpen = attemptsEl.classList.toggle('open');
+    if (chevEl) chevEl.style.transform = isOpen ? 'rotate(180deg)' : '';
   },
 
   _renderHistoryPage() {
@@ -304,37 +363,39 @@ const MypageScreen = {
     const pagEl = document.getElementById('d-history-pagination');
     if (!el) return;
 
-    const sessions = this._currentSessions;
-    if (!sessions.length) {
+    const groups = this._historyGroups || [];
+    if (!groups.length) {
       el.innerHTML = '<div style="padding:10px 0;color:var(--text3);font-size:12.5px">아직 학습 기록이 없어요</div>';
       if (pagEl) pagEl.innerHTML = '';
       return;
     }
 
     const pageSize = this.HISTORY_PAGE_SIZE;
-    const totalPages = Math.ceil(sessions.length / pageSize);
+    const totalPages = Math.ceil(groups.length / pageSize);
     const page = this._historyPage;
-    const pageSessions = sessions.slice(page * pageSize, page * pageSize + pageSize);
+    const pageGroups = groups.slice(page * pageSize, page * pageSize + pageSize);
 
-    el.innerHTML = pageSessions.map(s => {
-      const dateStr = s.createdAt && s.createdAt.toDate
-        ? s.createdAt.toDate().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
-        : '-';
-      const scoreCls = s.score >= 90 ? 'good' : s.score >= 70 ? 'mid' : 'bad';
-      // level은 이 기능을 만들기 전에 저장된 과거 세션엔 없을 수 있음 — 그런 경우는 배지 없이 표시
-      const levelBadge = s.level ? `<span class="level-badge l${s.level}">L${s.level}</span>` : '';
+    el.innerHTML = pageGroups.map((attempts, gi) => {
+      const retryCount = attempts.length - 1;
+
+      // 재도전이 없으면 예전과 동일하게 한 줄만
+      if (retryCount === 0) {
+        return `<div class="hist-item">${this._renderHistAttemptRow(attempts[0], null)}</div>`;
+      }
+
+      const latest = attempts[attempts.length - 1];
+      const groupId = `hist-group-${page}-${gi}`;
+      const attemptsHtml = attempts.map((s, i) => this._renderHistAttemptRow(s, `${i + 1}차 풀이`)).join('');
 
       return `
         <div class="hist-item">
-          <div class="hist-row">
-            <span class="hist-date">${dateStr}</span>
-            <span class="hist-score ${scoreCls}">${s.score}점</span>
-            <span class="hist-level">${levelBadge}</span>
-            <button class="hist-view-btn" onclick="viewSessionLog('${s.id}', '${this._currentSubUnit}', ${s.score}, 'mypage-detail')">
-              문제 보기
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+          <div class="hist-row hist-group-header" onclick="MypageScreen._toggleHistGroup('${groupId}')">
+            <span class="hist-date">${this._fmtHistDate(latest.createdAt)}</span>
+            <span class="hist-score ${this._histScoreCls(latest.score)}">${latest.score}점</span>
+            <span class="hist-retry-badge">재풀이 횟수: ${retryCount}</span>
+            <svg class="hist-toggle-chev" id="chev-${groupId}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
+          <div class="hist-attempts" id="${groupId}">${attemptsHtml}</div>
         </div>
       `;
     }).join('');
@@ -413,8 +474,9 @@ const MypageScreen = {
   },
 };
 
-/* 과거 세션의 문제/피드백을 실제로 보러가기 (마이페이지 이력에서 호출) */
-window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'mypage') {
+/* 과거 세션의 문제/피드백을 실제로 보러가기 (마이페이지 이력에서 호출)
+   rootId: 이 세션이 속한 "원본 문제" id — 여기서 다시 풀기를 또 누르면 같은 그룹으로 묶이도록 전달 */
+window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'mypage', rootId = null) {
   try {
     Toast.show('과거 기록을 불러오는 중...');
 
@@ -425,6 +487,7 @@ window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'm
       title: '과거 학습 복기',
       subtitle: `${unitName} 단원`,
       unit: unitName,
+      rootId: rootId || sessionId,
       items: logs,
     };
 

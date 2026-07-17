@@ -12,6 +12,7 @@ const KeywordScreen = {
     setQuizBackTarget(null);
     AppState.session.isRetry = false;
     AppState.session.isHistoryRetry = false;
+    AppState.session._rootSessionId = null;
 
     // 미리보기 이미지 표시
     const preview = document.getElementById('preview-img');

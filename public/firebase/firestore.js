@@ -17,20 +17,24 @@ const LearningService = {
       item => !(item.isCorrectAnswer ?? !item.isWrong)
     ).length;
 
-    const sessionRef = await addDoc(
-      collection(db, 'users', uid, 'sessions'),
-      {
-        unit:           sessionData.detectedUnit,
-        keywords:       sessionData.extractedKeywords,
-        misconceptions: sessionData.misconceptions.map(m => m.id),
-        score:          feedbackData.score,
-        level:          sessionData.currentLevel || 1,
-        wrongCount,
-        hintUsed:       sessionData.hintUsed,
-        checkedCount:   sessionData.checkedStatements.size,
-        createdAt:      serverTimestamp(),
-      }
-    );
+    const sessionDoc = {
+      unit:           sessionData.detectedUnit,
+      keywords:       sessionData.extractedKeywords,
+      misconceptions: sessionData.misconceptions.map(m => m.id),
+      score:          feedbackData.score,
+      level:          sessionData.currentLevel || 1,
+      wrongCount,
+      hintUsed:       sessionData.hintUsed,
+      checkedCount:   sessionData.checkedStatements.size,
+      createdAt:      serverTimestamp(),
+    };
+    // 🔑 재도전(다시 풀어보기/다시 풀기)이면 원본 문제 id를 같이 저장 —
+    // 마이페이지 이력에서 같은 문제끼리 묶어 보여주는 데 사용
+    if (sessionData.isRetry && sessionData._rootSessionId) {
+      sessionDoc.retryOf = sessionData._rootSessionId;
+    }
+
+    const sessionRef = await addDoc(collection(db, 'users', uid, 'sessions'), sessionDoc);
 
     const logs = feedbackData.items.map(item => {
       const log = {
