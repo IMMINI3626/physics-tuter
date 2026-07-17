@@ -275,10 +275,6 @@
 .progress-dots { display: flex; gap: 3.5px; flex-shrink: 0; }
 .progress-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
 .progress-dots span.filled { background: var(--accent); }
-.progress-count {
-  font-family: var(--font-mono);
-  font-size: 11px; color: var(--text3); flex-shrink: 0; white-space: nowrap;
-}
 .level-badge {
   font-size: 10.5px; font-weight: 700;
   padding: 3px 8px; border-radius: 100px;

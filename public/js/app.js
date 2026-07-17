@@ -143,11 +143,17 @@ const Router = {
 /* ────────────────────────────────────────
    Quiz 화면(step1/calc/level3)의 상단 "< 뒤로가기" 목적지
    기본은 keyword("분석 결과")지만, 마이페이지 소단원 상세에서 문제를 새로 풀거나
-   과거 기록을 다시 풀 때는 mypage-detail("학습 현황")로 돌아가야 함
+   과거 기록을 다시 풀 때는 mypage-detail("학습 현황")로, 문제풀기 탭 기록에서 다시 풀 때는
+   quiz-library("문제풀기")로 돌아가야 함
 ──────────────────────────────────────── */
+const QUIZ_BACK_LABELS = {
+  'mypage-detail': '학습 현황',
+  'quiz-library':  '문제풀기',
+};
+
 function setQuizBackTarget(target) {
   AppState.session._quizBackTarget = target;
-  const label = target === 'mypage-detail' ? '학습 현황' : '분석 결과';
+  const label = QUIZ_BACK_LABELS[target] || '분석 결과';
   ['step1-back-label', 'calc-back-label', 'l3-back-label'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = label;
@@ -156,6 +162,11 @@ function setQuizBackTarget(target) {
 
 function quizGoBack() {
   const target = AppState.session._quizBackTarget;
+  if (target === 'quiz-library') {
+    Router.go('quiz-library');
+    window.QuizLibraryScreen?.init();
+    return;
+  }
   Router.go(target === 'mypage-detail' ? 'mypage-detail' : 'keyword');
 }
 

@@ -90,7 +90,7 @@ const MypageScreen = {
           return `
           <button class="subunit-row" data-chapter-idx="${Object.keys(UNIT_MAP).indexOf(chapter)}" data-sub-idx="${i}" onclick="MypageScreen._onSubunitClick(this)">
             <span class="subunit-name ${p.sessionCount ? '' : 'dim'}">${su}</span>
-            ${this._progressDots(p.sessionCount || 0)}
+            ${this._levelDots(p)}
             ${this._levelBadge(p)}
             <svg class="subunit-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </button>`;
@@ -108,7 +108,7 @@ const MypageScreen = {
           return `
           <button class="subunit-row" data-etc-name="${this._escapeAttr(name)}" onclick="MypageScreen._onSubunitClick(this)">
             <span class="subunit-name">${name}</span>
-            ${this._progressDots(p.sessionCount || 0)}
+            ${this._levelDots(p)}
             ${this._levelBadge(p)}
             <svg class="subunit-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </button>`;
@@ -141,13 +141,13 @@ const MypageScreen = {
     return `<span class="level-badge l${level}">L${level}</span>`;
   },
 
-  _progressDots(n) {
-    if (!n) return '<span class="progress-count">0회</span>';
-    const capped = Math.min(n, 4);
+  /* 점 3개로 현재 레벨(L1~L3)을 표시. 완료면 3개 다 채움, 시작 전이면 0개 채움 —
+     "몇 번 풀었는지"는 더 이상 여기서 보여주지 않음 */
+  _levelDots(progress) {
+    const filled = progress.completed ? 3 : (progress.sessionCount ? (progress.level || 1) : 0);
     let dots = '';
-    for (let i = 0; i < 4; i++) dots += `<span class="${i < capped ? 'filled' : ''}"></span>`;
-    const extra = n > 4 ? `<span class="progress-count">${n}회</span>` : '';
-    return `<div class="progress-dots">${dots}</div>${extra}`;
+    for (let i = 0; i < 3; i++) dots += `<span class="${i < filled ? 'filled' : ''}"></span>`;
+    return `<div class="progress-dots">${dots}</div>`;
   },
 
   /* 소단원 상세 화면 진입 */
@@ -321,14 +321,13 @@ const MypageScreen = {
         ? s.createdAt.toDate().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
         : '-';
       const scoreCls = s.score >= 90 ? 'good' : s.score >= 70 ? 'mid' : 'bad';
-      const wrongText = s.wrongCount != null ? `틀린 문항 ${s.wrongCount}개` : '';
 
       return `
         <div class="hist-item">
           <div class="hist-row">
             <span class="hist-date">${dateStr}</span>
             <span class="hist-score ${scoreCls}">${s.score}점</span>
-            <span class="hist-wrong">${wrongText}</span>
+            <span class="hist-wrong"></span>
             <button class="hist-view-btn" onclick="viewSessionLog('${s.id}', '${this._currentSubUnit}', ${s.score}, 'mypage-detail')">
               문제 보기
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -372,6 +371,7 @@ const MypageScreen = {
       AppState.session.currentLevel = level;
       AppState.session.correctCount = this._currentCorrectCount;
       AppState.session.isRetry = false;
+      AppState.session.isHistoryRetry = false;
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
       AppState.session.hintUsed = 0;

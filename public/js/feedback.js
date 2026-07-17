@@ -30,6 +30,7 @@ const FeedbackScreen = {
       // 과거 기록 뷰: 다시 풀기 위해 필요한 데이터를 기억해둠 (retrySameHistory에서 사용)
       this._historyItems = data.items;
       this._historyUnit = data.unit || null;
+      this._historyReturnTo = returnTo;
 
       this._setHistoryHeader(returnTo);
       nextBtn.style.display = 'none';
@@ -124,11 +125,33 @@ const FeedbackScreen = {
     }
   },
 
+  /* "다시 풀기"(과거 기록 재도전) 결과 화면: 레벨/승급 정보 없이 맞았는지만 보여주고
+     [돌아가기] / [새 문제 풀기] 두 개만 양옆으로 반반 제공 */
+  _renderPostRetryActions() {
+    const area = document.getElementById('level-progress-area');
+    if (!area) return;
+
+    const returnTo = this._historyReturnTo === 'quiz-library' ? 'quiz-library' : 'mypage-detail';
+    const backLabel = returnTo === 'quiz-library' ? '문제풀기로 돌아가기' : '학습 현황으로 돌아가기';
+
+    area.style.display = 'block';
+    area.innerHTML = `
+      <div style="display:flex;gap:10px;margin:0 20px 20px;">
+        <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen._historyGoBack('${returnTo}')">
+          ${backLabel}
+        </button>
+        <button class="primary-btn green-btn" style="margin:0;flex:1" onclick="FeedbackScreen.retrySimilar(this)">
+          새 문제 풀기
+        </button>
+      </div>
+    `;
+  },
+
   /* 과거 기록 화면에서 "다시 풀기" — 그때 그 문제를 그대로 복원해서 다시 풀게 함
      (STEP1/2 방식은 5문장 전체를, 계산형은 문제·정답·단위를 복원).
      실제 라이브 세션의 retrySame()과 동일하게 isRetry=true로 표시되어, 다시 제출해도
      승급 카운터에는 반영되지 않음 (채점/저장 자체는 새로 일어남 — 라이브 재시도와 동일 동작) */
-  retrySameHistory() {
+  async retrySameHistory() {
     const items = this._historyItems;
     if (!this._canRetryHistory(items)) return;
 
@@ -136,11 +159,28 @@ const FeedbackScreen = {
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
     AppState.session.isRetry = true;
+    // 채점 후 결과 화면을 "레벨/승급 없는 간단 버전"으로 보여주기 위한 표시
+    AppState.session.isHistoryRetry = true;
     // 과거 기록에는 세션이 다뤘던 원래 오개념 id 목록이 없음 — 직전 세션(다른 단원일 수 있음)의
     // misconceptions가 그대로 남아있으면 이 재시도가 엉뚱한 오개념을 다룬 것으로 잘못 저장되므로 비움
     AppState.session.misconceptions = [];
-    // 문제 화면 상단 뒤로가기를 "분석 결과"가 아니라 "학습 현황"(마이페이지 상세)으로 돌아가게 함
-    setQuizBackTarget('mypage-detail');
+    // 문제 화면 상단 뒤로가기를 들어온 곳(마이페이지 상세 or 문제풀기 탭)으로 되돌아가게 함
+    setQuizBackTarget(this._historyReturnTo === 'quiz-library' ? 'quiz-library' : 'mypage-detail');
+
+    // 🔑 AppState.session.currentLevel/correctCount는 과거 기록을 열람하는 동안 다른 값으로
+    // 남아있을 수 있음(직전 세션 잔재, 또는 애초에 기본값 1) — 재시도 화면에 "현재 Level"을
+    // 잘못 표시하지 않도록 Firestore의 실제 진행 상태로 다시 맞춰줌
+    if (window.AppState.isLoggedIn && window.AppState.user && AppState.session.detectedUnit) {
+      try {
+        const progress = await window.LearningService.getUnitProgress(
+          window.AppState.user.uid, AppState.session.detectedUnit
+        );
+        AppState.session.currentLevel = progress.level || 1;
+        AppState.session.correctCount = progress.correctCount || 0;
+      } catch (e) {
+        console.warn('진행 상태 조회 실패, 기존 값 유지:', e);
+      }
+    }
 
     if (items.length > 1) {
       // STEP1/2 방식 — 문장 5개 그대로 복원
@@ -174,6 +214,14 @@ const FeedbackScreen = {
   async _handleLevelProgress(data) {
     const nextBtn = document.getElementById('btn-feedback-next');
     const session = window.AppState.session;
+
+    // 마이페이지 과거 기록에서 "다시 풀기"로 재도전한 결과 — 승급/레벨 정보 없이 간단한 선택지만 제공
+    if (session.isHistoryRetry) {
+      if (nextBtn) nextBtn.style.display = 'none';
+      this._renderPostRetryActions();
+      return;
+    }
+
     const isLoggedIn = window.AppState.isLoggedIn && window.AppState.user;
     const isPerfect = data.score === 100;
     const isNewProblem = !session.isRetry;
@@ -364,6 +412,7 @@ const FeedbackScreen = {
         mode
       );
       AppState.session.isRetry = false;
+      AppState.session.isHistoryRetry = false;
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
       if (result.misconceptionCount) {

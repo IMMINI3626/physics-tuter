@@ -7,8 +7,11 @@ const KeywordScreen = {
   async start(imageBase64) {
     Router.go('keyword');
     this._showLoading();
-    // 새 사진으로 시작하는 정상 흐름 — 문제 화면 뒤로가기를 기본값("분석 결과")으로 되돌림
+    // 새 사진으로 시작하는 정상 흐름 — 문제 화면 뒤로가기를 기본값("분석 결과")으로 되돌리고
+    // 이전에 남아있었을 수 있는 재시도 표시도 초기화
     setQuizBackTarget(null);
+    AppState.session.isRetry = false;
+    AppState.session.isHistoryRetry = false;
 
     // 미리보기 이미지 표시
     const preview = document.getElementById('preview-img');
