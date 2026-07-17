@@ -24,6 +24,7 @@ const LearningService = {
         keywords:       sessionData.extractedKeywords,
         misconceptions: sessionData.misconceptions.map(m => m.id),
         score:          feedbackData.score,
+        level:          sessionData.currentLevel || 1,
         wrongCount,
         hintUsed:       sessionData.hintUsed,
         checkedCount:   sessionData.checkedStatements.size,

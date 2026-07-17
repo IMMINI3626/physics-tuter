@@ -321,13 +321,15 @@ const MypageScreen = {
         ? s.createdAt.toDate().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
         : '-';
       const scoreCls = s.score >= 90 ? 'good' : s.score >= 70 ? 'mid' : 'bad';
+      // level은 이 기능을 만들기 전에 저장된 과거 세션엔 없을 수 있음 — 그런 경우는 배지 없이 표시
+      const levelBadge = s.level ? `<span class="level-badge l${s.level}">L${s.level}</span>` : '';
 
       return `
         <div class="hist-item">
           <div class="hist-row">
             <span class="hist-date">${dateStr}</span>
             <span class="hist-score ${scoreCls}">${s.score}점</span>
-            <span class="hist-wrong"></span>
+            <span class="hist-level">${levelBadge}</span>
             <button class="hist-view-btn" onclick="viewSessionLog('${s.id}', '${this._currentSubUnit}', ${s.score}, 'mypage-detail')">
               문제 보기
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
