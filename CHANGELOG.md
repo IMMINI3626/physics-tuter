@@ -491,3 +491,103 @@ const improvement = scores.at(-1) - scores[0];
     → batchUpload를 id 기반 덮어쓰기(upsert) 방식으로 전환, node seed.js를 몇 번 재실행해도 중복 안 쌓임
     → 기존에 반복 실행으로 3배씩 쌓여있던 중복 데이터는 삭제 후 재시딩으로 정리 완료
 ```
+
+---
+
+## (3) 과거 기록 "다시 풀기" 기능 및 관련 정리 (완료, 2026-07)
+
+### 배경
+
+마이페이지에서 "문제 보기"로 과거 세션을 열람만 할 수 있었는데, 그 자리에서 같은 문제를
+다시 풀어볼 수 있게 해달라는 요청으로 시작. STEP1/2(문장형) → Level 2 계산형 → Level 3
+순서로 단계적으로 확장했고, 그 과정에서 발견한 버그 수정과 코드 정리도 같이 진행함.
+
+### 3-1. 다시 풀기 — 문항 유형별 지원 범위
+
+| 유형 | 지원 여부 | 이유 |
+|------|-----------|------|
+| STEP1/2 (문장 5개) | ✅ | 로그에 문장 5개(id/text/isWrong)가 그대로 남아있어 원본 그대로 복원 가능 |
+| Level 2 계산형(방식B) | ✅ | `correctAnswer`/`unit`/`unitOptions`를 로그에 추가로 저장하도록 확장 |
+| Level 3 | ✅ | 위 필드에 더해 `solutionSteps`/`isLevel3`까지 저장하도록 확장 |
+| 이 기능 이전에 저장된 기록 | ❌ (자동 비활성화) | 위 필드들이 로그에 없어서 `_canRetryHistory()`가 자동으로 걸러냄 — 하위 호환 문제없음 |
+
+**변경 파일**
+| 파일 | 수정 내용 |
+|------|-----------|
+| `public/js/quiz.js` | 계산형(Level 2방식B) 채점 시 `correctAnswer`/`unit`/`unitOptions` 저장, Level 3 `_finalize()`에 `isLevel3`/`solutionSteps` 포함 |
+| `public/firebase/firestore.js` | `saveSession()`/`fetchSessionLogs()`가 위 필드들을 저장·반환하도록 확장 |
+| `public/js/feedback.js` | `_canRetryHistory()`, `retrySameHistory()` 추가 — 문항 유형에 따라 STEP1/계산 화면/Level3 화면 중 알맞은 곳으로 복원 |
+
+### 3-2. 재도전 결과 화면 — 레벨 정보 없는 간단 버전
+
+과거 기록에서 "다시 풀기"로 재도전한 결과는 레벨/승급 카운터와 무관하므로(`isRetry=true`라
+DB에 반영 안 됨), 화면도 승급 UI 없이 간단하게: 점수/피드백만 보여주고 아래 버튼 2개만 제공.
+
+```
+[학습 현황으로 돌아가기]   [새 문제 풀기]
+```
+
+`AppState.session.isHistoryRetry` 플래그로 이 케이스를 구분 (`FeedbackScreen._handleLevelProgress`
+맨 앞에서 분기). 새 문제를 생성하면(`retrySimilar`) 이 플래그를 다시 `false`로 돌려 정상
+승급 흐름으로 복귀.
+
+### 3-3. 상단 뒤로가기 목적지 — "분석 결과" / "학습 현황" / "문제풀기" 3분기
+
+문제 화면(STEP1/계산/Level3)에 들어온 경로에 따라 상단 뒤로가기 버튼의 목적지와 라벨이
+달라져야 함:
+- 홈 → 사진 업로드로 들어온 정상 흐름: "< 분석 결과" → keyword 화면
+- 마이페이지 상세에서 "이어서 풀기"/"다시 풀기"로 들어온 경우: "< 학습 현황" → mypage-detail
+- 문제풀기 탭 기록에서 "다시 풀기"로 들어온 경우: "< 문제풀기" → quiz-library
+
+`app.js`에 `setQuizBackTarget(target)` / `quizGoBack()` 공용 함수 추가, `AppState.session._quizBackTarget`에
+목적지를 저장해두고 진입 경로마다(`KeywordScreen.start`, `MypageScreen.retryUnit`,
+`FeedbackScreen.retrySameHistory`) 알맞게 설정.
+
+### 3-4. 마이페이지 이력 — 레벨 배지 + 같은 문제끼리 그룹핑
+
+- **레벨 배지**: 세션 저장 시 `level` 필드를 같이 저장(`sessionData.currentLevel`), 이력 목록에
+  L1/L2/L3 배지로 표시. 이 기능 이전 기록은 필드가 없어 배지 없이 표시 (하위 호환).
+- **재도전 그룹핑**: 세션 저장 시 재도전이면 원본 문제 id를 `retryOf` 필드로 같이 저장
+  (재도전의 재도전도 항상 최초 원본을 가리키도록 유지 — `AppState.session._rootSessionId`를
+  통해 체인 전체에 전파). 마이페이지 이력에서 `retryOf` 기준으로 그룹핑해서 재도전 없으면
+  기존처럼 한 줄, 있으면 "재풀이 횟수: N"으로 접어서 표시하고 펼치면 1차/2차/3차... 개별
+  시도를 볼 수 있음.
+- "틀린 문항 N개" 텍스트는 사용자에게 혼동을 줄 수 있어 제거 (레이아웃 spacer 역할만 유지).
+- 마이페이지 메인의 소단원 진행 점(●●●○)을 "몇 번 풀었는지" 대신 "현재 레벨(점 3개, L1~L3)"로
+  의미 변경.
+
+> ⚠️ **참고**: 소단원 상세 화면의 점수 추이 그래프는 재도전까지 전부 개별 점으로 표시하고,
+> 바로 아래 이력 목록은 재도전을 그룹으로 묶어서 표시함 — 같은 화면 안에서 두 영역이
+> "재도전"을 다르게 다룸. 그래프는 "점수가 어떻게 변해왔는지" 추이를 보여주는 용도, 이력
+> 목록은 "서로 다른 문제를 몇 개나 풀었는지" 정리해서 보여주는 용도라 각자 목적에 맞게
+> 의도적으로 다르게 처리한 것이며, 버그는 아님. 통일하고 싶으면 그래프도 그룹 단위(문제당
+> 최신 점수 하나)로 그리도록 바꿔야 함 — 아직 요청 없어 보류.
+
+### 3-5. 개발 중 발견/수정한 버그
+
+1. **마이페이지 상세로 돌아와도 이력이 바로 안 바뀌던 문제** — "학습 현황으로 돌아가기"가
+   `Router.go('mypage-detail')`만 호출해서 화면 전환만 하고 데이터는 새로고침 안 됐음.
+   `MypageScreen.goDetail()`을 같이 호출하도록 수정. (수정 과정에서 `window.MypageScreen`으로
+   잘못 참조해 새로고침이 아예 실행 안 되는 2차 버그도 같이 발생 → `mypage.js`가 모듈이 아닌
+   일반 스크립트라 `window.` 없이 바로 참조해야 한다는 걸 재확인하고 수정)
+2. **재도전 시 화면에 "Level 1"로 잘못 표시되던 문제** — `retrySameHistory()`가
+   `AppState.session.currentLevel`을 갱신 안 해서, 과거 화면 열람 중 남아있던 값(보통 기본값 1)이
+   그대로 표시됨. 실제 Firestore에 저장된 레벨/카운터는 (isRetry=true라 애초에 DB에 안 쓰여서)
+   안전했고, 화면 표시만 문제였음. `retrySameHistory()`에서 `LearningService.getUnitProgress()`로
+   실제 값을 다시 조회하도록 수정.
+3. **Level 3 화면 "텍스트 입력" 탭 버튼 HTML 태그 깨짐** — `<button>...도중</button>텍스트 입력</button>`처럼
+   `</button>`가 하나 더 들어가 있어서 라벨 텍스트가 버튼 밖으로 빠져나가 있었음 (클릭 안 됨).
+
+### 3-6. 코드 정리 — 문제 화면 라우팅 로직 통합
+
+"결과가 계산형인지/Level3인지 보고 step1·calc·level3 중 어디로 보낼지" 판단하는 로직이
+`keyword.js`(startQuiz), `feedback.js`(retrySame/retrySimilar/retrySameHistory),
+`mypage.js`(retryUnit) 5곳에 거의 동일하게 복사돼 있던 것을 `app.js`의 공용 함수 2개로 통합:
+
+```js
+routeToQuizScreen()      // AppState.session.calcQuestion/questions가 이미 세팅된 상태에서 라우팅만
+applyQuizResult(result)  // generateQuestions 응답을 세션에 반영한 뒤 routeToQuizScreen() 호출
+```
+
+5곳 전부 이 함수 호출로 교체 — 나중에 화면이 하나 늘어나거나 분기 조건이 바뀌어도 한 곳만
+고치면 됨.
