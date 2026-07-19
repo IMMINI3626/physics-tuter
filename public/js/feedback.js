@@ -128,6 +128,10 @@ const FeedbackScreen = {
     window.Router.go(returnTo);
     if (returnTo === 'quiz-library' && window.QuizLibraryScreen) {
       window.QuizLibraryScreen.init();
+    } else if (returnTo === 'mypage-detail' && typeof MypageScreen !== 'undefined' && MypageScreen._currentSubUnit) {
+      // Router.go만으로는 화면만 바뀌고 데이터는 그대로라, 방금 다시 풀기로 바뀐 이력/차트가
+      // 반영 안 됨 — goDetail을 다시 불러서 "나갔다 들어온 것"과 동일하게 새로고침
+      MypageScreen.goDetail(MypageScreen._currentChapter, MypageScreen._currentSubUnit);
     }
   },
 
