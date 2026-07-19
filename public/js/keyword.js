@@ -113,23 +113,8 @@ const KeywordScreen = {
         AppState.session.misconceptionCount = result.misconceptionCount;
       }
 
-      // Level 3: 복합 계산 문제 화면 / Level 2 Mode B: 계산 단답형 화면
-      if (result.calcQuestion) {
-        AppState.session.calcQuestion = result.calcQuestion;
-        AppState.session.questions = null;
-        if (result.calcQuestion.isLevel3) {
-          Level3Screen.init(result.calcQuestion);
-          Router.go('level3');
-        } else {
-          QuizScreen.initCalc(result.calcQuestion);
-          Router.go('calc');
-        }
-      } else {
-        AppState.session.calcQuestion = null;
-        AppState.session.questions = result.questions;
-        QuizScreen.init(result.questions);
-        Router.go('step1');
-      }
+      // 결과에 맞춰(문장형/계산형/Level3) 알맞은 문제 화면으로 이동
+      applyQuizResult(result);
     } catch (err) {
       console.error('Question generation failed:', err);
       Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');

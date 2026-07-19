@@ -171,6 +171,44 @@ function quizGoBack() {
 }
 
 /* ────────────────────────────────────────
+   문제 화면(step1/calc/level3) 라우팅 — 공용 함수
+   "어느 화면으로 보낼지" 판단 로직이 여러 곳에 흩어져 있으면 나중에 화면이 하나
+   늘어나거나 조건이 바뀔 때 한 곳을 빠뜨리기 쉬워서, 문제를 새로 보여줘야 하는
+   모든 지점(최초 출제, 다음 문제 풀기, 다시 풀어보기, 이어서 풀기, 과거 기록 다시 풀기)이
+   이 두 함수만 공유해서 쓴다.
+──────────────────────────────────────── */
+
+/* AppState.session.calcQuestion/questions가 이미 세팅되어 있다는 전제로,
+   그 내용에 맞는 문제 화면으로 이동만 시킴 */
+function routeToQuizScreen() {
+  const { calcQuestion, questions } = AppState.session;
+  if (calcQuestion) {
+    if (calcQuestion.isLevel3) {
+      Level3Screen.init(calcQuestion);
+      Router.go('level3');
+    } else {
+      QuizScreen.initCalc(calcQuestion);
+      Router.go('calc');
+    }
+  } else {
+    QuizScreen.init(questions);
+    Router.go('step1');
+  }
+}
+
+/* generateQuestions API 응답(result)을 세션에 반영한 뒤 알맞은 문제 화면으로 이동 */
+function applyQuizResult(result) {
+  if (result.calcQuestion) {
+    AppState.session.calcQuestion = result.calcQuestion;
+    AppState.session.questions = null;
+  } else {
+    AppState.session.calcQuestion = null;
+    AppState.session.questions = result.questions;
+  }
+  routeToQuizScreen();
+}
+
+/* ────────────────────────────────────────
    Toast
 ──────────────────────────────────────── */
 const Toast = {

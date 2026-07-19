@@ -198,8 +198,6 @@ const FeedbackScreen = {
       // STEP1/2 방식 — 문장 5개 그대로 복원
       AppState.session.questions = items.map(it => ({ id: it.id, text: it.text, isWrong: it.isWrong }));
       AppState.session.calcQuestion = null;
-      QuizScreen.init(AppState.session.questions);
-      Router.go('step1');
     } else {
       // 계산형(Level 2 방식B, Level 3) — 문제·정답·단위 그대로 복원
       const it = items[0];
@@ -212,14 +210,8 @@ const FeedbackScreen = {
         solutionSteps: it.solutionSteps || [],
         isLevel3: !!it.isLevel3,
       };
-      if (it.isLevel3) {
-        Level3Screen.init(AppState.session.calcQuestion);
-        Router.go('level3');
-      } else {
-        QuizScreen.initCalc(AppState.session.calcQuestion);
-        Router.go('calc');
-      }
     }
+    routeToQuizScreen();
   },
 
   /* 레벨 승급 카운터 처리 + 화면 분기 */
@@ -391,18 +383,7 @@ const FeedbackScreen = {
     AppState.session.isRetry = true;
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
-    if (AppState.session.calcQuestion) {
-      if (AppState.session.calcQuestion.isLevel3) {
-        Level3Screen.init(AppState.session.calcQuestion);
-        Router.go('level3');
-      } else {
-        QuizScreen.initCalc(AppState.session.calcQuestion);
-        Router.go('calc');
-      }
-    } else {
-      QuizScreen.init(AppState.session.questions);
-      Router.go('step1');
-    }
+    routeToQuizScreen();
   },
 
   /* 다음 문제 풀기: 같은 소단원/오개념/레벨로 새 문제 생성 */
@@ -432,22 +413,7 @@ const FeedbackScreen = {
       }
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
-      if (result.calcQuestion) {
-        AppState.session.calcQuestion = result.calcQuestion;
-        AppState.session.questions = null;
-        if (result.calcQuestion.isLevel3) {
-          Level3Screen.init(result.calcQuestion);
-          Router.go('level3');
-        } else {
-          QuizScreen.initCalc(result.calcQuestion);
-          Router.go('calc');
-        }
-      } else {
-        AppState.session.calcQuestion = null;
-        AppState.session.questions = result.questions;
-        QuizScreen.init(result.questions);
-        Router.go('step1');
-      }
+      applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
       Toast.show('문제 생성에 실패했어요. 다시 시도해주세요.');

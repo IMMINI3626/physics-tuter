@@ -448,22 +448,7 @@ const MypageScreen = {
       AppState.session.hint2 = result.hint2;
       if (result.misconceptionCount) AppState.session.misconceptionCount = result.misconceptionCount;
 
-      if (result.calcQuestion) {
-        AppState.session.calcQuestion = result.calcQuestion;
-        AppState.session.questions = null;
-        if (result.calcQuestion.isLevel3) {
-          Level3Screen.init(result.calcQuestion);
-          Router.go('level3');
-        } else {
-          QuizScreen.initCalc(result.calcQuestion);
-          Router.go('calc');
-        }
-      } else {
-        AppState.session.calcQuestion = null;
-        AppState.session.questions = result.questions;
-        QuizScreen.init(result.questions);
-        Router.go('step1');
-      }
+      applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
       Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');
