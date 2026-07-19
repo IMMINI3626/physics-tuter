@@ -435,6 +435,7 @@ const MypageScreen = {
       AppState.session.correctCount = this._currentCorrectCount;
       AppState.session.isRetry = false;
       AppState.session.isHistoryRetry = false;
+      AppState.session._rootSessionId = null;
       AppState.session.checkedStatements = new Set();
       AppState.session.step2Answers = [];
       AppState.session.hintUsed = 0;
