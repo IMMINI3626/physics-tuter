@@ -56,7 +56,7 @@ const QuizLibraryScreen = {
     if (!container) return;
     container.innerHTML = `
       <div style="text-align:center;padding:32px 20px;color:var(--text3);font-size:13px">
-        📚 ${message}
+        ${message}
       </div>`;
   },
 
