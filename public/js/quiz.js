@@ -192,20 +192,42 @@ const QuizScreen = {
     document.getElementById('calc-question-text').textContent = calcQuestion.text;
 
     // 단위 드롭다운
+    // 🔑 AI는 unitOptions를 ["정답단위", "헷갈릴단위1", ...] 순서로 생성한다(functions/index.js 프롬프트).
+    //    그대로 뿌리면 정답이 항상 첫 번째 = select의 기본 선택값이 되어, 단위를 건드리지 않은
+    //    학생이 무조건 맞는다. 반드시 섞어서 보여줄 것.
     const select = document.getElementById('calc-unit-select');
-    select.innerHTML = calcQuestion.unitOptions.map(u =>
+    const options = this._shuffle(calcQuestion.unitOptions || [calcQuestion.unit]);
+    select.innerHTML = options.map(u =>
       `<option value="${u}">${u}</option>`
     ).join('');
 
     // 힌트 초기화
+    // 🔑 버튼의 disabled뿐 아니라 세션 카운터(hintUsed)도 반드시 같이 0으로 되돌릴 것 —
+    //    useCalcHint()가 hintUsed 값으로 단계를 판단하기 때문에, 이게 남아있으면
+    //    버튼은 활성화돼 보이는데 눌러도 아무 반응이 없다.
+    AppState.session.hintUsed = 0;
     document.getElementById('calc-hint-btn-1').disabled = false;
     document.getElementById('calc-hint-btn-2').disabled = true;
     const hintResult = document.getElementById('calc-hint-result');
     if (hintResult) hintResult.classList.remove('visible');
 
+    // 🔑 계산형 화면엔 체크박스가 없으므로, 직전 STEP1 문제의 체크 상태가 그대로 남아
+    //    checkedCount로 저장되지 않도록 여기서 비움
+    AppState.session.checkedStatements = new Set();
+
     // 입력값 초기화
     const input = document.getElementById('calc-answer-input');
     if (input) input.value = '';
+  },
+
+  /* 원본 배열을 건드리지 않는 Fisher-Yates 셔플 */
+  _shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   },
 
   useCalcHint(level) {
@@ -310,6 +332,9 @@ const Level3Screen = {
     // 입력 초기화
     document.getElementById('l3-text-input').value = '';
     document.getElementById('l3-answer-text-input').value = '';
+    // 🔑 calc 화면과 같은 이유로 세션 카운터/체크 상태도 함께 초기화
+    session.hintUsed = 0;
+    session.checkedStatements = new Set();
     this._photoBase64 = null;
     this._answerHasDrawing = false;
     this._pending = null;
@@ -387,7 +412,15 @@ const Level3Screen = {
     if (!text) return;
     document.getElementById('l3-hint-result').style.display = 'flex';
     document.getElementById('l3-hint-result-text').textContent = text;
-    if (n === 1) document.getElementById('l3-hint-btn-2').disabled = false;
+    // 🔑 STEP1/calc 화면과 동일하게 사용량을 세션에 기록 —
+    //    안 그러면 L3 세션만 hintUsed가 0으로 저장돼 학습 분석에서 쓸 수 없다
+    session.hintUsed = Math.max(session.hintUsed || 0, n);
+    if (n === 1) {
+      document.getElementById('l3-hint-btn-1').disabled = true;
+      document.getElementById('l3-hint-btn-2').disabled = false;
+    } else {
+      document.getElementById('l3-hint-btn-2').disabled = true;
+    }
   },
 
   /* 제출 → 풀이 과정/답을 (이미지면) AI가 먼저 텍스트로 읽어서 검토 단계로 보여줌 */

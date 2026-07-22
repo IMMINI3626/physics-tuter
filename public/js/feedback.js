@@ -1,6 +1,14 @@
 /* ============================================================
    PhysiClinic — Feedback Screen Logic
    ============================================================ */
+/* 레벨별 "합격"(승급 카운터 +1) 기준 점수.
+   L1/L2는 문항 정오답이 명확해서 만점을 요구해도 되지만, L3는 최종 점수가
+   [정답 여부 60% + AI가 매긴 풀이 과정 점수 40%]라서 만점을 요구하면 사실상 승급이 불가능하다.
+   (풀이 과정 채점 프롬프트가 "100점이 아니면 감점 사유를 반드시 명시하라"고 지시해서
+    모델이 90~95점으로 수렴 → 총점이 100에 못 미침 → 🏆 단원 완료에 영원히 도달 못 함)
+   따라서 L3만 90점으로 낮춘다. 정답을 맞히고(60) 풀이 과정 75점 이상이면 통과하는 수준. */
+const PROMOTION_SCORE = { 1: 100, 2: 100, 3: 90 };
+
 /* 소단원 오개념 수 기반 동적 목표치 계산 (레벨별 배수/상하한) */
 function calcPromotionTarget(mcCount, level) {
   const configs = [
@@ -227,7 +235,8 @@ const FeedbackScreen = {
     }
 
     const isLoggedIn = window.AppState.isLoggedIn && window.AppState.user;
-    const isPerfect = data.score === 100;
+    const passScore = PROMOTION_SCORE[session.currentLevel] || 100;
+    const isPassed = data.score >= passScore;
     const isNewProblem = !session.isRetry;
 
     let isPromoted = false;
@@ -236,8 +245,8 @@ const FeedbackScreen = {
     const mcCount = session.misconceptionCount || 5;
     const promotionTarget = calcPromotionTarget(mcCount, session.currentLevel);
 
-    // 100점 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
-    if (isLoggedIn && session.detectedUnit && isPerfect && isNewProblem) {
+    // 합격 점수 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
+    if (isLoggedIn && session.detectedUnit && isPassed && isNewProblem) {
       try {
         const result = await window.LearningService.incrementCorrectCount(
           window.AppState.user.uid,
@@ -275,7 +284,7 @@ const FeedbackScreen = {
       this._renderPromotionActions(promotedTo);
     } else if (isLoggedIn) {
       nextBtn.style.display = 'none';
-      this._renderCorrectionLoop(isPerfect);
+      this._renderCorrectionLoop(isPassed);
     } else {
       // 비로그인
       nextBtn.style.display = '';
@@ -338,7 +347,7 @@ const FeedbackScreen = {
   },
 
   /* 교정 루프 UI */
-  _renderCorrectionLoop(isPerfect) {
+  _renderCorrectionLoop(isPassed) {
     const area = document.getElementById('level-progress-area');
     if (!area) return;
 
@@ -347,8 +356,8 @@ const FeedbackScreen = {
     const mcCount = window.AppState.session.misconceptionCount || 5;
     const target = calcPromotionTarget(mcCount, level);
 
-    // 100점이면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
-    const retryBtn = isPerfect ? '' : `
+    // 합격했으면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
+    const retryBtn = isPassed ? '' : `
       <button class="primary-btn" style="margin:0;flex:1;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.retrySame()">
         다시 풀어보기
       </button>

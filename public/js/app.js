@@ -111,17 +111,25 @@ const Router = {
     'mypage-detail': 'nav-mypage',
   },
 
-  authRequired: ['quiz-library', 'mypage', 'mypage-detail'],
+  // 🔑 quiz-library는 여기 넣지 말 것 — 이 화면은 비로그인 전용 안내 배너(#library-login-banner)를
+  // 갖고 있어서 게스트도 볼 수 있는 게 원래 설계다. authRequired에 넣으면 로그인 모달만 뜨고
+  // 그 배너 분기가 영원히 실행되지 않는 죽은 코드가 된다.
+  authRequired: ['mypage', 'mypage-detail'],
 
+  /* 화면 전환 성공 여부를 반환 — 호출부에서 "전환에 성공했을 때만 init()" 하도록 판단할 수 있게 함.
+     (예전엔 반환값이 없어서 nav가 Router.go()로 막힌 뒤에도 init()을 그대로 실행했음) */
   go(screenId) {
     if (this.authRequired.includes(screenId) && !AppState.isLoggedIn) {
-    Toast.show('로그인 후 이용할 수 있어요');
-    Modal.open('login-modal');
-    return;
-  }
+      Toast.show('로그인 후 이용할 수 있어요');
+      Modal.open('login-modal');
+      return false;
+    }
     const prev = document.getElementById(`screen-${this.current}`);
     const next = document.getElementById(`screen-${screenId}`);
-    if (!next) return console.warn(`Screen not found: ${screenId}`);
+    if (!next) {
+      console.warn(`Screen not found: ${screenId}`);
+      return false;
+    }
 
     if (prev) prev.classList.remove('active');
     next.classList.remove('active');   // reset animation
@@ -131,6 +139,7 @@ const Router = {
     this.current = screenId;
     window.scrollTo(0, 0);
     this._updateNav(screenId);
+    return true;
   },
 
   _updateNav(screenId) {

@@ -4,6 +4,7 @@ const MypageScreen = {
   _currentLevel: 1,
   _currentCorrectCount: 0,
   _currentSessionCount: 0,
+  _currentCompleted: false,
   _currentSessions: [],
   _historyPage: 0,
   HISTORY_PAGE_SIZE: 10,
@@ -170,6 +171,7 @@ const MypageScreen = {
       this._currentLevel = progress.level || 1;
       this._currentCorrectCount = progress.correctCount || 0;
       this._currentSessionCount = sessions.length;
+      this._currentCompleted = !!progress.completed;
 
       this._renderChart(sessions);
       await this._renderMisconceptions(weakList);
@@ -197,7 +199,12 @@ const MypageScreen = {
     if (this._currentSessionCount > 0) {
       btn.style.display = '';
       cta.style.display = 'none';
-      btn.textContent = `L${this._currentLevel} 이어서 풀기`;
+      // 🔑 완료(completed)된 단원은 incrementCorrectCount가 카운터를 더 올리지 않는다.
+      //    그런데 "L3 이어서 풀기"라고 계속 띄우면 풀어도 아무 변화가 없는 이유를
+      //    사용자가 알 수 없으므로, 복습 모드라는 걸 라벨로 분명히 알려준다.
+      btn.textContent = this._currentCompleted
+        ? '✓ 완료한 단원 · 복습 문제 풀기'
+        : `L${this._currentLevel} 이어서 풀기`;
     } else {
       btn.style.display = 'none';
       cta.style.display = '';
