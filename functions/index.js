@@ -47,12 +47,15 @@ const MAX_AI_ATTEMPTS = 3;
  *        추론이 필요 없는 작업(이미지 분류·OCR)은 0으로 완전히 끄고, 정답의 논리적
  *        일관성이 중요한 작업(계산 문제 생성·풀이 채점)만 제한적으로 허용한다.
  *        (0 = 끔. Flash는 0을 허용함)
- * @param {number} [opts.maxOutputTokens]  응답 길이 상한. 폭주 방지 + 최악 지연/비용 억제.
- *        ⚠️ thinking이 켜진 호출에서는 너무 낮게 잡으면 추론에 예산을 다 쓰고 본문이
- *           비어 나올 수 있으므로 넉넉히 잡을 것. thinkingBudget과는 별개 예산이다.
+ * @param {number} [opts.outputTokens]  "눈에 보이는 답변"에 필요한 토큰 예산.
+ *        thinking 토큰과 실제 답변 토큰은 maxOutputTokens 예산을 함께 쓴다.
+ *        (2.5 모델에서 thinking도 output으로 집계됨) 그래서 maxOutputTokens를 답변 크기에만
+ *        맞춰 잡으면, 추론이 예산을 다 써버려 답변 JSON이 중간에 잘려 나온다(파싱 실패).
+ *        여기서는 outputTokens를 "답변에 필요한 양"으로 받고, 내부에서 thinkingBudget을
+ *        자동으로 더해 실제 maxOutputTokens = thinkingBudget + outputTokens 로 설정한다.
  */
 function getGeminiModel(temperature = 0, opts = {}) {
-  const { thinkingBudget = 0, maxOutputTokens } = opts;
+  const { thinkingBudget = 0, outputTokens } = opts;
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
 
   const generationConfig = {
@@ -62,7 +65,8 @@ function getGeminiModel(temperature = 0, opts = {}) {
     //    v1beta API에 실어 보내므로(필드 필터링 없음) 2.5 모델에서 정상 적용된다.
     thinkingConfig: { thinkingBudget },
   };
-  if (maxOutputTokens) generationConfig.maxOutputTokens = maxOutputTokens;
+  // thinking 몫을 더해줘야 답변이 잘리지 않는다 (위 outputTokens 설명 참고)
+  if (outputTokens) generationConfig.maxOutputTokens = thinkingBudget + outputTokens;
 
   return genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig });
 }
@@ -192,7 +196,7 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
 
     // 이미지 → 소단원 분류 + 오개념 id 매핑. 정해진 목록에서 고르는 분류 작업이라
     // 추론 불필요 → thinking 0. (입력이 큰 호출이라 여기서 지연을 가장 크게 줄인다)
-    const model = getGeminiModel(0, { maxOutputTokens: 1024 });
+    const model = getGeminiModel(0, { outputTokens: 1024 });
 
     // 2. 하이브리드 프롬프트 + 소단원명 강제 지시
     const prompt = `
@@ -380,7 +384,7 @@ JSON만 출력하세요:
   }
 }
 `;
-      const model = getGeminiModel(0.8, { thinkingBudget: 2048, maxOutputTokens: 2048 });
+      const model = getGeminiModel(0.8, { thinkingBudget: 2048, outputTokens: 1536 });
       return await withRetry('generateQuestions:L3', async () => {
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
@@ -431,7 +435,7 @@ JSON만 출력하세요:
   }
 }
 `;
-      const model = getGeminiModel(0.8, { thinkingBudget: 1024, maxOutputTokens: 1024 });
+      const model = getGeminiModel(0.8, { thinkingBudget: 1024, outputTokens: 1024 });
       return await withRetry('generateQuestions:L2B', async () => {
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
@@ -527,7 +531,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
 - 모든 힌트는 "~해보세요", "~생각해보세요" 경어체
 `;
 
-    const model = getGeminiModel(0.8, { thinkingBudget: 512, maxOutputTokens: 1536 });
+    const model = getGeminiModel(0.8, { thinkingBudget: 512, outputTokens: 1536 });
     return await withRetry('generateQuestions', async () => {
       const result = await model.generateContent(prompt);
       const parsed = parseJSON(result.response.text());
@@ -570,7 +574,7 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
 
   try {
     // 손글씨 → 텍스트 그대로 옮겨 적기(OCR). 판단·채점 없음 → thinking 0.
-    const model = getGeminiModel(0, { maxOutputTokens: 1024 });
+    const model = getGeminiModel(0, { outputTokens: 1024 });
     const prompt = `
 다음은 학생이 물리 문제를 풀이한 손글씨 또는 사진입니다.
 이미지에 적힌 풀이 과정을 최대한 정확하게 텍스트로 옮겨 적으세요.
@@ -608,7 +612,7 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
 
   try {
     // 다단계 풀이의 논리적 타당성을 평가하는 작업이라 추론이 실제로 필요 → thinking 허용.
-    const model = getGeminiModel(0, { thinkingBudget: 1024, maxOutputTokens: 1024 });
+    const model = getGeminiModel(0, { thinkingBudget: 1024, outputTokens: 1024 });
     const stepsText = (solutionSteps || []).join('\n');
 
     // 숫자 입력칸 대신 직접 쓴 답(근호·분수 등)이 있으면 정오 여부도 함께 판단
@@ -697,7 +701,7 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
 
     // 서술형 답변 5개를 루브릭에 따라 채점 + 해설 작성. 약간의 추론이 도움 → 소량 허용.
     // 해설 5개를 담아야 하므로 출력 상한은 넉넉히.
-    const model = getGeminiModel(0, { thinkingBudget: 512, maxOutputTokens: 2048 });
+    const model = getGeminiModel(0, { thinkingBudget: 512, outputTokens: 2048 });
     const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
