@@ -471,13 +471,13 @@ const FeedbackScreen = {
       html += perfectItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
-            <span class="fb-stmt" style="text-decoration:line-through;color:var(--text3)">${item.text}</span>
+            <span class="fb-stmt" style="text-decoration:line-through;color:var(--text3)">${escapeHtml(item.text)}</span>
           </div>
           <div class="fb-explanation">
             <div class="fb-exp-label user">📝 내 답변</div>
-            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-user-ans">${escapeHtml(item.userReason || '(입력 없음)')}</div>
             <div class="fb-exp-label ideal">✅ 피드백</div>
-            <div class="fb-correct-ans">${item.explanation}</div>
+            <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
         </div>`).join('');
     }
@@ -488,13 +488,13 @@ const FeedbackScreen = {
       html += halfItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
-            <span class="fb-stmt">${item.text}</span>
+            <span class="fb-stmt">${escapeHtml(item.text)}</span>
           </div>
           <div class="fb-explanation">
             <div class="fb-exp-label user">📝 내 답변</div>
-            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-user-ans">${escapeHtml(item.userReason || '(입력 없음)')}</div>
             <div class="fb-exp-label ideal">💡 올바른 피드백</div>
-            <div class="fb-correct-ans">${item.explanation}</div>
+            <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
         </div>`).join('');
     }
@@ -505,13 +505,13 @@ const FeedbackScreen = {
       html += wrongGuess.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
-            <span class="fb-stmt">${item.text}</span>
+            <span class="fb-stmt">${escapeHtml(item.text)}</span>
           </div>
           <div class="fb-explanation">
             <div class="fb-exp-label user">📝 내 답변</div>
-            <div class="fb-user-ans">${item.userReason || '(입력 없음)'}</div>
+            <div class="fb-user-ans">${escapeHtml(item.userReason || '(입력 없음)')}</div>
             <div class="fb-exp-label ideal">💡 올바른 피드백</div>
-            <div class="fb-correct-ans">${item.explanation}</div>
+            <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
         </div>`).join('');
     }
@@ -522,11 +522,11 @@ const FeedbackScreen = {
       html += missedItems.map(item => `
         <div class="feedback-card">
           <div class="fb-card-header">
-            <span class="fb-stmt">${item.text}</span>
+            <span class="fb-stmt">${escapeHtml(item.text)}</span>
           </div>
           <div class="fb-explanation">
             <div class="fb-exp-label ideal">💡 틀린 이유</div>
-            <div class="fb-correct-ans">${item.explanation}</div>
+            <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
         </div>`).join('');
     }

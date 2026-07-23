@@ -91,7 +91,7 @@ const KeywordScreen = {
     // 키워드 태그
     const tagsEl = document.getElementById('kw-tags');
     tagsEl.innerHTML = data.keywords.map((kw, i) =>
-      `<span class="keyword-tag ${i < 4 ? 'active' : ''}">${kw}</span>`
+      `<span class="keyword-tag ${i < 4 ? 'active' : ''}">${escapeHtml(kw)}</span>`
     ).join('');
   },
 

@@ -27,7 +27,7 @@ const QuizScreen = {
       <div class="statement-item" id="stmt-${q.id}" data-id="${q.id}">
         <div class="statement-header" onclick="QuizScreen.toggleStatement(${q.id})">
           <span class="stmt-num">${nums[i]}</span>
-          <span class="stmt-text">${q.text}</span>
+          <span class="stmt-text">${escapeHtml(q.text)}</span>
           <div class="stmt-checkbox" id="cb-${q.id}">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -79,8 +79,8 @@ const QuizScreen = {
       document.getElementById('hint-btn-2').disabled = true;
 
       textEl.innerHTML = `
-        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${AppState.session.hint1 || ''}</div>
-        <div>${AppState.session.hint2 || '각 문장의 표현과 조건을 하나씩 따져보세요.'}</div>
+        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${escapeHtml(AppState.session.hint1 || '')}</div>
+        <div>${escapeHtml(AppState.session.hint2 || '각 문장의 표현과 조건을 하나씩 따져보세요.')}</div>
       `;
       Toast.show('힌트 2 사용 완료');
     }
@@ -123,7 +123,7 @@ const QuizScreen = {
         <div class="step2-item" data-id="${q.id}">
           <div class="step2-stmt-row">
             <span class="step2-stmt-num">${nums[idx]}</span>
-            <span class="step2-stmt-text">${q.text}</span>
+            <span class="step2-stmt-text">${escapeHtml(q.text)}</span>
           </div>
           <div class="step2-fields">
             <div>
@@ -198,7 +198,7 @@ const QuizScreen = {
     const select = document.getElementById('calc-unit-select');
     const options = this._shuffle(calcQuestion.unitOptions || [calcQuestion.unit]);
     select.innerHTML = options.map(u =>
-      `<option value="${u}">${u}</option>`
+      `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`
     ).join('');
 
     // 힌트 초기화
@@ -246,8 +246,8 @@ const QuizScreen = {
       AppState.session.hintUsed = 2;
       document.getElementById('calc-hint-btn-2').disabled = true;
       textEl.innerHTML = `
-        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${AppState.session.hint1 || ''}</div>
-        <div>${AppState.session.hint2 || '각 변수에 어떤 값을 대입할지 생각해보세요.'}</div>
+        <div style="color:var(--text3);margin-bottom:6px;font-size:12px">${escapeHtml(AppState.session.hint1 || '')}</div>
+        <div>${escapeHtml(AppState.session.hint2 || '각 변수에 어떤 값을 대입할지 생각해보세요.')}</div>
       `;
       Toast.show('힌트 2 사용 완료');
     }

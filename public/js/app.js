@@ -32,6 +32,21 @@ function getChapter(unitName) {
   return null;
 }
 
+/* HTML 특수문자 이스케이프.
+   화면에 뿌리는 문자열 중 사용자 입력(서술형 답변)과 AI 생성 텍스트(문제 문장, 해설,
+   단원명, 키워드 등)는 전부 이 함수를 거쳐 innerHTML에 넣어야 한다. 안 그러면
+   "<img src=x onerror=...>" 같은 입력이 그대로 실행되고(XSS), 단원명에 <, & 등이
+   섞이면 레이아웃도 깨진다. 따옴표까지 이스케이프하므로 속성값 자리에도 안전하다. */
+function escapeHtml(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ────────────────────────────────────────
    Global App State
 ──────────────────────────────────────── */
@@ -298,3 +313,4 @@ window.Modal      = Modal;
 window.GuestGuard = GuestGuard;
 window.UNIT_MAP    = UNIT_MAP;
 window.getChapter  = getChapter;
+window.escapeHtml  = escapeHtml;

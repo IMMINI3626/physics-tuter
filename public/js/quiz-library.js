@@ -32,23 +32,32 @@ const QuizLibraryScreen = {
       return;
     }
 
+    // 🔑 단원명(s.unit)은 AI가 생성한 문자열이라 onclick 문자열에 직접 보간하면 작은따옴표
+    //    한 개로 핸들러가 깨진다. 값은 data-* 속성(escapeHtml로 이스케이프)에 담고, 클릭은
+    //    컨테이너 한 곳에 위임 리스너로 처리한다.
     container.innerHTML = sessions.map(s => {
       const dateStr = s.createdAt?.toDate
         ? s.createdAt.toDate().toLocaleDateString('ko-KR') : '최근';
       const score = s.score ?? 0;
       const badgeClass = score >= 80 ? 'badge-green' : score >= 60 ? 'badge-amber' : 'badge-red';
-
       const rootId = s.retryOf || s.id;
 
       return `
-        <div class="recent-card" onclick="QuizLibraryScreen.openSession('${s.id}', '${s.unit || '물리'}', ${score}, '${rootId}')">
+        <div class="recent-card" data-session-id="${escapeHtml(s.id)}" data-unit="${escapeHtml(s.unit || '물리')}" data-score="${score}" data-root-id="${escapeHtml(rootId)}">
           <div class="recent-info">
-            <div class="recent-unit">${s.unit || '개념 학습'}</div>
+            <div class="recent-unit">${escapeHtml(s.unit || '개념 학습')}</div>
             <div class="recent-meta">${dateStr} · 5문제</div>
           </div>
           <span class="badge ${badgeClass}">${score}점</span>
         </div>`;
     }).join('');
+
+    container.querySelectorAll('.recent-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const { sessionId, unit, score, rootId } = card.dataset;
+        this.openSession(sessionId, unit, Number(score), rootId);
+      });
+    });
   },
 
   _renderEmpty(message) {

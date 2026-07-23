@@ -66,7 +66,7 @@ const MypageScreen = {
     const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
     container.innerHTML = weakList.map((item, i) => `
       <div class="weak-row">
-        <span class="weak-name">${item.name}</span>
+        <span class="weak-name">${escapeHtml(item.name)}</span>
         <div class="weak-track">
           <div class="weak-fill" style="width:${item.pct}%;background:${colors[i % colors.length]}"></div>
         </div>
@@ -108,7 +108,7 @@ const MypageScreen = {
           const p = allProgress[name];
           return `
           <button class="subunit-row" data-etc-name="${this._escapeAttr(name)}" onclick="MypageScreen._onSubunitClick(this)">
-            <span class="subunit-name">${name}</span>
+            <span class="subunit-name">${escapeHtml(name)}</span>
             ${this._levelDots(p)}
             ${this._levelBadge(p)}
             <svg class="subunit-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -292,7 +292,7 @@ const MypageScreen = {
     el.innerHTML = withNames.map(w => `
       <div class="mc-row">
         <div class="mc-icon">⚠</div>
-        <div class="mc-text">${w.label}</div>
+        <div class="mc-text">${escapeHtml(w.label)}</div>
         <div class="mc-count">${w.count}회</div>
       </div>
     `).join('');
@@ -349,7 +349,7 @@ const MypageScreen = {
         <span class="hist-date">${this._fmtHistDate(s.createdAt)}</span>
         <span class="hist-score ${this._histScoreCls(s.score)}">${s.score}점</span>
         <span class="hist-level">${levelBadge}</span>
-        <button class="hist-view-btn" onclick="event.stopPropagation(); viewSessionLog('${s.id}', '${this._currentSubUnit}', ${s.score}, 'mypage-detail', '${rootId}')">
+        <button class="hist-view-btn" onclick="event.stopPropagation(); viewSessionLog('${s.id}', MypageScreen._currentSubUnit, ${s.score}, 'mypage-detail', '${rootId}')">
           문제 보기
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
