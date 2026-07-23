@@ -23,10 +23,10 @@ const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 const FUNC_OPTIONS = {
   region: 'asia-northeast3',  // 서울 리전
   secrets: [GEMINI_API_KEY],
-  // 재시도(withRetry, 최대 3회)를 도입하면서 60초 → 180초로 상향.
-  // gemini-2.5-flash는 thinking이 기본 활성이라 Level 3 문제 생성이 한 번에 20~30초씩
-  // 걸리기도 해서, 60초로는 2회차 재시도 도중에 함수가 먼저 죽어버린다.
-  timeoutSeconds: 180,
+  // thinking 예산을 작업별로 제한(getGeminiModel)하면서 호출당 지연이 크게 줄어,
+  // 재시도(최대 3회)를 감안해도 120초면 충분하다. 이 값은 비용이 아니라 최악의
+  // 대기시간 상한이다 — 낮출수록 사용자가 무한정 기다리는 일이 없어진다.
+  timeoutSeconds: 120,
 };
 
 /* AI 호출 최대 시도 횟수 (최초 1회 + 재시도 2회) */
@@ -38,18 +38,33 @@ const MAX_AI_ATTEMPTS = 3;
 
 /**
  * 설정된 API 키를 사용하여 Gemini 모델 인스턴스를 반환합니다.
+ *
  * @param {number} temperature - 기본 0(결정적). 문제 생성처럼 다양성이 필요한 곳은 높여서 호출.
+ * @param {object} [opts]
+ * @param {number} [opts.thinkingBudget=0]  추론(thinking) 토큰 상한.
+ *        gemini-2.5-flash는 thinking이 기본 켜져 있고 그 양이 적응적으로 늘어난다.
+ *        thinking 토큰은 출력 토큰으로 과금되고 응답 지연의 최대 요인이므로,
+ *        추론이 필요 없는 작업(이미지 분류·OCR)은 0으로 완전히 끄고, 정답의 논리적
+ *        일관성이 중요한 작업(계산 문제 생성·풀이 채점)만 제한적으로 허용한다.
+ *        (0 = 끔. Flash는 0을 허용함)
+ * @param {number} [opts.maxOutputTokens]  응답 길이 상한. 폭주 방지 + 최악 지연/비용 억제.
+ *        ⚠️ thinking이 켜진 호출에서는 너무 낮게 잡으면 추론에 예산을 다 쓰고 본문이
+ *           비어 나올 수 있으므로 넉넉히 잡을 것. thinkingBudget과는 별개 예산이다.
  */
-function getGeminiModel(temperature = 0) {
+function getGeminiModel(temperature = 0, opts = {}) {
+  const { thinkingBudget = 0, maxOutputTokens } = opts;
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-  return genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash', 
 
-    generationConfig: {
-      temperature, // 채점(extractKeywords, gradeAnswers)은 0 유지, 문제 생성은 다양성을 위해 올림
-      responseMimeType: "application/json" // (보너스 팁) AI가 무조건 완벽한 JSON 형태로만 답변하도록 강제합니다.
-    }
-  });
+  const generationConfig = {
+    temperature,
+    responseMimeType: "application/json", // AI가 항상 JSON만 반환하도록 강제
+    // 🔑 SDK 0.21의 타입 정의엔 thinkingConfig가 없지만, generationConfig 객체를 그대로
+    //    v1beta API에 실어 보내므로(필드 필터링 없음) 2.5 모델에서 정상 적용된다.
+    thinkingConfig: { thinkingBudget },
+  };
+  if (maxOutputTokens) generationConfig.maxOutputTokens = maxOutputTokens;
+
+  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig });
 }
 
 /**
@@ -105,12 +120,29 @@ function parseJSON(text) {
 }
 
 /**
- * 계산형 문제(Level 2 방식B, Level 3)의 필수 필드를 검증합니다.
+ * 단위 문자열을 비교용으로 정규화합니다. (m/s² ≡ m/s^2 ≡ M/S 2 판정용)
+ * 표기 차이(위첨자·^·공백·중점·대소문자)만 무시하고 실질이 같은지 본다.
+ */
+function normalizeUnit(u) {
+  return String(u)
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/²/g, '2').replace(/³/g, '3')
+    .replace(/\^/g, '')       // m/s^2 → m/s2
+    .replace(/[·*×]/g, '');    // kg·m/s → kgm/s
+}
+
+/**
+ * 계산형 문제(Level 2 방식B, Level 3)의 필수 필드를 검증하고, 고칠 수 있는 건 고칩니다.
  * 하나라도 어긋나면 throw → withRetry가 재생성을 시도합니다.
  *
  * 특히 unitOptions에 정답 단위가 실제로 들어있는지 확인하는 게 중요합니다.
  * 프론트(QuizScreen.initCalc)는 보기를 셔플한 뒤 `선택값 === calcQuestion.unit`으로
  * 채점하므로, 보기 안에 정답 단위가 없으면 학생이 무엇을 고르든 무조건 오답이 됩니다.
+ *
+ * 🔑 표기만 다른 경우(정답 'm/s²' vs 보기 'm/s^2')는 그냥 재시도하지 않고 보기 문자열을
+ *    정답과 똑같이 맞춰서 "교정"한다. 이런 사소한 표기 차이로 3번씩 재생성하면 비용·지연
+ *    낭비가 크기 때문. 실질이 다른 단위가 없을 때만 throw한다.
  */
 function validateCalcQuestion(q, label) {
   if (!q)                                    throw new Error(`${label} calcQuestion 누락`);
@@ -123,7 +155,10 @@ function validateCalcQuestion(q, label) {
     throw new Error(`${label} unitOptions가 부족함`);
   }
   if (!q.unitOptions.includes(q.unit)) {
-    throw new Error(`${label} unitOptions에 정답 단위(${q.unit})가 없음`);
+    // 표기만 다른 보기가 있으면 그 자리를 정답 문자열로 교정 (재시도 없이 해결)
+    const idx = q.unitOptions.findIndex(o => normalizeUnit(o) === normalizeUnit(q.unit));
+    if (idx === -1) throw new Error(`${label} unitOptions에 정답 단위(${q.unit})가 없음`);
+    q.unitOptions[idx] = q.unit;
   }
   // Level 3는 "다시 풀기"로 문제를 복원할 때 모범 풀이 단계까지 필요함
   if (label === 'L3' && (!Array.isArray(q.solutionSteps) || !q.solutionSteps.length)) {
@@ -155,8 +190,10 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
       description: doc.data().description
     }));
 
-    const model = getGeminiModel();
-    
+    // 이미지 → 소단원 분류 + 오개념 id 매핑. 정해진 목록에서 고르는 분류 작업이라
+    // 추론 불필요 → thinking 0. (입력이 큰 호출이라 여기서 지연을 가장 크게 줄인다)
+    const model = getGeminiModel(0, { maxOutputTokens: 1024 });
+
     // 2. 하이브리드 프롬프트 + 소단원명 강제 지시
     const prompt = `
       다음 물리 교과서/필기 이미지를 분석하여 아래 JSON 형식으로 응답하세요.
@@ -286,7 +323,10 @@ ${patternText}
     // 매 호출마다 고유한 시드값을 줘서 같은 입력이어도 다른 결과를 유도
     const varietySeed = Math.random().toString(36).slice(2, 8);
 
-    const model = getGeminiModel(0.8);
+    // 🔑 thinking 예산은 레벨별로 다르게 준다 (아래 각 분기에서 모델 생성).
+    //    - L1/L2A(문장 5개): 개념 참/거짓이라 추론 부담이 작음 → 적게
+    //    - L2B(단일 계산): 정답 숫자가 맞아야 함 → 중간
+    //    - L3(다단계 복합): 두 법칙 결합 계산의 논리 일관성이 중요 → 넉넉히
 
     // ── Level 3: 다단계 복합 계산 문제 ──
     if (level === 3) {
@@ -340,6 +380,7 @@ JSON만 출력하세요:
   }
 }
 `;
+      const model = getGeminiModel(0.8, { thinkingBudget: 2048, maxOutputTokens: 2048 });
       return await withRetry('generateQuestions:L3', async () => {
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
@@ -390,6 +431,7 @@ JSON만 출력하세요:
   }
 }
 `;
+      const model = getGeminiModel(0.8, { thinkingBudget: 1024, maxOutputTokens: 1024 });
       return await withRetry('generateQuestions:L2B', async () => {
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
@@ -485,6 +527,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
 - 모든 힌트는 "~해보세요", "~생각해보세요" 경어체
 `;
 
+    const model = getGeminiModel(0.8, { thinkingBudget: 512, maxOutputTokens: 1536 });
     return await withRetry('generateQuestions', async () => {
       const result = await model.generateContent(prompt);
       const parsed = parseJSON(result.response.text());
@@ -526,7 +569,8 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
   if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
 
   try {
-    const model = getGeminiModel();
+    // 손글씨 → 텍스트 그대로 옮겨 적기(OCR). 판단·채점 없음 → thinking 0.
+    const model = getGeminiModel(0, { maxOutputTokens: 1024 });
     const prompt = `
 다음은 학생이 물리 문제를 풀이한 손글씨 또는 사진입니다.
 이미지에 적힌 풀이 과정을 최대한 정확하게 텍스트로 옮겨 적으세요.
@@ -563,7 +607,8 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
   }
 
   try {
-    const model = getGeminiModel();
+    // 다단계 풀이의 논리적 타당성을 평가하는 작업이라 추론이 실제로 필요 → thinking 허용.
+    const model = getGeminiModel(0, { thinkingBudget: 1024, maxOutputTokens: 1024 });
     const stepsText = (solutionSteps || []).join('\n');
 
     // 숫자 입력칸 대신 직접 쓴 답(근호·분수 등)이 있으면 정오 여부도 함께 판단
@@ -650,7 +695,9 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
     const maxScorePerItem = Math.round(100 / targetWrongCount); 
     const partialScoreRange = targetWrongCount === 1 ? '20~60점' : '10~30점';
 
-    const model = getGeminiModel();
+    // 서술형 답변 5개를 루브릭에 따라 채점 + 해설 작성. 약간의 추론이 도움 → 소량 허용.
+    // 해설 5개를 담아야 하므로 출력 상한은 넉넉히.
+    const model = getGeminiModel(0, { thinkingBudget: 512, maxOutputTokens: 2048 });
     const prompt = `
 당신은 고등학교 물리 교사입니다.
 단원: "${unit}"
