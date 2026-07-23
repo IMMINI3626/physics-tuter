@@ -23,8 +23,14 @@ const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 const FUNC_OPTIONS = {
   region: 'asia-northeast3',  // 서울 리전
   secrets: [GEMINI_API_KEY],
-  timeoutSeconds: 60,
+  // 재시도(withRetry, 최대 3회)를 도입하면서 60초 → 180초로 상향.
+  // gemini-2.5-flash는 thinking이 기본 활성이라 Level 3 문제 생성이 한 번에 20~30초씩
+  // 걸리기도 해서, 60초로는 2회차 재시도 도중에 함수가 먼저 죽어버린다.
+  timeoutSeconds: 180,
 };
+
+/* AI 호출 최대 시도 횟수 (최초 1회 + 재시도 2회) */
+const MAX_AI_ATTEMPTS = 3;
 
 /* ------------------------------------------------------------
    유틸리티 함수 모음
@@ -47,6 +53,39 @@ function getGeminiModel(temperature = 0) {
 }
 
 /**
+ * AI 호출을 재시도로 감쌉니다.
+ *
+ * LLM은 특성상 일정 비율로 형식을 어깁니다 — 응답이 중간에 잘려 JSON 파싱이 깨지거나,
+ * 문장 5개를 요청했는데 4개를 주는 식입니다. 예전에는 이런 경우 곧바로 HttpsError를 던져서
+ * 사용자에게 "다시 시도해주세요" 토스트가 그대로 노출됐습니다. 주문을 잘못 알아들은 직원에게
+ * 다시 물어보지도 않고 손님한테 안 된다고 하는 셈이라, 서버에서 조용히 두 번 더 시도합니다.
+ *
+ * 검증(파싱·형식 확인)까지 fn 안에서 해야 의미가 있습니다. 검증을 밖에서 하면
+ *    "형식이 틀린 응답"이 재시도를 유발하지 못하고 그대로 실패로 빠집니다.
+ *
+ * @param {string} label   로그 식별용 함수명
+ * @param {Function} fn    호출 + 파싱 + 검증까지 수행하는 async 함수
+ */
+async function withRetry(label, fn) {
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt++) {
+    try {
+      const result = await fn(attempt);
+      if (attempt > 1) console.info(`[${label}] ${attempt}번째 시도에서 성공`);
+      return result;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[${label}] ${attempt}/${MAX_AI_ATTEMPTS} 시도 실패: ${err.message}`);
+      // 마지막 시도가 아니면 잠깐 쉬었다가 (400ms → 800ms) 재시도
+      if (attempt < MAX_AI_ATTEMPTS) {
+        await new Promise(resolve => setTimeout(resolve, 400 * attempt));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * 마크다운 찌꺼기나 불필요한 텍스트를 제거하고 안전하게 JSON을 파싱합니다.
  */
 function parseJSON(text) {
@@ -62,6 +101,33 @@ function parseJSON(text) {
     return JSON.parse(cleaned);
   } catch (e) {
     throw new Error(`JSON 파싱 실패: ${text.slice(0, 200)}`);
+  }
+}
+
+/**
+ * 계산형 문제(Level 2 방식B, Level 3)의 필수 필드를 검증합니다.
+ * 하나라도 어긋나면 throw → withRetry가 재생성을 시도합니다.
+ *
+ * 특히 unitOptions에 정답 단위가 실제로 들어있는지 확인하는 게 중요합니다.
+ * 프론트(QuizScreen.initCalc)는 보기를 셔플한 뒤 `선택값 === calcQuestion.unit`으로
+ * 채점하므로, 보기 안에 정답 단위가 없으면 학생이 무엇을 고르든 무조건 오답이 됩니다.
+ */
+function validateCalcQuestion(q, label) {
+  if (!q)                                    throw new Error(`${label} calcQuestion 누락`);
+  if (typeof q.text !== 'string' || !q.text.trim()) throw new Error(`${label} 문제 본문 누락`);
+  if (typeof q.correctAnswer !== 'number' || !Number.isFinite(q.correctAnswer)) {
+    throw new Error(`${label} correctAnswer가 숫자가 아님 (${q.correctAnswer})`);
+  }
+  if (typeof q.unit !== 'string' || !q.unit.trim()) throw new Error(`${label} 정답 단위 누락`);
+  if (!Array.isArray(q.unitOptions) || q.unitOptions.length < 2) {
+    throw new Error(`${label} unitOptions가 부족함`);
+  }
+  if (!q.unitOptions.includes(q.unit)) {
+    throw new Error(`${label} unitOptions에 정답 단위(${q.unit})가 없음`);
+  }
+  // Level 3는 "다시 풀기"로 문제를 복원할 때 모범 풀이 단계까지 필요함
+  if (label === 'L3' && (!Array.isArray(q.solutionSteps) || !q.solutionSteps.length)) {
+    throw new Error('L3 solutionSteps 누락');
   }
 }
 
@@ -124,17 +190,26 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
       3. [제1기준], [제2기준] 두 곳 모두에 도저히 일치하는 내용이 없다면 id에 "ETC"라고 작성하세요.
     `;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: imageBase64,
+    return await withRetry('extractKeywords', async () => {
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: imageBase64,
+          },
         },
-      },
-    ]);
+      ]);
 
-    return parseJSON(result.response.text());
+      const parsed = parseJSON(result.response.text());
+      // 화면이 곧바로 참조하는 필드들 — 비어 있으면 재시도해서 받아내는 편이 낫다
+      if (!parsed.unit) throw new Error('unit 누락');
+      if (!Array.isArray(parsed.keywords) || !parsed.keywords.length) {
+        throw new Error('keywords 누락');
+      }
+      if (!Array.isArray(parsed.misconceptions)) parsed.misconceptions = [];
+      return parsed;
+    });
   } catch (err) {
     console.error('[extractKeywords] Error:', err);
     throw new HttpsError('internal', `키워드 추출 실패: ${err.message}`);
@@ -265,17 +340,19 @@ JSON만 출력하세요:
   }
 }
 `;
-      const result = await model.generateContent(prompt);
-      const parsed = parseJSON(result.response.text());
-      if (!parsed.calcQuestion) throw new Error('L3 calcQuestion 생성 실패');
-      return {
-        questions: null,
-        calcQuestion: { ...parsed.calcQuestion, isLevel3: true },
-        hint1: parsed.calcQuestion.hint1 || null,
-        hint2: parsed.calcQuestion.hint2 || null,
-        misconceptionCount: activeMisconceptions.length,
-        patternCount: sampledPatterns.length,
-      };
+      return await withRetry('generateQuestions:L3', async () => {
+        const result = await model.generateContent(prompt);
+        const parsed = parseJSON(result.response.text());
+        validateCalcQuestion(parsed.calcQuestion, 'L3');
+        return {
+          questions: null,
+          calcQuestion: { ...parsed.calcQuestion, isLevel3: true },
+          hint1: parsed.calcQuestion.hint1 || null,
+          hint2: parsed.calcQuestion.hint2 || null,
+          misconceptionCount: activeMisconceptions.length,
+          patternCount: sampledPatterns.length,
+        };
+      });
     }
 
     // ── Level 2 Mode B: 계산 단답형 ──
@@ -313,17 +390,19 @@ JSON만 출력하세요:
   }
 }
 `;
-      const result = await model.generateContent(prompt);
-      const parsed = parseJSON(result.response.text());
-      if (!parsed.calcQuestion) throw new Error('calcQuestion 생성 실패');
-      return {
-        questions: null,
-        calcQuestion: parsed.calcQuestion,
-        hint1: parsed.calcQuestion.hint1 || null,
-        hint2: parsed.calcQuestion.hint2 || null,
-        misconceptionCount: activeMisconceptions.length,
-        patternCount: sampledPatterns.length,
-      };
+      return await withRetry('generateQuestions:L2B', async () => {
+        const result = await model.generateContent(prompt);
+        const parsed = parseJSON(result.response.text());
+        validateCalcQuestion(parsed.calcQuestion, 'L2 방식B');
+        return {
+          questions: null,
+          calcQuestion: parsed.calcQuestion,
+          hint1: parsed.calcQuestion.hint1 || null,
+          hint2: parsed.calcQuestion.hint2 || null,
+          misconceptionCount: activeMisconceptions.length,
+          patternCount: sampledPatterns.length,
+        };
+      });
     }
 
     // 🆕 Level 1: 정성적 문장 + 공식 판별 문장 혼합 출제 지시
@@ -406,22 +485,33 @@ JSON만 출력하세요 (다른 텍스트 금지):
 - 모든 힌트는 "~해보세요", "~생각해보세요" 경어체
 `;
 
-    const result = await model.generateContent(prompt);
-    const parsed = parseJSON(result.response.text());
+    return await withRetry('generateQuestions', async () => {
+      const result = await model.generateContent(prompt);
+      const parsed = parseJSON(result.response.text());
 
-    // 구버전 호환: 배열로 반환된 경우 힌트 없이 래핑
-    const questions = Array.isArray(parsed) ? parsed : parsed.questions;
-    if (!Array.isArray(questions) || questions.length !== 5) {
-      throw new Error('문장 수가 올바르지 않거나 배열 형태가 아닙니다.');
-    }
+      // 구버전 호환: 배열로 반환된 경우 힌트 없이 래핑
+      const questions = Array.isArray(parsed) ? parsed : parsed.questions;
+      if (!Array.isArray(questions) || questions.length !== 5) {
+        throw new Error(`문장 수가 올바르지 않음 (${Array.isArray(questions) ? questions.length : '배열 아님'})`);
+      }
+      // 화면이 q.id / q.text / q.isWrong을 그대로 쓰므로 여기서 형태를 보장해둔다
+      questions.forEach((q, i) => {
+        if (typeof q.text !== 'string' || !q.text.trim()) throw new Error(`${i + 1}번 문장 text 누락`);
+        if (typeof q.isWrong !== 'boolean') throw new Error(`${i + 1}번 문장 isWrong 누락`);
+        if (typeof q.id !== 'number') q.id = i + 1;
+      });
+      if (!questions.some(q => q.isWrong)) {
+        throw new Error('틀린 문장이 하나도 없음');   // 채점 자체가 성립 안 함
+      }
 
-    return {
-      questions,
-      hint1: parsed.hint1 || null,
-      hint2: parsed.hint2 || null,
-      misconceptionCount: activeMisconceptions.length,
-      patternCount: sampledPatterns.length,
-    };
+      return {
+        questions,
+        hint1: parsed.hint1 || null,
+        hint2: parsed.hint2 || null,
+        misconceptionCount: activeMisconceptions.length,
+        patternCount: sampledPatterns.length,
+      };
+    });
   } catch (err) {
     console.error('[generateQuestions] Error:', err);
     throw new HttpsError('internal', `문제 생성 실패: ${err.message}`);
@@ -447,12 +537,16 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
 JSON만 출력하세요:
 { "text": "옮겨 적은 풀이 과정 전체" }
 `;
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { mimeType: 'image/png', data: imageBase64 } },
-    ]);
-    const parsed = parseJSON(result.response.text());
-    return { text: parsed.text || '' };
+    return await withRetry('recognizeSolutionImage', async () => {
+      const result = await model.generateContent([
+        prompt,
+        { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+      ]);
+      const parsed = parseJSON(result.response.text());
+      // 빈 문자열은 정상 결과일 수 있음(백지 제출) — 필드 자체가 없을 때만 재시도
+      if (typeof parsed.text !== 'string') throw new Error('text 필드 누락');
+      return { text: parsed.text };
+    });
   } catch (err) {
     console.error('[recognizeSolutionImage] Error:', err);
     throw new HttpsError('internal', `풀이 인식 실패: ${err.message}`);
@@ -513,13 +607,23 @@ JSON만 출력하세요:
   "feedback": "학생 풀이에 대한 구체적 코멘트. 100점이 아니면 감점 사유를 반드시 포함 (2~3문장 이상)"${answerText ? ',\n  "answerCorrect": true 또는 false (위 직접 쓴 답이 정답과 같은지)' : ''}
 }
 `;
-    const result = await model.generateContent(prompt);
-    const parsed = parseJSON(result.response.text());
-    return {
-      score: typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 0,
-      feedback: parsed.feedback || '풀이 과정에 대한 설명이 제공되지 않았습니다.',
-      answerCorrect: answerText ? !!parsed.answerCorrect : null,
-    };
+    return await withRetry('gradeSolutionProcess', async () => {
+      const result = await model.generateContent(prompt);
+      const parsed = parseJSON(result.response.text());
+      // score가 없으면 0점 처리하지 말고 재시도할 것 — 채점 실패를 학생의 0점으로
+      // 둔갑시키면 안 된다. 학습 이력에 그대로 남는 값이다.
+      if (typeof parsed.score !== 'number' || !Number.isFinite(parsed.score)) {
+        throw new Error(`score가 숫자가 아님 (${parsed.score})`);
+      }
+      if (typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
+        throw new Error('feedback 누락');
+      }
+      return {
+        score: Math.max(0, Math.min(100, Math.round(parsed.score))),
+        feedback: parsed.feedback,
+        answerCorrect: answerText ? !!parsed.answerCorrect : null,
+      };
+    });
   } catch (err) {
     console.error('[gradeSolutionProcess] Error:', err);
     throw new HttpsError('internal', `풀이 과정 채점 실패: ${err.message}`);
@@ -582,8 +686,21 @@ JSON만 출력하세요 (다른 텍스트 금지):
 }
 `;
 
-    const result = await model.generateContent(prompt);
-    const graded = parseJSON(result.response.text());
+    const graded = await withRetry('gradeAnswers', async () => {
+      const result = await model.generateContent(prompt);
+      const parsed = parseJSON(result.response.text());
+      if (!Array.isArray(parsed.items) || !parsed.items.length) {
+        throw new Error('items 배열 누락');
+      }
+      // 학생이 실제로 답한 문항이 채점 결과에 빠져 있으면 그 문항은 0점 처리돼버린다.
+      // 누락은 재시도로 받아내는 게 맞다.
+      const gradedIds = new Set(parsed.items.map(it => it.questionId));
+      const missing = answers
+        .map(a => a.questionId)
+        .filter(id => !gradedIds.has(id));
+      if (missing.length) throw new Error(`채점 누락 문항: ${missing.join(', ')}`);
+      return parsed;
+    });
 
     let rawTotalScore = 0;
 

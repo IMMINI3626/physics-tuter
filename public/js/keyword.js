@@ -25,6 +25,14 @@ const KeywordScreen = {
     try {
       // Firebase Function 호출 → Gemini API (1차: 키워드 추출)
       const result = await ApiService.extractKeywords(imageBase64);
+
+      // 🔑 게스트 무료 횟수는 "분석에 성공한 시점"에 차감한다.
+      //    예전엔 home.js의 업로드 시점에 올렸는데, 그러면 AI 인식이 실패했을 때
+      //    사용자는 아무것도 못 해보고 기회만 하나 잃었다. (표를 넣었는데 기계가 고장난 격)
+      if (!AppState.isLoggedIn) {
+        GuestGuard.increment();
+      }
+
       AppState.session.extractedKeywords = result.keywords;
       AppState.session.misconceptions    = result.misconceptions;
 

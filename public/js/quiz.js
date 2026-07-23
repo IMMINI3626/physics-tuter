@@ -14,7 +14,7 @@ const QuizScreen = {
     this._renderStatements(questions);
     this._resetHints();
     this._updateProgress(1);
-    // 🔑 게스트 카운트 증가는 home.js의 업로드 시점에서 이미 처리됨 (중복 방지)
+    // 게스트 카운트 증가는 keyword.js의 분석 성공 시점에서 이미 처리됨 (중복 방지)
   },
 
   /* 문장 목록 렌더링 */
