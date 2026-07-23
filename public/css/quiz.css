@@ -347,6 +347,10 @@
 }
 .calc-input {
   flex: 1;
+  /* 🔑 min-width:0 이 없으면 number 입력칸이 자기 콘텐츠 최소 너비 밑으로 줄어들지 않아
+     행 전체를 화면 밖으로 밀어내고, 옆의 단위 드롭다운이 잘려서 안 보인다.
+     (flex 아이템의 기본값 min-width:auto 때문에 생기는 전형적인 오버플로) */
+  min-width: 0;
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--r-sm);
@@ -363,15 +367,19 @@
 }
 .calc-input::placeholder { color: var(--text3); }
 .calc-unit-select {
+  /* 🔑 flex-shrink:0 — 입력칸이 아무리 넓어져도 단위 드롭다운은 찌그러지지 않게 고정.
+     너비도 내용에 맞춰(고정폭) 잡아 화면 안에 항상 들어오게 함 */
+  flex: 0 0 auto;
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 12px 12px;
+  padding: 12px 10px;
   font-size: 14px;
   font-family: var(--font);
   color: var(--text1);
   cursor: pointer;
-  min-width: 90px;
+  min-width: 78px;
+  max-width: 38%;
 }
 .l3-answer-text-input {
   width: 100%;
