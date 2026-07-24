@@ -162,10 +162,10 @@ const MypageScreen = {
 
     try {
       const uid = AppState.user.uid;
-      const [sessions, progress, weakList] = await Promise.all([
+      const [sessions, progress, weakConcepts] = await Promise.all([
         LearningService.fetchSessionsByUnit(uid, subUnit),
         LearningService.getUnitProgress(uid, subUnit),
-        LearningService.fetchWeakMisconceptions(uid, subUnit),
+        LearningService.fetchWeakConcepts(uid, subUnit),
       ]);
 
       this._currentLevel = progress.level || 1;
@@ -174,7 +174,7 @@ const MypageScreen = {
       this._currentCompleted = !!progress.completed;
 
       this._renderChart(sessions);
-      await this._renderMisconceptions(weakList);
+      this._renderWeakConcepts(weakConcepts);
       this._renderHistory(sessions);
       this._updateRetryButton();
     } catch (e) {
@@ -273,29 +273,35 @@ const MypageScreen = {
       </svg>`;
   },
 
-  /* 반복 오개념 유형 (2회 이상만) */
-  async _renderMisconceptions(weakList) {
+  /* 등장 횟수를 부드러운 강도 표현으로. 실패 횟수를 숫자로 들이밀지 않기 위함 */
+  _intensityLabel(count) {
+    if (count >= 5) return { text: '자주', cls: 'high' };
+    if (count >= 3) return { text: '종종', cls: 'mid' };
+    return { text: '가끔', cls: 'low' };
+  },
+
+  /* "집중하면 좋을 개념" — 개별 오개념 대신 개념 영역으로 묶어 부드럽게 표시.
+     데이터는 fetchWeakConcepts가 이미 영역 단위로 집계·정렬해서 넘겨줌 */
+  _renderWeakConcepts(concepts) {
     const card = document.getElementById('d-mc-card');
     const el = document.getElementById('d-misconceptions');
     if (!card || !el) return;
 
-    if (!weakList.length) {
+    if (!concepts || !concepts.length) {
       card.style.display = 'none';
       return;
     }
 
-    const withNames = await Promise.all(weakList.map(async (w) => {
-      const mc = await MisconceptionDB.getMisconceptionById(w.id);
-      return { ...w, label: mc ? mc.name_ko : w.id };
-    }));
-
-    el.innerHTML = withNames.map(w => `
-      <div class="mc-row">
-        <div class="mc-icon">⚠</div>
-        <div class="mc-text">${escapeHtml(w.label)}</div>
-        <div class="mc-count">${w.count}회</div>
-      </div>
-    `).join('');
+    el.innerHTML = concepts.map(c => {
+      const it = this._intensityLabel(c.count);
+      // 강도는 신호등 색 점으로만 표시(빨강=자주 / 노랑=종종 / 초록=가끔).
+      // 색만으로는 색각 이상 사용자가 구분 못 하므로 강도 텍스트를 title/aria-label에 남겨둠.
+      return `
+        <div class="mc-row">
+          <span class="mc-dot ${it.cls}" title="${it.text}" aria-label="${it.text}"></span>
+          <div class="mc-text">${escapeHtml(c.name)}</div>
+        </div>`;
+    }).join('');
     card.style.display = '';
   },
 

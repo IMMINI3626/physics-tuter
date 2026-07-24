@@ -32,6 +32,20 @@ function getChapter(unitName) {
   return null;
 }
 
+/* 오개념 차원 코드 → 개념 영역 한글 이름.
+   개별 오개념(틀린 생각)을 그대로 나열하는 대신, 상위 "개념 영역"으로 묶어
+   "집중하면 좋을 개념"으로 부드럽게 보여주기 위한 매핑. (seed.js의 misconception_dimensions와 동일)
+   오개념 id는 앞글자로 영역을 유추할 수 없어(CF·Ob·R1~R3 등은 앞글자가 달라도 모두 '중력/저항')
+   실제 dimensionCode로 묶어야 한다 — id→dimensionCode는 Firestore에서 조회한다. */
+const DIMENSION_NAMES = {
+  K:  '운동학',            I:   '임페투스',        AF: '능동적 힘',
+  AR: '작용-반작용',       CI:  '힘의 합성',        G:  '중력·저항',
+  ME: '역학적 에너지 보존', WI:  '파동의 간섭',      MD: '물질의 이중성',
+  EC: '전기 회로',         MF:  '자기장',           EMI:'전자기 유도',
+  MO: '운동량',            AT:  '원자 모형',         EB: '에너지 띠와 반도체',
+  LD: '빛의 이중성',        WR:  '파동·굴절',
+};
+
 /* HTML 특수문자 이스케이프.
    화면에 뿌리는 문자열 중 사용자 입력(서술형 답변)과 AI 생성 텍스트(문제 문장, 해설,
    단원명, 키워드 등)는 전부 이 함수를 거쳐 innerHTML에 넣어야 한다. 안 그러면
@@ -314,3 +328,4 @@ window.GuestGuard = GuestGuard;
 window.UNIT_MAP    = UNIT_MAP;
 window.getChapter  = getChapter;
 window.escapeHtml  = escapeHtml;
+window.DIMENSION_NAMES = DIMENSION_NAMES;

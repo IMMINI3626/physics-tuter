@@ -108,25 +108,41 @@ const LearningService = {
   },
 
   /**
-   * 오개념 반복 집계. unitName을 주면 그 소단원 세션만 대상으로 필터링.
-   * 2회 이상 반복된 오개념만 반환 (한 번 나온 건 "반복 오개념"이 아님)
+   * "집중하면 좋을 개념" 집계. 세션에 쌓인 개별 오개념 id를 상위 개념 영역(dimension)으로
+   * 묶어서 영역별 등장 횟수를 낸다. unitName을 주면 그 소단원 세션만 대상으로 한다.
+   *
+   * 개별 오개념을 그대로 세지 않고 영역으로 묶는 이유:
+   *  - 학습자에게 "무거운 물체가 빨리 낙하한다는 오개념" 대신 "중력·저항" 같은 개념 영역으로
+   *    부드럽게 보여주기 위함
+   *  - 정확도도 오른다. 예전엔 같은 영역의 서로 다른 오개념(G1·G3)이 각각 1회면 둘 다
+   *    "2회 미만"으로 잘렸는데, 영역으로 묶으면 '중력·저항' 2회로 정상 집계된다.
+   *
+   * @returns {[{code, name, count}]} 2회 이상 영역만, 많은 순, 상위 4개
    */
-  async fetchWeakMisconceptions(uid, unitName = null) {
+  async fetchWeakConcepts(uid, unitName = null) {
     let q = collection(db, 'users', uid, 'sessions');
     if (unitName) q = query(q, where('unit', '==', unitName));
-    const snap = await getDocs(q);
-    const countMap = {};
+    const [snap, dimMap] = await Promise.all([
+      getDocs(q),
+      MisconceptionDB.getDimensionMap(),
+    ]);
 
+    // 오개념 id → 개념 영역(dimensionCode)으로 환산하며 영역별 합산
+    const countByCode = {};
     snap.docs.forEach(d => {
-      const mc = d.data().misconceptions || [];
-      mc.forEach(id => { countMap[id] = (countMap[id] || 0) + 1; });
+      (d.data().misconceptions || []).forEach(id => {
+        const code = dimMap[id];
+        if (!code) return; // 매핑 못 찾는 id(과거 이상 데이터 등)는 건너뜀
+        countByCode[code] = (countByCode[code] || 0) + 1;
+      });
     });
 
-    return Object.entries(countMap)
+    const names = window.DIMENSION_NAMES || {};
+    return Object.entries(countByCode)
       .filter(([, cnt]) => cnt >= 2)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([id, count]) => ({ id, count }));
+      .slice(0, 4)
+      .map(([code, count]) => ({ code, name: names[code] || code, count }));
   },
 
   /**
@@ -249,6 +265,22 @@ const MisconceptionDB = {
   async getMisconceptionById(id) {
     const snap = await getDoc(doc(db, 'misconceptions', id));
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  },
+
+  // 오개념 id → 개념 영역 코드(dimensionCode) 전체 지도. 87개 오개념을 한 번만 읽어
+  // 메모리에 캐시한다(정적 데이터라 세션 중 안 바뀜). 마이페이지에서 소단원을 옮겨다녀도
+  // 재조회 없이 재사용됨.
+  _dimMapCache: null,
+  async getDimensionMap() {
+    if (this._dimMapCache) return this._dimMapCache;
+    const snap = await getDocs(collection(db, 'misconceptions'));
+    const map = {};
+    snap.docs.forEach(d => {
+      const code = d.data().dimensionCode;
+      if (code) map[d.id] = code;
+    });
+    this._dimMapCache = map;
+    return map;
   },
 };
 
