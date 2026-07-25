@@ -319,6 +319,32 @@ const LearningService = {
   },
 
   /**
+   * 사진 진단으로 나온 오개념 id들을 소단원별 "진단된 풀"(unitProgress.diagnosedMisconceptions)에
+   * 합집합으로 누적하고, 아직 이해도 기록이 없는 오개념은 weak(0.15)로 초기화한다.
+   * 이미 knowledgeState가 있는 오개념은 그대로 둔다(누적된 관측을 덮어쓰지 않음).
+   */
+  async addDiagnosedMisconceptions(uid, unitName, ids) {
+    const cleanIds = [...new Set((ids || []).filter(id => id && id !== 'ETC'))];
+    if (!uid || !unitName || !cleanIds.length) return;
+
+    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
+    const snap = await getDoc(ref);
+    const prev = snap.exists() ? (snap.data().diagnosedMisconceptions || []) : [];
+    const merged = [...new Set([...prev, ...cleanIds])];
+    await setDoc(ref, {
+      diagnosedMisconceptions: merged,
+      chapter: window.getChapter?.(unitName) || null,
+      lastStudied: serverTimestamp(),
+    }, { merge: true });
+
+    const weak = window.BKT ? window.BKT.PRIOR.weak : 0.15;
+    await Promise.all(cleanIds.map(async id => {
+      const cur = await this.getKnowledge(uid, id);
+      if (!cur) await this.saveKnowledge(uid, id, weak, 0);
+    }));
+  },
+
+  /**
    * 채점 결과(feedbackData.items)의 태그된 관측을 BKT로 반영해 knowledgeState를 갱신한다.
    * 태그(targetMisconceptionId) 없는 문항은 제외. 같은 오개념 문항이 여러 개면 한 오개념으로
    * 묶어 순서대로 반영한 뒤 한 번만 저장(같은 문서 병렬 쓰기 레이스 방지).

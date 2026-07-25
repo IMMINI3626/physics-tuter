@@ -61,6 +61,11 @@ const KeywordScreen = {
 
           AppState.session.currentLevel = progress.level || 1;
           AppState.session.correctCount = count;
+
+          // 진단된 오개념을 소단원 풀에 누적 + 초기 이해도(weak) 세팅 (BKT)
+          await LearningService.addDiagnosedMisconceptions(
+            uid, result.unit, (result.misconceptions || []).map(m => m.id)
+          );
         } catch (e) {
           console.warn('진행 상태 동기화 실패, 기본값 유지:', e);
         }

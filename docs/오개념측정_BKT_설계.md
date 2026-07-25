@@ -326,7 +326,7 @@ P(S) = 0.10   (실수)
 [x] 2. 채점 로그 확장 — logs에 targetMisconceptionId/usedHint 저장 (정오답은 기존 isCorrectAnswer 재사용)
 [x] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
 [x] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
-[ ] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
+[x] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
 [ ] 6. 순환 출제 — 현재 레벨 대상 중 P(L) 낮은 오개념 우선 선택
 [ ] 7. 승급 판정 교체 — calcPromotionTarget → 레벨 대상 오개념 P(L) ≥ τ
 [ ] 8. 사전 진단검사 화면 — 문장 5개로 초기 P(L) 세팅
@@ -403,6 +403,17 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 - 초기값 세팅(진단검사=known/weak, 사진=weak)은 아직 미연결 → 지금은 모두 unknown(0.30)에서
   시작한다(단계 5·8에서 연결).
 - 아직 이 P(L)을 승급 판정이나 화면에 쓰진 않는다(단계 7·9). 데이터만 쌓임.
+
+### 단계 5 — 진단된 오개념 풀 (2026-07)
+
+- `LearningService.addDiagnosedMisconceptions(uid, unit, ids)` 추가: 진단 오개념 id를
+  unitProgress.diagnosedMisconceptions에 합집합 누적(ETC·빈값 제거), 아직 knowledgeState가
+  없는 오개념만 weak(0.15)로 초기화(기존 관측은 보존).
+- `keyword.js`: 사진 분석 성공 후(로그인) 호출 → 사진에서 나온 오개념이 풀에 쌓이고 약점으로 세팅.
+- `mypage.js` retryUnit(이어서 풀기): Phase 2의 "마지막 진단 물려받기"를 이 누적 풀 사용으로
+  교체. 풀이 비면 fetchLastMisconceptions로 폴백(옛 데이터 호환).
+- 순수 로직(정리·합집합) 4개 통과. 이제 사진에서 진단된 오개념은 unknown(0.30)이 아니라
+  weak(0.15)에서 시작한다.
 
 ---
 

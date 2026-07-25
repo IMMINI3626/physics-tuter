@@ -442,15 +442,18 @@ const MypageScreen = {
       const level = this._currentLevel;
       const mode = pickQuizMode(level);
 
-      // 🔑 "이어서 풀기"는 사진 없이 푸는 세션이라 예전엔 오개념을 빈 값으로 저장해
-      //    "집중하면 좋을 개념" 통계에서 통째로 빠졌다. 이 소단원에서 마지막으로 진단된
-      //    오개념을 이어받아 저장해, 계속 연습한 개념이 통계에 반영되게 한다.
-      //    ("다시 풀기"는 같은 문제라 중복 집계를 피하려 이렇게 하지 않음 — 점수만 저장)
+      // 🔑 "이어서 풀기"는 사진 없이 푸는 세션이라, 이 소단원에 누적된 "진단된 오개념 풀"을
+      //    이어받아 저장한다(계속 연습한 개념이 통계·BKT에 반영되게). 풀이 비어 있으면(오래된
+      //    데이터) 마지막 진단 세션의 오개념으로 폴백. ("다시 풀기"는 중복 집계 방지로 제외)
       let inherited = [];
       try {
-        inherited = await LearningService.fetchLastMisconceptions(AppState.user.uid, this._currentSubUnit);
+        const progress = await LearningService.getUnitProgress(AppState.user.uid, this._currentSubUnit);
+        inherited = progress.diagnosedMisconceptions || [];
+        if (!inherited.length) {
+          inherited = await LearningService.fetchLastMisconceptions(AppState.user.uid, this._currentSubUnit);
+        }
       } catch (e) {
-        console.warn('이전 오개념 조회 실패, 빈 값으로 진행:', e);
+        console.warn('진단 오개념 풀 조회 실패, 빈 값으로 진행:', e);
       }
 
       AppState.session.detectedUnit = this._currentSubUnit;
