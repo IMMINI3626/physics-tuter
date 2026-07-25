@@ -292,6 +292,31 @@ const LearningService = {
     snap.docs.forEach(d => { map[d.id] = d.data(); });
     return map;
   },
+
+  /* ────────────────────────────────────────
+     BKT — 오개념별 이해도 상태 (knowledgeState)
+     /users/{uid}/knowledgeState/{오개념id} = { pL, attempts, lastUpdated }
+  ──────────────────────────────────────── */
+
+  /** 오개념별 이해도 전체 조회. { [오개념id]: {pL, attempts, lastUpdated} } (없으면 빈 객체) */
+  async fetchKnowledgeState(uid) {
+    const snap = await getDocs(collection(db, 'users', uid, 'knowledgeState'));
+    const map = {};
+    snap.docs.forEach(d => { map[d.id] = d.data(); });
+    return map;
+  },
+
+  /** 특정 오개념 하나의 이해도 조회 (없으면 null) */
+  async getKnowledge(uid, misconceptionId) {
+    const snap = await getDoc(doc(db, 'users', uid, 'knowledgeState', misconceptionId));
+    return snap.exists() ? snap.data() : null;
+  },
+
+  /** 오개념 하나의 이해도 저장/갱신 (upsert). BKT 갱신 결과를 여기에 쓴다. */
+  async saveKnowledge(uid, misconceptionId, pL, attempts) {
+    const ref = doc(db, 'users', uid, 'knowledgeState', misconceptionId);
+    await setDoc(ref, { pL, attempts, lastUpdated: serverTimestamp() }, { merge: true });
+  },
 };
 
 const MisconceptionDB = {

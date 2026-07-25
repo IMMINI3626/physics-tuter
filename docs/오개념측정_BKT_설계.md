@@ -324,7 +324,7 @@ P(S) = 0.10   (실수)
         update(pL, isCorrect, {usedHint}), isMastered(pL), 초기값 상수
 [x] 1. 문항별 오개념 태깅 — generateQuestions가 문항에 targetMisconceptionId 반환 + 검증
 [x] 2. 채점 로그 확장 — logs에 targetMisconceptionId/usedHint 저장 (정오답은 기존 isCorrectAnswer 재사용)
-[ ] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
+[x] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
 [ ] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
 [ ] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
 [ ] 6. 순환 출제 — 현재 레벨 대상 중 P(L) 낮은 오개념 우선 선택
@@ -379,6 +379,15 @@ BKT에 넣을 "관측(어느 오개념을 맞혔나)"의 근거를 만드는 단
 - 로그 매핑 단위 테스트 11개 통과: 태그된 문항의 (오개념, 정오답, 힌트) 관측 추출, 옳은
   문장·무태그 문항 null 처리, 계산형 단일 태그, 힌트 유무.
 - 데이터 경로만 깔았고(저장까지), 아직 P(L)을 갱신하진 않는다(단계 3·4).
+
+### 단계 3 — knowledgeState 저장/조회 (2026-07)
+
+`firestore.js`에 오개념별 이해도(`/users/{uid}/knowledgeState/{오개념id}` = pL, attempts,
+lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없음(단계 4에서 연결).
+
+- `fetchKnowledgeState(uid)` — 전체 조회(마이페이지/승급 판정용).
+- `getKnowledge(uid, id)` — 단건 조회(없으면 null → 호출부가 초기값 사용).
+- `saveKnowledge(uid, id, pL, attempts)` — upsert(merge).
 
 ---
 
