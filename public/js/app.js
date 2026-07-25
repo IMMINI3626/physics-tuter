@@ -56,9 +56,10 @@ function applyHintPenalty(feedbackData) {
   if (used > 0 && typeof feedbackData.score === 'number') {
     const penalty = used * 10;
     feedbackData.score = Math.max(0, feedbackData.score - penalty);
+    // 부제에는 감점 점수 대신 힌트 사용 횟수만 부드럽게 표시 (점수는 위에서 이미 차감됨)
     feedbackData.subtitle = feedbackData.subtitle
-      ? `${feedbackData.subtitle} · 힌트 -${penalty}점`
-      : `힌트 -${penalty}점`;
+      ? `${feedbackData.subtitle} · 힌트 ${used}회 사용`
+      : `힌트 ${used}회 사용`;
   }
   return feedbackData;
 }

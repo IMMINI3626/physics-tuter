@@ -26,6 +26,10 @@ const LearningService = {
       wrongCount,
       hintUsed:       sessionData.hintUsed,
       checkedCount:   sessionData.checkedStatements.size,
+      // 🔑 힌트도 저장 — 과거 기록 "다시 풀기"로 이 문제를 복원할 때 힌트까지 되살리기 위함.
+      //    (안 저장하면 재도전 시 힌트가 하드코딩 기본 문구로 떨어짐)
+      hint1:          sessionData.hint1 || null,
+      hint2:          sessionData.hint2 || null,
       createdAt:      serverTimestamp(),
     };
     // 🔑 재도전(다시 풀어보기/다시 풀기)이면 원본 문제 id를 같이 저장 —
@@ -170,6 +174,14 @@ const LearningService = {
       if (Array.isArray(mc) && mc.length) return mc;
     }
     return [];
+  },
+
+  // 과거 세션에 저장된 힌트 조회 ("다시 풀기"로 복원 시 사용). 없으면 null.
+  async getSessionHints(uid, sessionId) {
+    const snap = await getDoc(doc(db, 'users', uid, 'sessions', sessionId));
+    if (!snap.exists()) return { hint1: null, hint2: null };
+    const d = snap.data();
+    return { hint1: d.hint1 || null, hint2: d.hint2 || null };
   },
 
   async fetchSessionLogs(uid, sessionId) {

@@ -490,7 +490,10 @@ window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'm
   try {
     Toast.show('과거 기록을 불러오는 중...');
 
-    const logs = await LearningService.fetchSessionLogs(AppState.user.uid, sessionId);
+    const [logs, hints] = await Promise.all([
+      LearningService.fetchSessionLogs(AppState.user.uid, sessionId),
+      LearningService.getSessionHints(AppState.user.uid, sessionId),
+    ]);
 
     const historyData = {
       score: score,
@@ -498,6 +501,8 @@ window.viewSessionLog = async function(sessionId, unitName, score, returnTo = 'm
       subtitle: `${unitName} 단원`,
       unit: unitName,
       rootId: rootId || sessionId,
+      hint1: hints.hint1,   // "다시 풀기"로 복원 시 힌트도 되살리기 위함
+      hint2: hints.hint2,
       items: logs,
     };
 

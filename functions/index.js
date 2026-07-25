@@ -168,6 +168,11 @@ function validateCalcQuestion(q, label) {
   if (label === 'L3' && (!Array.isArray(q.solutionSteps) || !q.solutionSteps.length)) {
     throw new Error('L3 solutionSteps 누락');
   }
+  // 힌트가 없으면 화면에 하드코딩 기본 문구가 뜨므로, 없으면 재생성
+  if (typeof q.hint1 !== 'string' || !q.hint1.trim() ||
+      typeof q.hint2 !== 'string' || !q.hint2.trim()) {
+    throw new Error(`${label} 힌트 누락`);
+  }
 }
 
 /* ────────────────────────────────────────
@@ -550,11 +555,18 @@ JSON만 출력하세요 (다른 텍스트 금지):
       if (!questions.some(q => q.isWrong)) {
         throw new Error('틀린 문장이 하나도 없음');   // 채점 자체가 성립 안 함
       }
+      // 🔑 힌트도 반드시 있어야 한다. 예전엔 없으면 null로 통과시켜서, AI가 힌트를
+      //    빼먹으면(특히 문제 배열만 반환한 경우) 화면에 하드코딩 기본 문구가 떴다.
+      //    없으면 재생성해서 실제 힌트를 받아낸다.
+      if (typeof parsed.hint1 !== 'string' || !parsed.hint1.trim() ||
+          typeof parsed.hint2 !== 'string' || !parsed.hint2.trim()) {
+        throw new Error('힌트 누락');
+      }
 
       return {
         questions,
-        hint1: parsed.hint1 || null,
-        hint2: parsed.hint2 || null,
+        hint1: parsed.hint1,
+        hint2: parsed.hint2,
         misconceptionCount: activeMisconceptions.length,
         patternCount: sampledPatterns.length,
       };
@@ -802,7 +814,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
     return {
       score: finalScore,
       title: finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
-      subtitle: `${targetWrongCount}개 오개념 중 ${correctAnswered.length}개 이해`,
+      subtitle: `틀린 문장 ${targetWrongCount}개 중 ${correctAnswered.length}개 정답`,
       misconceptions: misconceptionTags,
       items: feedbackItems,
     };

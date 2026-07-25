@@ -45,6 +45,8 @@ const FeedbackScreen = {
       this._historyUnit = data.unit || null;
       this._historyReturnTo = returnTo;
       this._historyRootId = data.rootId || null;
+      this._historyHint1 = data.hint1 || null;   // 다시 풀기로 복원 시 힌트 되살리기
+      this._historyHint2 = data.hint2 || null;
 
       this._setHistoryHeader(returnTo);
       nextBtn.style.display = 'none';
@@ -176,6 +178,9 @@ const FeedbackScreen = {
     AppState.session.detectedUnit = this._historyUnit || AppState.session.detectedUnit;
     AppState.session.checkedStatements = new Set();
     AppState.session.step2Answers = [];
+    // 저장해둔 힌트 복원 (없으면 화면에서 기본 문구로 떨어짐 — 옛 기록엔 없을 수 있음)
+    AppState.session.hint1 = this._historyHint1 || null;
+    AppState.session.hint2 = this._historyHint2 || null;
     AppState.session.isRetry = true;
     // 채점 후 결과 화면을 "레벨/승급 없는 간단 버전"으로 보여주기 위한 표시
     AppState.session.isHistoryRetry = true;
