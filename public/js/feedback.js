@@ -28,12 +28,16 @@ const FeedbackScreen = {
 
     // isHistory가 아닐 때(방금 막 푼 새 문제일 때)만 DB에 저장
     if (!isHistory && window.AppState.isLoggedIn && window.AppState.user) {
+      const uid = window.AppState.user.uid;
       window.LearningService.saveSession(data).then(newId => {
         // 재도전이 아니라 새 문제였다면, 이 문제가 앞으로의 재도전들이 묶일 "원본"이 됨
         if (!window.AppState.session.isRetry) {
           window.AppState.session._rootSessionId = newId;
         }
       }).catch(console.error);
+      // 태그된 오개념 관측을 BKT로 반영해 이해도(knowledgeState) 갱신
+      const usedHint = (window.AppState.session.hintUsed || 0) > 0;
+      window.LearningService.applyBktObservations(uid, data.items, usedHint).catch(console.error);
     }
 
     const nextBtn = document.getElementById('btn-feedback-next');

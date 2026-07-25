@@ -317,6 +317,30 @@ const LearningService = {
     const ref = doc(db, 'users', uid, 'knowledgeState', misconceptionId);
     await setDoc(ref, { pL, attempts, lastUpdated: serverTimestamp() }, { merge: true });
   },
+
+  /**
+   * 채점 결과(feedbackData.items)의 태그된 관측을 BKT로 반영해 knowledgeState를 갱신한다.
+   * 태그(targetMisconceptionId) 없는 문항은 제외. 같은 오개념 문항이 여러 개면 한 오개념으로
+   * 묶어 순서대로 반영한 뒤 한 번만 저장(같은 문서 병렬 쓰기 레이스 방지).
+   */
+  async applyBktObservations(uid, items, usedHint) {
+    const BKT = window.BKT;
+    if (!BKT || !uid) return;
+
+    const byId = {};
+    (items || []).forEach(it => {
+      if (!it.targetMisconceptionId) return;
+      const isCorrect = it.isCorrectAnswer ?? !it.isWrong;
+      (byId[it.targetMisconceptionId] ||= []).push(isCorrect);
+    });
+
+    await Promise.all(Object.entries(byId).map(async ([id, corrects]) => {
+      const cur = await this.getKnowledge(uid, id);
+      const pL0 = (cur && typeof cur.pL === 'number') ? cur.pL : BKT.PRIOR.unknown;
+      const newPL = corrects.reduce((p, ok) => BKT.update(p, ok, { usedHint }), pL0);
+      await this.saveKnowledge(uid, id, newPL, (cur?.attempts || 0) + corrects.length);
+    }));
+  },
 };
 
 const MisconceptionDB = {

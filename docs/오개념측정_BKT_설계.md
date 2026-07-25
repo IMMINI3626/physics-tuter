@@ -325,7 +325,7 @@ P(S) = 0.10   (실수)
 [x] 1. 문항별 오개념 태깅 — generateQuestions가 문항에 targetMisconceptionId 반환 + 검증
 [x] 2. 채점 로그 확장 — logs에 targetMisconceptionId/usedHint 저장 (정오답은 기존 isCorrectAnswer 재사용)
 [x] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
-[ ] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
+[x] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
 [ ] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
 [ ] 6. 순환 출제 — 현재 레벨 대상 중 P(L) 낮은 오개념 우선 선택
 [ ] 7. 승급 판정 교체 — calcPromotionTarget → 레벨 대상 오개념 P(L) ≥ τ
@@ -388,6 +388,21 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 - `fetchKnowledgeState(uid)` — 전체 조회(마이페이지/승급 판정용).
 - `getKnowledge(uid, id)` — 단건 조회(없으면 null → 호출부가 초기값 사용).
 - `saveKnowledge(uid, id, pL, attempts)` — upsert(merge).
+
+### 단계 4 — 관측 반영 (2026-07)
+
+단계 0~3이 처음으로 연결되어, 문제를 풀면 실제로 이해도 P(L)이 쌓이기 시작한다.
+
+- `LearningService.applyBktObservations(uid, items, usedHint)` 추가: feedbackData.items에서
+  태그된 관측만 골라 오개념별로 묶고, 각 오개념의 현재 P(L)(없으면 unknown=0.30)에서 BKT로
+  순서대로 갱신한 뒤 한 번만 저장(같은 문서 병렬 쓰기 레이스 방지).
+- `feedback.js`의 render에서, 새 문제 채점 시(비-history, 로그인) saveSession과 함께 호출.
+  usedHint는 세션의 hintUsed>0.
+- 순수 로직(묶기 + BKT reduce) 단위 테스트 10개 통과: 태그 없는 문항 제외, 정답 상승/오답 하락,
+  누적, 같은 오개념 묶음 = 순차 반영과 동일, 힌트 정답 상승폭 축소.
+- 초기값 세팅(진단검사=known/weak, 사진=weak)은 아직 미연결 → 지금은 모두 unknown(0.30)에서
+  시작한다(단계 5·8에서 연결).
+- 아직 이 P(L)을 승급 판정이나 화면에 쓰진 않는다(단계 7·9). 데이터만 쌓임.
 
 ---
 
