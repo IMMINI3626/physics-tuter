@@ -46,6 +46,23 @@ const DIMENSION_NAMES = {
   LD: '빛의 이중성',        WR:  '파동·굴절',
 };
 
+/* 힌트를 볼수록 감점 (힌트 1개당 10점: 1차만 -10, 둘 다 -20).
+   교정 루프의 취지가 "스스로 풀었을 때만 만점→승급"이므로, 힌트를 다 보고 맞혀도
+   만점이 나오던 문제를 막는다. 채점이 끝난 feedbackData를 이 함수로 한 번 걸러
+   저장·표시·승급 판정에 모두 같은 점수를 쓴다. 문제 유형(STEP1/2·계산·L3)과 무관하게 공용.
+   점수뿐 아니라 부제에 감점 내역을 남겨, 학생이 왜 만점이 아닌지 알 수 있게 한다. */
+function applyHintPenalty(feedbackData) {
+  const used = window.AppState?.session?.hintUsed || 0;
+  if (used > 0 && typeof feedbackData.score === 'number') {
+    const penalty = used * 10;
+    feedbackData.score = Math.max(0, feedbackData.score - penalty);
+    feedbackData.subtitle = feedbackData.subtitle
+      ? `${feedbackData.subtitle} · 힌트 -${penalty}점`
+      : `힌트 -${penalty}점`;
+  }
+  return feedbackData;
+}
+
 /* HTML 특수문자 이스케이프.
    화면에 뿌리는 문자열 중 사용자 입력(서술형 답변)과 AI 생성 텍스트(문제 문장, 해설,
    단원명, 키워드 등)는 전부 이 함수를 거쳐 innerHTML에 넣어야 한다. 안 그러면
@@ -329,3 +346,4 @@ window.UNIT_MAP    = UNIT_MAP;
 window.getChapter  = getChapter;
 window.escapeHtml  = escapeHtml;
 window.DIMENSION_NAMES = DIMENSION_NAMES;
+window.applyHintPenalty = applyHintPenalty;

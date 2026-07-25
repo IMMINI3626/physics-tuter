@@ -764,8 +764,11 @@ JSON만 출력하세요 (다른 텍스트 금지):
         // 진짜 오개념을 찾은 경우: AI가 채점한 점수 합산
         rawTotalScore += (gradedItem?.score || 0);
       } else if (!q.isWrong && answered) {
-        // 맞는 문장인데 오개념이라고 억울하게 고른 경우: 무지성 체크 방지용 감점
-        rawTotalScore -= 20; // 문항당 20점 감점
+        // 맞는 문장인데 오개념이라고 억울하게 고른 경우(헛다리): 무지성 체크 방지용 감점.
+        // 🔑 고정 -20이 아니라 문항당 배점에 비례(절반)시킨다. 예전엔 틀린 문장이 1개인
+        //    문제(문항 만점 100)와 2개인 문제(만점 50)에 똑같이 -20이라, 같은 "다 찍기"인데도
+        //    벌점 무게가 두 배 차이 났다. maxScorePerItem × 0.5로 문제 유형과 무관하게 공평하게.
+        rawTotalScore -= Math.round(maxScorePerItem * 0.5);
       }
 
       return {

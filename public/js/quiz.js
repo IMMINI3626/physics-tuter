@@ -173,6 +173,7 @@ const QuizScreen = {
         questions,
         AppState.session.detectedUnit
       );
+      applyHintPenalty(result);   // 힌트 사용분 감점 (모든 유형 공용)
       AppState.session.score = result.score;
       AppState.session.feedbackData = result;
       await FeedbackScreen.render(result);
@@ -273,7 +274,6 @@ const QuizScreen = {
     const isCorrect = isValueCorrect && isUnitCorrect;
 
     const score = isCorrect ? 100 : 0;
-    AppState.session.score = score;
 
     const feedbackData = {
       score,
@@ -299,6 +299,8 @@ const QuizScreen = {
       }],
     };
 
+    applyHintPenalty(feedbackData);   // 힌트 사용분 감점
+    AppState.session.score = feedbackData.score;
     AppState.session.feedbackData = feedbackData;
     FeedbackScreen.render(feedbackData);
     Router.go('feedback');
@@ -544,7 +546,8 @@ const Level3Screen = {
       }],
     };
 
-    AppState.session.score = finalScore;
+    applyHintPenalty(feedbackData);   // 힌트 사용분 감점
+    AppState.session.score = feedbackData.score;
     AppState.session.feedbackData = feedbackData;
     this._resetReviewUI();
     await FeedbackScreen.render(feedbackData);

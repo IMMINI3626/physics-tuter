@@ -157,6 +157,21 @@ const LearningService = {
       .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
   },
 
+  /**
+   * 이 소단원에서 가장 최근에 "오개념이 채워진" 세션의 오개념 id 목록을 돌려준다.
+   * 마이페이지 "이어서 풀기"가 이 값을 이어받아 저장하면, 사진 없이 푼 세션도
+   * "집중하면 좋을 개념" 통계에 반영된다. (사진 세션과 비슷한 크기라 통계가 부풀지 않음)
+   * "다시 풀기"(같은 문제 재도전)는 이 함수를 쓰지 않는다 — 같은 문제를 또 세면 중복 집계됨.
+   */
+  async fetchLastMisconceptions(uid, unitName) {
+    const sessions = await this.fetchSessionsByUnit(uid, unitName); // 오래된 → 최신 순
+    for (let i = sessions.length - 1; i >= 0; i--) {
+      const mc = sessions[i].misconceptions;
+      if (Array.isArray(mc) && mc.length) return mc;
+    }
+    return [];
+  },
+
   async fetchSessionLogs(uid, sessionId) {
     const q = query(
       collection(db, 'users', uid, 'sessions', sessionId, 'logs'),

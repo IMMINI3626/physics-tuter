@@ -442,8 +442,19 @@ const MypageScreen = {
       const level = this._currentLevel;
       const mode = pickQuizMode(level);
 
+      // 🔑 "이어서 풀기"는 사진 없이 푸는 세션이라 예전엔 오개념을 빈 값으로 저장해
+      //    "집중하면 좋을 개념" 통계에서 통째로 빠졌다. 이 소단원에서 마지막으로 진단된
+      //    오개념을 이어받아 저장해, 계속 연습한 개념이 통계에 반영되게 한다.
+      //    ("다시 풀기"는 같은 문제라 중복 집계를 피하려 이렇게 하지 않음 — 점수만 저장)
+      let inherited = [];
+      try {
+        inherited = await LearningService.fetchLastMisconceptions(AppState.user.uid, this._currentSubUnit);
+      } catch (e) {
+        console.warn('이전 오개념 조회 실패, 빈 값으로 진행:', e);
+      }
+
       AppState.session.detectedUnit = this._currentSubUnit;
-      AppState.session.misconceptions = [];
+      AppState.session.misconceptions = inherited.map(id => ({ id }));
       AppState.session.currentLevel = level;
       AppState.session.correctCount = this._currentCorrectCount;
       AppState.session.isRetry = false;
