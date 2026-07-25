@@ -815,6 +815,8 @@ JSON만 출력하세요 (다른 텍스트 금지):
         isCorrectAnswer: gradedItem?.isCorrectAnswer ?? !q.isWrong,
         userReason:      answered?.reason || answered?.answer,
         explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
+        // 🆕 문항이 겨냥한 오개념(있으면) — 저장 후 BKT 관측으로 쓰임. 태그 없으면 null.
+        targetMisconceptionId: q.targetMisconceptionId ?? null,
       };
     });
 

@@ -323,7 +323,7 @@ P(S) = 0.10   (실수)
 [x] 0. BKT 계산 핵심 모듈 (public/js/bkt.js) — 순수 함수, 단위 테스트 완료
         update(pL, isCorrect, {usedHint}), isMastered(pL), 초기값 상수
 [x] 1. 문항별 오개념 태깅 — generateQuestions가 문항에 targetMisconceptionId 반환 + 검증
-[ ] 2. 채점 로그 확장 — logs에 targetMisconceptionId/isCorrect/usedHint 저장
+[x] 2. 채점 로그 확장 — logs에 targetMisconceptionId/usedHint 저장 (정오답은 기존 isCorrectAnswer 재사용)
 [ ] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
 [ ] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
 [ ] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
@@ -363,6 +363,22 @@ BKT에 넣을 "관측(어느 오개념을 맞혔나)"의 근거를 만드는 단
   재시도하지 않는다(생성 안정성 우선).
 - 태그 정리 로직 단위 테스트 10개 통과. 프론트는 아직 이 필드를 사용하지 않아 기존 동작 무영향.
 - 미확인: AI가 문장에 실제로 올바른 오개념 id를 다는 정확도는 배포 후 실측 필요.
+
+### 단계 2 — 채점 로그 확장 (2026-07)
+
+태그가 채점 결과(feedbackData.items)를 거쳐 세션 로그에 저장되도록 연결했다. 이로써
+한 문항이 "어느 오개념(targetMisconceptionId)에 대해 맞혔나(isCorrectAnswer)를, 힌트를 쓰고
+(usedHint)"라는 한 건의 BKT 관측으로 남는다.
+
+- 서버 gradeAnswers: feedbackItems에 targetMisconceptionId 추가(STEP1/2, questions에서 그대로).
+- 클라이언트 submitCalc(L2B)·_finalize(L3): feedbackData.items[0]에 calcQuestion의 태그 추가.
+- saveSession: 각 로그에 targetMisconceptionId + usedHint(세션의 hintUsed>0) 저장. 정오답은
+  기존 isCorrectAnswer를 그대로 관측 신호로 쓴다(별도 isCorrect 필드는 두지 않음).
+- fetchSessionLogs: targetMisconceptionId를 반환에 포함해, "다시 풀기"로 복원해 다시 풀 때도
+  관측이 이어지게 함.
+- 로그 매핑 단위 테스트 11개 통과: 태그된 문항의 (오개념, 정오답, 힌트) 관측 추출, 옳은
+  문장·무태그 문항 null 처리, 계산형 단일 태그, 힌트 유무.
+- 데이터 경로만 깔았고(저장까지), 아직 P(L)을 갱신하진 않는다(단계 3·4).
 
 ---
 

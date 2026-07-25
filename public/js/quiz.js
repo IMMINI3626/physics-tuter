@@ -296,6 +296,7 @@ const QuizScreen = {
         correctAnswer: calcQuestion.correctAnswer,
         unit: calcQuestion.unit,
         unitOptions: calcQuestion.unitOptions,
+        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,   // BKT 관측용
       }],
     };
 
@@ -542,6 +543,7 @@ const Level3Screen = {
         correctAnswer: calcQuestion.correctAnswer,
         unit: calcQuestion.unit,
         unitOptions: calcQuestion.unitOptions,
+        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,   // BKT 관측용
         isLevel3: true,
       }],
     };

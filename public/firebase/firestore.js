@@ -50,6 +50,10 @@ const LearningService = {
         userReason:      item.userReason || null,
         // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
         explanation:     item.explanation || null,
+        // 🆕 BKT 관측용: 이 문항이 겨냥한 오개념 + 이 세션에서 힌트를 썼는지.
+        //    targetMisconceptionId가 있는 문항의 (isCorrectAnswer, usedHint)가 한 건의 관측이 된다.
+        targetMisconceptionId: item.targetMisconceptionId || null,
+        usedHint:        (sessionData.hintUsed || 0) > 0,
         createdAt:       serverTimestamp(),
       };
       // 🔑 계산형 문제(Level 2 방식B, Level 3)일 때만 존재 — 있으면 같이 저장해서 나중에 "다시 풀기"가 가능하게 함
@@ -207,6 +211,8 @@ const LearningService = {
         unitOptions: data.unitOptions,
         solutionSteps: data.solutionSteps,
         isLevel3: data.isLevel3,
+        // 🆕 오개념 태그 — "다시 풀기"로 복원해 다시 풀 때도 관측이 이어지도록 보존
+        targetMisconceptionId: data.targetMisconceptionId || null,
       };
     });
   },
