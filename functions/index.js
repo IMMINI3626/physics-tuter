@@ -285,6 +285,8 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
 
     // 해당 소단원 오개념 ID 목록으로 sentences 조회
     const validIds = activeMisconceptions.map(mc => mc.id).filter(Boolean);
+    // 문항 오개념 태깅 검증용 — AI가 붙인 targetMisconceptionId가 실제 목록 안의 값인지 확인
+    const validIdSet = new Set(validIds);
     const dbQueries = validIds.map(id =>
       db.collection('misconception_sentences').where('misconceptionId', '==', id).get()
     );
@@ -314,7 +316,9 @@ ${patternText}
     const wrongExamples = contextSentences.filter(s => s.isWrong).map(s => s.sentence).join(' / ');
     const correctExamples = contextSentences.filter(s => !s.isWrong).map(s => s.sentence).join(' / ');
 
-    const mcText = activeMisconceptions.map((mc, i) => `${i + 1}. ${mc.description}`).join('\n');
+    // 각 오개념에 id를 함께 노출한다. STEP1/2에서 틀린 문장을 만들 때, 그 문장이 겨냥한
+    // 오개념 id를 targetMisconceptionId로 태깅하게 하기 위함(BKT 관측의 근거).
+    const mcText = activeMisconceptions.map((mc, i) => `${i + 1}. [id: ${mc.id || '?'}] ${mc.description}`).join('\n');
 
     const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
     const rightCount = 5 - wrongCount; // 4 or 3
@@ -384,6 +388,7 @@ JSON만 출력하세요:
     "unit": "정답 단위",
     "unitOptions": ["정답단위", "헷갈릴단위1", "헷갈릴단위2", "헷갈릴단위3"],
     "solutionSteps": ["1단계: 적용할 법칙/공식 설명", "2단계: 계산 과정 설명"],
+    "targetMisconceptionId": "위 오개념 목록의 id 중 이 문제가 주로 겨냥하는 것 하나 (없으면 생략)",
     "hint1": "어떤 물리 법칙을 순서대로 적용해야 하는지 방향만 제시. 정답 언급 금지. 1~2문장 경어체.",
     "hint2": "각 단계에서 어떤 변수를 구해야 하는지 유도. 최종 값 언급 금지. 1~2문장 경어체."
   }
@@ -394,9 +399,11 @@ JSON만 출력하세요:
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
         validateCalcQuestion(parsed.calcQuestion, 'L3');
+        const targetMc = validIdSet.has(parsed.calcQuestion.targetMisconceptionId)
+          ? parsed.calcQuestion.targetMisconceptionId : null;
         return {
           questions: null,
-          calcQuestion: { ...parsed.calcQuestion, isLevel3: true },
+          calcQuestion: { ...parsed.calcQuestion, targetMisconceptionId: targetMc, isLevel3: true },
           hint1: parsed.calcQuestion.hint1 || null,
           hint2: parsed.calcQuestion.hint2 || null,
           misconceptionCount: activeMisconceptions.length,
@@ -435,6 +442,7 @@ JSON만 출력하세요:
     "correctAnswer": 숫자(정수 또는 소수),
     "unit": "정답 단위 (예: m/s, N, J, kg·m/s 등)",
     "unitOptions": ["정답단위", "헷갈릴단위1", "헷갈릴단위2", "헷갈릴단위3"],
+    "targetMisconceptionId": "위 오개념 목록의 id 중 이 문제가 주로 겨냥하는 것 하나 (없으면 생략)",
     "hint1": "이 문제를 풀 때 어떤 물리 법칙/공식을 사용해야 하는지 방향만 제시. 정답 언급 금지. 1~2문장 경어체.",
     "hint2": "공식에서 각 변수에 어떤 값을 대입해야 하는지 구체적으로 유도. 최종 값 언급 금지. 1~2문장 경어체."
   }
@@ -445,9 +453,11 @@ JSON만 출력하세요:
         const result = await model.generateContent(prompt);
         const parsed = parseJSON(result.response.text());
         validateCalcQuestion(parsed.calcQuestion, 'L2 방식B');
+        const targetMc = validIdSet.has(parsed.calcQuestion.targetMisconceptionId)
+          ? parsed.calcQuestion.targetMisconceptionId : null;
         return {
           questions: null,
-          calcQuestion: parsed.calcQuestion,
+          calcQuestion: { ...parsed.calcQuestion, targetMisconceptionId: targetMc },
           hint1: parsed.calcQuestion.hint1 || null,
           hint2: parsed.calcQuestion.hint2 || null,
           misconceptionCount: activeMisconceptions.length,
@@ -521,12 +531,20 @@ ${levelInstruction}
 JSON만 출력하세요 (다른 텍스트 금지):
 {
   "questions": [
-    { "id": 1, "text": "문장 내용", "isWrong": true  },
+    { "id": 1, "text": "문장 내용", "isWrong": true, "targetMisconceptionId": "위 오개념 목록의 id" },
     { "id": 2, "text": "문장 내용", "isWrong": false }
   ],
   "hint1": "5개 문장 전체를 대상으로, 어떤 물리 개념/법칙을 중심으로 판단해야 하는지 방향만 제시. 어느 문장이 틀렸는지 절대 언급 금지. 1~2문장 경어체.",
   "hint2": "hint1보다 구체적으로, 틀린 문장에 사용된 표현이나 조건의 어떤 부분을 의심해봐야 하는지 유도. 어느 문장인지 직접 지목 금지. 1~2문장 경어체."
 }
+
+[오개념 태깅 규칙 - 매우 중요]
+- isWrong:true 인 문장 중, 위 [학생들의 주요 오개념] 목록의 특정 오개념을 겨냥한 문장은
+  targetMisconceptionId에 그 오개념의 id(대괄호 [id: ...] 안의 값)를 정확히 그대로 적으세요.
+- 공식이 맞는지 틀린지 판별하는 문장이나 계산 판별 문장처럼 특정 오개념과 직접 연결되지 않는
+  문장은 targetMisconceptionId를 넣지 마세요(생략).
+- isWrong:false(옳은 문장)에는 targetMisconceptionId를 넣지 마세요.
+- 목록에 없는 id를 지어내지 마세요.
 
 [힌트 작성 규칙]
 - 힌트는 문제 세트 전체에 대한 것 (특정 문장 번호 언급 금지)
@@ -555,6 +573,13 @@ JSON만 출력하세요 (다른 텍스트 금지):
       if (!questions.some(q => q.isWrong)) {
         throw new Error('틀린 문장이 하나도 없음');   // 채점 자체가 성립 안 함
       }
+      // 오개념 태그(targetMisconceptionId) 정리: 틀린 문장이면서 실제 목록에 있는 id만 남기고
+      // 나머지(옳은 문장, 목록 밖 id, 공식/계산 판별 문장 등)는 제거한다. 태깅은 BKT 관측용
+      // 부가 정보라, 없거나 어긋나도 재시도하지 않고 조용히 비운다(생성 안정성 우선).
+      questions.forEach(q => {
+        const ok = q.isWrong && validIdSet.has(q.targetMisconceptionId);
+        q.targetMisconceptionId = ok ? q.targetMisconceptionId : null;
+      });
       // 🔑 힌트도 반드시 있어야 한다. 예전엔 없으면 null로 통과시켜서, AI가 힌트를
       //    빼먹으면(특히 문제 배열만 반환한 경우) 화면에 하드코딩 기본 문구가 떴다.
       //    없으면 재생성해서 실제 힌트를 받아낸다.

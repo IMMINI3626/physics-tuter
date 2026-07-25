@@ -322,7 +322,7 @@ P(S) = 0.10   (실수)
 ```
 [x] 0. BKT 계산 핵심 모듈 (public/js/bkt.js) — 순수 함수, 단위 테스트 완료
         update(pL, isCorrect, {usedHint}), isMastered(pL), 초기값 상수
-[ ] 1. 문항별 오개념 태깅 — generateQuestions가 문항에 targetMisconceptionId 반환 + 검증
+[x] 1. 문항별 오개념 태깅 — generateQuestions가 문항에 targetMisconceptionId 반환 + 검증
 [ ] 2. 채점 로그 확장 — logs에 targetMisconceptionId/isCorrect/usedHint 저장
 [ ] 3. knowledgeState 저장/조회 (firestore.js) — 오개념별 P(L) 영속화
 [ ] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
@@ -333,6 +333,36 @@ P(S) = 0.10   (실수)
 [ ] 9. 마이페이지 표시 — 오개념/영역 이해도 % 시각화, "교정된 오개념" 통계 복원
 [ ] 10. (검증) 수치 검증 + 파라미터 민감도 분석 (논문 실험)
 ```
+
+---
+
+## 9. 구현 진행 기록
+
+### 단계 0 — BKT 계산 핵심 모듈 (2026-07)
+
+`public/js/bkt.js` 신규. 오개념 하나의 이해도 P(L)을 관측마다 갱신하는 순수 함수.
+파라미터·초기값·τ는 4-3의 확정값을 상수로 담았다.
+
+- `update(pL, isCorrect, {usedHint})` — 베이즈 갱신 후 학습 전이 반영. 힌트로 맞힌 정답은
+  P(G)를 0.20→0.50으로 올려 증거를 할인.
+- `isMastered(pL)`, `initialPL(status)`, `pickWeakest(items, count)`(순환 출제용), `updateMany`.
+- 부수효과 없음(저장·화면·승급은 다른 파일이 호출). Node/브라우저 양쪽 노출.
+- 단위 테스트 26개 통과: 3-3 수치 예시 재현, τ=0.90 극복 횟수(0.15→3/0.30→2/0.70→1),
+  단조성, 힌트 할인, 경계값(0/1/범위 밖), 약점 정렬. 아직 어느 화면도 호출하지 않음.
+
+### 단계 1 — 문항별 오개념 태깅 (2026-07)
+
+`functions/index.js`의 generateQuestions가 각 문항에 겨냥 오개념 id를 붙여 반환한다.
+BKT에 넣을 "관측(어느 오개념을 맞혔나)"의 근거를 만드는 단계.
+
+- 프롬프트의 오개념 목록에 id를 노출(`[id: I3] 설명`)하고, 답변 스키마에 targetMisconceptionId 추가.
+  - STEP1/2: isWrong:true 문장마다 태깅(옳은 문장·공식/계산 판별 문장은 생략).
+  - L2B·L3 계산: calcQuestion에 주 오개념 하나(선택).
+- 서버 검증: 반환된 태그 중 활성 오개념 목록(validIdSet)에 실제로 있는 것만 남기고, 나머지
+  (옳은 문장에 붙은 것, 목록 밖 id, 무태그)는 null로 정리. 태깅은 부가 정보라 누락·오류 시
+  재시도하지 않는다(생성 안정성 우선).
+- 태그 정리 로직 단위 테스트 10개 통과. 프론트는 아직 이 필드를 사용하지 않아 기존 동작 무영향.
+- 미확인: AI가 문장에 실제로 올바른 오개념 id를 다는 정확도는 배포 후 실측 필요.
 
 ---
 
