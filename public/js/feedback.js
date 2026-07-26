@@ -416,11 +416,14 @@ const FeedbackScreen = {
       const mode = pickQuizMode(level);
       AppState.session.quizMode = mode;
 
+      const targets = await pickTargetMisconceptionIds(AppState.session.detectedUnit, level);
+
       const result = await ApiService.generateQuestions(
         AppState.session.misconceptions,
         AppState.session.detectedUnit,
         level,
-        mode
+        mode,
+        targets
       );
       AppState.session.isRetry = false;
       AppState.session.isHistoryRetry = false;

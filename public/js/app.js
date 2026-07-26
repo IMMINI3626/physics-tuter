@@ -252,6 +252,19 @@ function routeToQuizScreen() {
   }
 }
 
+/* 순환 출제 — 문제를 만들기 전에 "이번에 겨냥할 오개념"을 이해도 낮은 순으로 고른다.
+   비로그인이면 이해도 기록 자체가 없으므로 빈 배열(= 서버가 전체에서 자유 출제).
+   조회에 실패해도 문제 생성은 막지 않는다(순환 출제는 부가 기능). */
+async function pickTargetMisconceptionIds(unit, level) {
+  if (!AppState.isLoggedIn || !AppState.user || !unit) return [];
+  try {
+    return await LearningService.pickTargetMisconceptions(AppState.user.uid, unit, level);
+  } catch (e) {
+    console.warn('순환 출제 대상 선정 실패, 전체 오개념에서 출제:', e);
+    return [];
+  }
+}
+
 /* generateQuestions API 응답(result)을 세션에 반영한 뒤 알맞은 문제 화면으로 이동 */
 function applyQuizResult(result) {
   if (result.calcQuestion) {

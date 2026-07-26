@@ -266,7 +266,7 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
    Function 2: generateQuestions (DB 참고 문장 활용 + 레벨 분기)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
-  const { misconceptions, unit, level = 1, mode = null } = request.data;
+  const { misconceptions, unit, level = 1, mode = null, targetMisconceptionIds = [] } = request.data;
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
   }
@@ -318,7 +318,30 @@ ${patternText}
 
     // 각 오개념에 id를 함께 노출한다. STEP1/2에서 틀린 문장을 만들 때, 그 문장이 겨냥한
     // 오개념 id를 targetMisconceptionId로 태깅하게 하기 위함(BKT 관측의 근거).
-    const mcText = activeMisconceptions.map((mc, i) => `${i + 1}. [id: ${mc.id || '?'}] ${mc.description}`).join('\n');
+    // 🆕 순환 출제(설계 4-8): 클라이언트가 "이해도 낮은 오개념"을 우선 겨냥 대상으로 보내온다.
+    //    목록 밖 id는 버리고, 최대 2개까지만 사용한다. 지정이 없으면 예전처럼 전체에서 자유 출제.
+    const priorityIds = [...new Set(
+      (Array.isArray(targetMisconceptionIds) ? targetMisconceptionIds : []).filter(id => validIdSet.has(id))
+    )].slice(0, 2);
+
+    // 오개념이 17개까지 갈 수 있어, 우선 대상을 목록 맨 앞으로 올려 프롬프트에서 눈에 띄게 한다
+    const orderedMisconceptions = priorityIds.length
+      ? [...activeMisconceptions].sort(
+          (a, b) => (priorityIds.includes(b.id) ? 1 : 0) - (priorityIds.includes(a.id) ? 1 : 0))
+      : activeMisconceptions;
+
+    const mcText = orderedMisconceptions.map((mc, i) => `${i + 1}. [id: ${mc.id || '?'}] ${mc.description}`).join('\n');
+
+    const priorityInstruction = priorityIds.length ? `
+[우선 겨냥 오개념 - 매우 중요]
+아래 오개념은 이 학생이 아직 이해하지 못한 것으로 측정되었습니다. 이번 문제는 반드시 아래 오개념을 겨냥하세요.
+${priorityIds.map(id => {
+      const mc = activeMisconceptions.find(m => m.id === id);
+      return `- [id: ${id}] ${mc ? mc.description : ''}`;
+    }).join('\n')}
+- 문장 5개를 만드는 경우: 틀린 문장(isWrong: true) 중 최소 1개는 위 오개념을 겨냥하고, 그 문장의 targetMisconceptionId에 해당 id를 적으세요.
+- 계산 문제를 만드는 경우: 위 오개념이 문제의 함정(자주 하는 실수)이 되도록 상황을 설계하고, targetMisconceptionId에 해당 id를 적으세요.
+` : '';
 
     const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
     const rightCount = 5 - wrongCount; // 4 or 3
@@ -348,7 +371,7 @@ ${patternText}
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
-${patternInstruction}
+${priorityInstruction}${patternInstruction}
 이 단원과 오개념을 중심으로, 두 가지 이상의 물리 법칙이 결합된 다단계 복합 계산 문제를 1개 만드세요.
 - 실생활 또는 수능/모의고사 스타일 (놀이기구, 스포츠, 실험 등)
 - 최소 2단계 이상의 풀이 과정 필요
@@ -419,7 +442,7 @@ JSON만 출력하세요:
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
-${patternInstruction}
+${priorityInstruction}${patternInstruction}
 이 오개념과 관련된 단일 공식으로 풀 수 있는 계산 문제를 1개 만드세요.
 - 숫자와 단위가 명확하게 주어지는 문제
 - 고등학생이 풀 수 있는 수준 (F=ma, E=mc², W=Fs, v=at, p=mv 등 기본 공식)
@@ -500,7 +523,7 @@ JSON만 출력하세요:
 단원: "${unit}"
 학생들의 주요 오개념:
 ${mcText}
-
+${priorityInstruction}
 [학술적 참고 자료 (FCI/FMCE 기반)]
 - 학생들이 흔히 하는 틀린 생각 예시: ${wrongExamples || '관련 자료 없음'}
 - 올바른 물리 개념 예시: ${correctExamples || '관련 자료 없음'}

@@ -470,7 +470,8 @@ const MypageScreen = {
       // 마이페이지 상세에서 온 거라 문제 화면 상단 뒤로가기는 "분석 결과"가 아니라 "학습 현황"으로
       setQuizBackTarget('mypage-detail');
 
-      const result = await ApiService.generateQuestions([], this._currentSubUnit, level, mode);
+      const targets = await pickTargetMisconceptionIds(this._currentSubUnit, level);
+      const result = await ApiService.generateQuestions([], this._currentSubUnit, level, mode, targets);
 
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;

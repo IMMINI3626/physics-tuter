@@ -367,6 +367,46 @@ const LearningService = {
       await this.saveKnowledge(uid, id, newPL, (cur?.attempts || 0) + corrects.length);
     }));
   },
+
+  /**
+   * 순환 출제(설계 4-8): 다음 문제가 겨냥할 오개념 id를 이해도 낮은 순으로 고른다.
+   *
+   * 후보 = 사진으로 진단된 풀 + 그 소단원의 오개념
+   *   - level 1: 소단원 전체가 후보 (아직 뭘 모르는지 좁혀지지 않은 단계)
+   *   - level 2 이상: 진단된 풀 + 실제로 풀어본 적 있는(knowledgeState 기록이 있는) 오개념으로 좁힘.
+   *                   좁힌 결과가 비면 소단원 전체로 되돌린다.
+   * 후보 중 이미 숙달(P(L) ≥ 0.90)한 것은 제외하고, 남은 것 중 이해도 낮은 순 count개를 반환한다.
+   * 전부 숙달했거나 후보가 없으면 빈 배열 → 서버는 예전처럼 전체 오개념에서 자유 출제한다.
+   */
+  async pickTargetMisconceptions(uid, unitName, level = 1, count = 2) {
+    const BKT = window.BKT;
+    if (!BKT || !uid || !unitName) return [];
+
+    const [progress, knowledge, subUnitMap] = await Promise.all([
+      this.getUnitProgress(uid, unitName),
+      this.fetchKnowledgeState(uid),
+      MisconceptionDB.getSubUnitMap(),
+    ]);
+
+    const unitIds = Object.keys(subUnitMap).filter(id => subUnitMap[id] === unitName);
+    const diagnosed = progress.diagnosedMisconceptions || [];
+
+    let candidates;
+    if (level >= 2) {
+      const narrowed = unitIds.filter(id => diagnosed.includes(id) || knowledge[id]);
+      candidates = narrowed.length ? narrowed : unitIds;
+    } else {
+      candidates = unitIds;
+    }
+    // 소단원 오개념 목록을 못 읽은 경우(데이터 누락)에도 진단된 풀은 살려둔다
+    if (!candidates.length) candidates = diagnosed;
+
+    const items = [...new Set(candidates)].map(id => ({
+      id,
+      pL: typeof knowledge[id]?.pL === 'number' ? knowledge[id].pL : BKT.PRIOR.unknown,
+    }));
+    return BKT.pickWeakest(items, count).map(it => it.id);
+  },
 };
 
 const MisconceptionDB = {
@@ -375,19 +415,35 @@ const MisconceptionDB = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 
-  // 오개념 id → 개념 영역 코드(dimensionCode) 전체 지도. 87개 오개념을 한 번만 읽어
-  // 메모리에 캐시한다(정적 데이터라 세션 중 안 바뀜). 마이페이지에서 소단원을 옮겨다녀도
-  // 재조회 없이 재사용됨.
+  // 오개념 87개는 정적 데이터라 세션 중 안 바뀐다. 한 번만 읽어 메모리에 캐시하고
+  // 아래 지도들(개념 영역 / 소단원)이 같은 캐시를 나눠 쓴다.
+  _allCache: null,
+  async _loadAll() {
+    if (this._allCache) return this._allCache;
+    const snap = await getDocs(collection(db, 'misconceptions'));
+    this._allCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return this._allCache;
+  },
+
+  // 오개념 id → 개념 영역 코드(dimensionCode) 전체 지도
   _dimMapCache: null,
   async getDimensionMap() {
     if (this._dimMapCache) return this._dimMapCache;
-    const snap = await getDocs(collection(db, 'misconceptions'));
+    const all = await this._loadAll();
     const map = {};
-    snap.docs.forEach(d => {
-      const code = d.data().dimensionCode;
-      if (code) map[d.id] = code;
-    });
+    all.forEach(m => { if (m.dimensionCode) map[m.id] = m.dimensionCode; });
     this._dimMapCache = map;
+    return map;
+  },
+
+  // 오개념 id → 소단원(subUnit) 전체 지도. 순환 출제에서 "이 소단원의 오개념"을 추리는 데 쓴다.
+  _subUnitMapCache: null,
+  async getSubUnitMap() {
+    if (this._subUnitMapCache) return this._subUnitMapCache;
+    const all = await this._loadAll();
+    const map = {};
+    all.forEach(m => { if (m.subUnit) map[m.id] = m.subUnit; });
+    this._subUnitMapCache = map;
     return map;
   },
 };

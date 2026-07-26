@@ -9,9 +9,10 @@ const ApiService = {
     return data;
   },
 
-  async generateQuestions(misconceptions, unit, level = 1, mode = null) {
+  // targetMisconceptionIds: 순환 출제에서 우선 겨냥할 오개념 id (없으면 서버가 전체에서 자유 출제)
+  async generateQuestions(misconceptions, unit, level = 1, mode = null, targetMisconceptionIds = []) {
     const fn = httpsCallable(functions, 'generateQuestions');
-    const { data } = await fn({ misconceptions, unit, level, mode });
+    const { data } = await fn({ misconceptions, unit, level, mode, targetMisconceptionIds });
     return data;
   },
 
