@@ -222,19 +222,17 @@ const LearningService = {
   ──────────────────────────────────────── */
 
   /**
-   * 같은 소단원 내 새 문제 정답 시 누적 카운터 +1
-   * 5회 도달 시 overcome: true로 표시하고 isPromoted: true를 반환
+   * [폴백 전용] 누적 정답 카운터 +1. Phase 3 단계 7부터 승급은 이해도(P(L)) 기준이지만,
+   * misconceptions 컬렉션에 오개념이 하나도 없는 소단원은 이해도 판정 대상이 없어 영원히
+   * 승급이 안 된다. 그런 소단원에서만 예전 방식으로 승급시킨다(안전망).
    */
-  async incrementCorrectCount(uid, unitName, target = 5) {
+  async incrementCorrectCount(uid, unitName, target = 10) {
     const ref = doc(db, 'users', uid, 'unitProgress', unitName);
     const snap = await getDoc(ref);
     const prevData = snap.exists() ? snap.data() : {};
     const prevCount = prevData.correctCount || 0;
 
-    // 이미 승급 완료(completed)된 경우 카운터 증가 안 함
-    if (prevData.completed) {
-      return { count: prevCount, isPromoted: false };
-    }
+    if (prevData.completed) return { count: prevCount, isPromoted: false };
 
     const newCount = prevCount + 1;
     const isPromoted = newCount >= target;
@@ -248,7 +246,7 @@ const LearningService = {
   },
 
   /**
-   * 소단원의 현재 승급 카운터 조회
+   * 소단원의 현재 승급 카운터 조회 (폴백 소단원 표시용)
    */
   async getCorrectCount(uid, unitName) {
     const ref = doc(db, 'users', uid, 'unitProgress', unitName);
@@ -324,8 +322,14 @@ const LearningService = {
    * 이미 knowledgeState가 있는 오개념은 그대로 둔다(누적된 관측을 덮어쓰지 않음).
    */
   async addDiagnosedMisconceptions(uid, unitName, ids) {
-    const cleanIds = [...new Set((ids || []).filter(id => id && id !== 'ETC'))];
-    if (!uid || !unitName || !cleanIds.length) return;
+    if (!uid || !unitName) return;
+    // 실제 존재하는 오개념 id만 남긴다. AI가 목록 밖 id를 반환하면 쓸모없는 이해도 문서가
+    // 생기고 진단 풀도 오염된다. 소단원이 다른 id도 함께 걸러낸다.
+    const subUnitMap = await MisconceptionDB.getSubUnitMap();
+    const cleanIds = [...new Set(
+      (ids || []).filter(id => id && id !== 'ETC' && subUnitMap[id] === unitName)
+    )];
+    if (!cleanIds.length) return;
 
     const ref = doc(db, 'users', uid, 'unitProgress', unitName);
     const snap = await getDoc(ref);
@@ -369,19 +373,12 @@ const LearningService = {
   },
 
   /**
-   * 순환 출제(설계 4-8): 다음 문제가 겨냥할 오개념 id를 이해도 낮은 순으로 고른다.
-   *
-   * 후보 = 사진으로 진단된 풀 + 그 소단원의 오개념
-   *   - level 1: 소단원 전체가 후보 (아직 뭘 모르는지 좁혀지지 않은 단계)
-   *   - level 2 이상: 진단된 풀 + 실제로 풀어본 적 있는(knowledgeState 기록이 있는) 오개념으로 좁힘.
-   *                   좁힌 결과가 비면 소단원 전체로 되돌린다.
-   * 후보 중 이미 숙달(P(L) ≥ 0.90)한 것은 제외하고, 남은 것 중 이해도 낮은 순 count개를 반환한다.
-   * 전부 숙달했거나 후보가 없으면 빈 배열 → 서버는 예전처럼 전체 오개념에서 자유 출제한다.
+   * 레벨별 대상 오개념 (설계 4-10). 출제·승급이 같은 집합을 본다.
+   *   Level 1     : 소단원 전체 오개념 (넓게 훑는 단계)
+   *   Level 2 / 3 : 사진으로 진단된 풀 (범위 축소). 풀이 비면 소단원 전체로 폴백.
+   * @returns {{ids: string[], knowledge: object, completed: boolean}}
    */
-  async pickTargetMisconceptions(uid, unitName, level = 1, count = 2) {
-    const BKT = window.BKT;
-    if (!BKT || !uid || !unitName) return [];
-
+  async _levelTargets(uid, unitName, level = 1) {
     const [progress, knowledge, subUnitMap] = await Promise.all([
       this.getUnitProgress(uid, unitName),
       this.fetchKnowledgeState(uid),
@@ -389,23 +386,69 @@ const LearningService = {
     ]);
 
     const unitIds = Object.keys(subUnitMap).filter(id => subUnitMap[id] === unitName);
-    const diagnosed = progress.diagnosedMisconceptions || [];
+    // 진단 풀에 다른 소단원 id가 섞여 들어간 과거 데이터를 걸러낸다
+    const diagnosed = (progress.diagnosedMisconceptions || [])
+      .filter(id => !unitIds.length || unitIds.includes(id));
 
-    let candidates;
-    if (level >= 2) {
-      const narrowed = unitIds.filter(id => diagnosed.includes(id) || knowledge[id]);
-      candidates = narrowed.length ? narrowed : unitIds;
-    } else {
-      candidates = unitIds;
+    let ids = (level >= 2 && diagnosed.length) ? diagnosed : unitIds;
+    if (!ids.length) ids = diagnosed;   // 소단원 오개념 데이터 자체가 없을 때의 최후 폴백
+
+    return { ids: [...new Set(ids)], knowledge, completed: !!progress.completed };
+  },
+
+  /** knowledgeState에서 이해도 하나 꺼내기 (기록 없으면 unknown 0.30) */
+  _pL(knowledge, id) {
+    const v = knowledge?.[id]?.pL;
+    return typeof v === 'number' ? v : window.BKT.PRIOR.unknown;
+  },
+
+  /**
+   * 순환 출제(설계 4-8): 다음 문제가 겨냥할 오개념 id를 이해도 낮은 순으로 고른다.
+   * 이미 숙달(P(L) ≥ 0.90)한 것은 제외. 전부 숙달했거나 대상이 없으면 빈 배열을 반환하고,
+   * 서버는 예전처럼 전체 오개념에서 자유 출제한다.
+   */
+  async pickTargetMisconceptions(uid, unitName, level = 1, count = 2) {
+    if (!window.BKT || !uid || !unitName) return [];
+    const { ids, knowledge } = await this._levelTargets(uid, unitName, level);
+    const items = ids.map(id => ({ id, pL: this._pL(knowledge, id) }));
+    return window.BKT.pickWeakest(items, count).map(it => it.id);
+  },
+
+  /**
+   * 승급 판정 (설계 4-10): 현재 레벨의 대상 오개념이 모두 숙달(P(L) ≥ τ)됐는지.
+   * 대상이 하나도 없으면 승급시키지 않는다(데이터 누락으로 인한 오승급 방지).
+   * @returns {{ids, mastered, total, isPromoted, completed}}
+   */
+  async evaluatePromotion(uid, unitName, level = 1) {
+    if (!window.BKT || !uid || !unitName) {
+      return { ids: [], mastered: 0, total: 0, isPromoted: false, completed: false };
     }
-    // 소단원 오개념 목록을 못 읽은 경우(데이터 누락)에도 진단된 풀은 살려둔다
-    if (!candidates.length) candidates = diagnosed;
+    const { ids, knowledge, completed } = await this._levelTargets(uid, unitName, level);
+    const mastered = ids.filter(id => window.BKT.isMastered(this._pL(knowledge, id))).length;
+    return {
+      ids,
+      mastered,
+      total: ids.length,
+      isPromoted: ids.length > 0 && mastered === ids.length,
+      completed,
+    };
+  },
 
-    const items = [...new Set(candidates)].map(id => ({
-      id,
-      pL: typeof knowledge[id]?.pL === 'number' ? knowledge[id].pL : BKT.PRIOR.unknown,
+  /**
+   * 승급 직후 다음 레벨의 초기 이해도 재설정 (설계 4-10).
+   * 쉬운 난이도에서 모은 증거는 어려운 난이도에 그대로 전이되지 않는다. 증거를 들고 가면
+   * 다음 레벨이 한두 문제로 끝나버리므로, 숙달했던 오개념은 unknown(0.30)으로 되돌리고
+   * 숙달 못 한 채 올라온 오개념은 weak(0.15)에서 다시 증거를 모은다.
+   */
+  async resetKnowledgeForLevel(uid, ids) {
+    const BKT = window.BKT;
+    if (!BKT || !uid) return;
+    await Promise.all((ids || []).map(async id => {
+      const cur = await this.getKnowledge(uid, id);
+      const pL0 = (cur && typeof cur.pL === 'number') ? cur.pL : BKT.PRIOR.unknown;
+      const next = BKT.isMastered(pL0) ? BKT.PRIOR.unknown : BKT.PRIOR.weak;
+      await this.saveKnowledge(uid, id, next, cur?.attempts || 0);
     }));
-    return BKT.pickWeakest(items, count).map(it => it.id);
   },
 };
 

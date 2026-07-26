@@ -213,7 +213,11 @@ P(S) = 0.10   (실수)
 τ는 0.95 대신 0.90으로 낮춘다. 이때 한 오개념 극복에 필요한 연속 정답은 초기값별로 1~3회
 (0.70→1, 0.30→2, 0.15→3)로, 단원 완주가 현실적 범위(≈10~48문제)에 든다.
 
-### 4-4. L2/L3 대상 오개념 선정 (확정: 가+나 / A, 추후 C)
+### 4-4. L2/L3 대상 오개념 선정 (단계 7에서 4-10으로 수정됨)
+
+> 아래 (나)·(A)는 "L1/L2를 마쳐도 미숙달 오개념이 남는다"는 전제였다. 단계 7에서 승급 조건을
+> "레벨 대상 전부 숙달"로 확정하면서 그 잔여 집합이 공집합이 되므로, 실제 구현은 4-10을 따른다.
+> (L2/L3 대상 = 사진으로 진단된 풀, 난이도 상승은 이해도 재설정으로 반영)
 
 - **L2 약점** = **(가) 사진에서 진단된 것 OR (나) L1 종료 시 이해도가 낮았던 하위 N개**.
   둘의 합집합. "학생이 교과서에서 헷갈린 것 + 실제로 못 잡은 것"을 모두 계산 수준으로 검증.
@@ -278,6 +282,45 @@ P(S) = 0.10   (실수)
 승급 판정(feedback.js)은 "correctCount 비교"에서 "현재 레벨 대상 오개념의 knowledgeState.pL이
 모두 τ 이상인지 확인"으로 바뀐다. `calcPromotionTarget`(임의 계수)은 제거된다.
 
+### 4-10. 승급 판정 (확정, 단계 7)
+
+레벨별 대상 오개념
+
+| 레벨 | 대상 | 근거 |
+|---|---|---|
+| L1 | 소단원 전체 오개념 | 무엇을 모르는지 아직 좁혀지지 않은 단계 — 넓게 훑는다 |
+| L2 | 사진으로 진단된 풀 (비면 소단원 전체) | 학생이 실제로 교과서에서 걸린 지점을 계산 수준에서 재검증 |
+| L3 | 사진으로 진단된 풀 (비면 소단원 전체) | 같은 지점을 최상위 난이도로 최종 검증 |
+
+승급 조건 — **대상 오개념의 P(L)이 모두 0.90 이상**. 점수 만점 여부는 보지 않는다(오답은 이미
+P(L)을 떨어뜨리는 형태로 반영됨). 대상이 0개면 승급시키지 않는다(데이터 누락 시 오승급 방지).
+
+승급 시 이해도 재설정 — 쉬운 난이도의 증거는 어려운 난이도로 그대로 전이되지 않는다.
+증거를 들고 가면 다음 레벨이 한두 문제로 끝나므로 사전확률을 되돌린다.
+
+| 승급 시점 상태 | 다음 레벨 초기 P(L) |
+|---|---|
+| 숙달(≥ 0.90) | unknown 0.30 |
+| 미숙달 | weak 0.15 |
+
+새 상수를 도입하지 않고 4-3의 초기값을 재사용한다.
+
+예상 문항 수 (한 문제도 안 틀린 최선 시나리오, 문항당 관측 L1·L2 2회 / L3 1회)
+
+| 소단원 오개념 수 | 진단 풀 | L1 | L2 | L3 | 합계 |
+|---|---|---|---|---|---|
+| 22 (뉴턴 운동 법칙) | 3 | 24 | 3 | 6 | 33 |
+| 13 (역학적 에너지 보존) | 3 | 15 | 3 | 6 | 24 |
+| 8 (물체의 운동) | 2 | 9 | 2 | 4 | 15 |
+| 3 (운동량과 충격량) | 1 | 4 | 2 | 2 | 8 |
+
+기존 방식(L1 20 + L2 13 + L3 10 = 최대 43문제, 매번 만점 요구)보다 짧으면서, 소단원 크기에
+비례해 자동으로 조절된다. 임의 계수(1.7 / 1.3 / 1.0, 상하한)는 사라진다.
+
+폴백 — `misconceptions`에 오개념이 하나도 없는 소단원은 판정 대상이 없어 영원히 승급이 안 되므로,
+그런 소단원에서만 예전 누적 정답 방식(목표 L1 10 / L2 7 / L3 5)을 쓴다. 단계 7-1에서 전 소단원에
+오개념을 채워 현재는 발동하지 않으며, 데이터 누락에 대비한 안전망으로만 남겨둔다.
+
 ---
 
 ## 5. 기존 방식과의 비교 (논문 표 초안)
@@ -328,7 +371,7 @@ P(S) = 0.10   (실수)
 [x] 4. 관측 반영 — 채점 후 겨냥 오개념의 P(L)을 BKT로 갱신
 [x] 5. 진단된 오개념 풀 — 사진 성공 시 unitProgress에 누적, 이어서 풀기가 사용
 [x] 6. 순환 출제 — 현재 레벨 대상 중 P(L) 낮은 오개념 우선 선택
-[ ] 7. 승급 판정 교체 — calcPromotionTarget → 레벨 대상 오개념 P(L) ≥ τ
+[x] 7. 승급 판정 교체 — calcPromotionTarget → 레벨 대상 오개념 P(L) ≥ τ
 [ ] 8. 사전 진단검사 화면 — 문장 5개로 초기 P(L) 세팅
 [ ] 9. 마이페이지 표시 — 오개념/영역 이해도 % 시각화, "교정된 오개념" 통계 복원
 [ ] 10. (검증) 수치 검증 + 파라미터 민감도 분석 (논문 실험)
@@ -441,6 +484,54 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
   한 번의 캐시로 공유하도록 정리(추가 읽기 비용 없음).
 - 이 단계까지는 "무엇을 출제할지"만 P(L)에 따라 바뀐다. 승급 판정은 아직 횟수 기반(단계 7).
 
+### 단계 7 — 승급 판정 교체 (2026-07)
+
+판정 규칙은 4-10 확정안을 그대로 구현했다.
+
+- `feedback.js`: `calcPromotionTarget` 삭제. `_handleLevelProgress`가 `evaluatePromotion`을
+  호출해 "대상 오개념 전부 P(L) ≥ 0.90"으로 승급을 판정한다. 합격 점수 조건은 승급에서 분리됐고
+  (오답은 P(L) 하락으로 이미 반영), `PROMOTION_SCORE`는 "다시 풀어보기" 버튼 표시에만 남는다.
+- 순서 보장: 이번 문제의 관측 저장(`applyBktObservations`)이 끝난 뒤 판정하도록 promise를
+  `_bktApplied`에 보관하고 판정 직전 await한다. 안 그러면 갱신 전 값을 읽어 승급이 한 문제씩 밀린다.
+- `firestore.js`: `_levelTargets`(레벨별 대상), `evaluatePromotion`(판정),
+  `resetKnowledgeForLevel`(승급 시 초기값 복귀) 추가. 출제(`pickTargetMisconceptions`)와 승급이
+  같은 대상 집합을 공유한다.
+- 화면 표시: "누적 정답 n / 목표" → "이해한 오개념 n / 대상 수". 승급 배너 문구도 교체.
+- 폴백: 대상이 0개인 소단원만 `incrementCorrectCount`(예전 방식) 사용. 화면에는 "누적 정답"으로 표시.
+- 재도전 제외: "다시 풀어보기"(같은 문제 재풀이)는 정답을 이미 본 상태라 관측으로 세면 이해도가
+  부풀려진다. 단계 4에서는 재도전도 관측에 포함됐는데, 승급이 이해도에 걸린 이 단계부터는
+  실제 이해보다 빨리 승급하는 원인이 되므로 이해도 갱신 대상에서 제외했다.
+- 시뮬레이션으로 소단원 크기별 예상 문항 수 확인(4-10 표). BKT 갱신 함수는 단계 0의 단위 테스트로 검증됨.
+
+작업 중 발견한 데이터 결함: `misconceptions` 87개가 12개 소단원에만 분포하고, 열역학 법칙·특수
+상대성 이론에는 오개념이 하나도 없었다(Firestore 실제 데이터로 확인). 단계 7-1에서 보강했다.
+
+### 단계 7-1 — 오개념 데이터 보강 (2026-07)
+
+기존 오개념은 FCI/FMCE(역학 전용)와 국내 논문에서 뽑았기 때문에, 표준 진단도구가 없는
+열역학·특수 상대성 두 소단원이 비어 있었다. 각 영역의 표준 진단도구·오개념 연구를 근거로 채웠다.
+
+| 항목 | 이전 | 이후 |
+|---|---|---|
+| 개념 영역(dimension) | 17 | 19 (TH 열역학, SR 특수 상대성 추가) |
+| 오개념 | 87 (12개 소단원) | 103 (14개 소단원 전체) |
+| 판별 문장 | 166 | 214 |
+
+- 열역학 8개(TH1~TH8): 열/내부 에너지 구분, 온도와 내부 에너지 동일시, 등온-단열 혼동, 단열 과정
+  온도 방향, 제1법칙에서 일 누락, 등적 과정의 일, 열효율 100 %, 자발적 과정의 방향성.
+- 특수 상대성 8개(SR1~SR8): 광속에 속도 합성, 동시성 절대화, 시간 지연을 착시로 봄, 고유 시간
+  기준 혼동, 길이 수축 방향, 길이 수축을 압축으로 봄, 절대 운동 판별 가능, 질량 결손 부정.
+- 근거 문헌은 아래 참고문헌의 열역학·특수 상대성 항목 8편. 모두 온라인 서지로 존재를 확인했다
+  (Dimitriadi & Halkia의 권·호를 34(15) → 34(16)으로 정정).
+- 오개념당 판별 문장 3개(틀린 문장 1~2 + 옳은 문장 1~2)를 붙여 문제 생성의 참고 자료로 쓰이게 했다.
+- 사진 진단(`extractKeywords`) 정리: 비역학 단원에 오개념이 없던 시절의 임시 목록
+  (M-W01/M-E01/M-T01, DB에 없는 가짜 id)을 제거하고, 오개념 목록에 소단원을 함께 실어
+  "정한 소단원의 오개념 중에서만 고르라"로 지시를 바꿨다. 저장 단계
+  (`addDiagnosedMisconceptions`)에서도 실제 존재하고 소단원이 일치하는 id만 남기도록 걸렀다.
+  이 정리가 없으면 열역학·특수 상대성 사진이 가짜 id로 진단돼 L2/L3 범위 축소가 작동하지 않는다.
+- 남은 결함: 기존 오개념 17개에 판별 문장이 없다(I2, I4, AF6, AF7, CI2, CI3, Ob, R3, G1, G2, ME3,
+  ME6, ME7, WI3, WI4, WI5, MD1). 단계 8(사전 진단검사)이 문장을 표본으로 쓰므로 그전에 보강 필요.
+
 ---
 
 ## 참고문헌 (제출 전 서지 재확인 필요)
@@ -452,3 +543,17 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 - Thornton, R. K., & Sokoloff, D. R. (1998). Assessing Student Learning of Newton's Laws: The Force and Motion Conceptual Evaluation. *American Journal of Physics*, 66(4), 338–352.
 - VanLehn, K. (2011). The Relative Effectiveness of Human Tutoring, Intelligent Tutoring Systems, and Other Tutoring Systems. *Educational Psychologist*, 46(4), 197–221.
 - Piech, C., et al. (2015). Deep Knowledge Tracing. *Advances in Neural Information Processing Systems (NeurIPS)*.
+
+열역학 오개념 (단계 7-1 근거)
+
+- Yeo, S., & Zadnik, M. (2001). Introductory Thermal Concept Evaluation: Assessing Students' Understanding. *The Physics Teacher*, 39(8), 496–504.
+- Meltzer, D. E. (2004). Investigation of Students' Reasoning Regarding Heat, Work, and the First Law of Thermodynamics in an Introductory Calculus-based General Physics Course. *American Journal of Physics*, 72(11), 1432–1446. doi:10.1119/1.1789161
+- Cochran, M. J., & Heron, P. R. L. (2006). Development and Assessment of Research-based Tutorials on Heat Engines and the Second Law of Thermodynamics. *American Journal of Physics*, 74(8), 734–741.
+- Sözbilir, M. (2003). A Review of Selected Literature on Students' Misconceptions of Heat and Temperature. *Boğaziçi University Journal of Education*, 20(1), 25–41.
+
+특수 상대성 오개념 (단계 7-1 근거)
+
+- Villani, A., & Pacca, J. L. A. (1987). Students' Spontaneous Ideas about the Speed of Light. *International Journal of Science Education*, 9(1), 55–66.
+- Scherr, R. E., Shaffer, P. S., & Vokos, S. (2001). Student Understanding of Time in Special Relativity: Simultaneity and Reference Frames. *American Journal of Physics*, 69(S1), S24–S35. doi:10.1119/1.1371254
+- Aslanides, J. S., & Savage, C. M. (2013). Relativity Concept Inventory: Development, Analysis, and Results. *Physical Review Special Topics — Physics Education Research*, 9(1), 010118.
+- Dimitriadi, K., & Halkia, K. (2012). Secondary Students' Understanding of Basic Ideas of Special Relativity. *International Journal of Science Education*, 34(16), 2565–2582.

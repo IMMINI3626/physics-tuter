@@ -199,7 +199,7 @@ const MypageScreen = {
     if (this._currentSessionCount > 0) {
       btn.style.display = '';
       cta.style.display = 'none';
-      // 🔑 완료(completed)된 단원은 incrementCorrectCount가 카운터를 더 올리지 않는다.
+      // 🔑 완료(completed)된 단원은 더 이상 승급 판정을 하지 않는다.
       //    그런데 "L3 이어서 풀기"라고 계속 띄우면 풀어도 아무 변화가 없는 이유를
       //    사용자가 알 수 없으므로, 복습 모드라는 걸 라벨로 분명히 알려준다.
       btn.textContent = this._currentCompleted

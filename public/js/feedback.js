@@ -9,22 +9,15 @@
    따라서 L3만 90점으로 낮춘다. 정답을 맞히고(60) 풀이 과정 75점 이상이면 통과하는 수준. */
 const PROMOTION_SCORE = { 1: 100, 2: 100, 3: 90 };
 
-/* 소단원 오개념 수 기반 동적 목표치 계산 (레벨별 배수/상하한) */
-function calcPromotionTarget(mcCount, level) {
-  const configs = [
-    { mul: 1.7, min: 10, max: 20 }, // L1
-    { mul: 1.3, min: 7,  max: 13 }, // L2
-    { mul: 1.0, min: 5,  max: 10 }, // L3
-  ];
-  const { mul, min, max } = configs[(level - 1)] || configs[0];
-  return Math.min(Math.max(Math.round(mcCount * mul), min), max);
-}
+/* 승급 판정은 Phase 3 단계 7에서 "누적 정답 횟수"(calcPromotionTarget의 임의 계수)에서
+   "레벨 대상 오개념의 이해도 P(L)이 모두 0.90 이상인가"로 교체됐다. 설계: docs/오개념측정_BKT_설계.md 4-10 */
 
 const FeedbackScreen = {
   // isHistory 파라미터 추가, returnTo로 돌아갈 화면 지정 (기본값: mypage)
   async render(data, isHistory = false, returnTo = 'mypage') {
     this._renderScore(data.score, data.title, data.subtitle);
     this._renderFeedbackList(data.items);
+    this._bktApplied = null;   // 직전 문제의 갱신 promise가 남아있지 않도록 초기화
 
     // isHistory가 아닐 때(방금 막 푼 새 문제일 때)만 DB에 저장
     if (!isHistory && window.AppState.isLoggedIn && window.AppState.user) {
@@ -35,9 +28,16 @@ const FeedbackScreen = {
           window.AppState.session._rootSessionId = newId;
         }
       }).catch(console.error);
-      // 태그된 오개념 관측을 BKT로 반영해 이해도(knowledgeState) 갱신
-      const usedHint = (window.AppState.session.hintUsed || 0) > 0;
-      window.LearningService.applyBktObservations(uid, data.items, usedHint).catch(console.error);
+      // 태그된 오개념 관측을 BKT로 반영해 이해도(knowledgeState) 갱신.
+      // 🔑 "다시 풀어보기"(isRetry)는 정답을 이미 본 같은 문제라서 맞히는 게 당연하다.
+      //    이걸 관측으로 세면 이해도가 부풀려져 승급이 실제 이해보다 빨리 나므로 제외한다.
+      // 승급 판정(_handleLevelProgress)이 이 갱신 결과를 읽어야 하므로 promise를 남겨둔다.
+      if (!window.AppState.session.isRetry) {
+        const usedHint = (window.AppState.session.hintUsed || 0) > 0;
+        this._bktApplied = window.LearningService
+          .applyBktObservations(uid, data.items, usedHint)
+          .catch(e => { console.error('이해도 갱신 실패:', e); });
+      }
     }
 
     const nextBtn = document.getElementById('btn-feedback-next');
@@ -250,38 +250,43 @@ const FeedbackScreen = {
 
     let isPromoted = false;
     let promotedTo = null;
+    // 판정에 실패했을 때 직전 문제의 값이 화면에 남지 않도록 먼저 비운다
+    session.masteryProgress = null;
 
-    const mcCount = session.misconceptionCount || 5;
-    const promotionTarget = calcPromotionTarget(mcCount, session.currentLevel);
-
-    // 합격 점수 + 새 문제(다시 풀어보기 아님) 일 때만 카운터 +1
-    if (isLoggedIn && session.detectedUnit && isPassed && isNewProblem) {
+    // 승급 판정 (설계 4-10): 이번 문제의 이해도 갱신이 반영된 뒤, 현재 레벨의 대상 오개념이
+    // 모두 숙달(P(L) ≥ 0.90)됐는지 확인한다. 점수 만점 여부와 무관 — 오답은 이미 이해도를
+    // 떨어뜨리는 방식으로 반영돼 있다.
+    if (isLoggedIn && session.detectedUnit && isNewProblem) {
       try {
-        const result = await window.LearningService.incrementCorrectCount(
-          window.AppState.user.uid,
-          session.detectedUnit,
-          promotionTarget
+        await this._bktApplied;   // 방금 푼 문제의 관측이 저장될 때까지 대기
+        const uid = window.AppState.user.uid;
+        const result = await window.LearningService.evaluatePromotion(
+          uid, session.detectedUnit, session.currentLevel
         );
-        session.correctCount = result.count;
-        if (result.isPromoted) {
+        session.masteryProgress = { mastered: result.mastered, total: result.total };
+
+        // 오개념 데이터가 없는 소단원은 이해도로 판정할 대상이 없다(안전망).
+        // 그런 소단원에서만 예전 누적 정답 방식으로 승급시킨다.
+        const promote = result.total === 0
+          ? await this._legacyPromotionCheck(uid, session, isPassed)
+          : (result.isPromoted && !result.completed);
+
+        if (promote) {
           isPromoted = true;
           if (session.currentLevel >= 3) {
-            // L3 완료
             promotedTo = 'complete';
-            await window.LearningService.setUnitLevel(
-              window.AppState.user.uid, session.detectedUnit, 3, true
-            );
+            await window.LearningService.setUnitLevel(uid, session.detectedUnit, 3, true);
           } else {
             promotedTo = session.currentLevel + 1;
             session.currentLevel = promotedTo;
-            session.correctCount = 0;
-            await window.LearningService.setUnitLevel(
-              window.AppState.user.uid, session.detectedUnit, promotedTo
-            );
+            // 다음 난이도에서는 증거를 다시 모은다 (숙달했던 것도 unknown 0.30에서 재시작)
+            await window.LearningService.resetKnowledgeForLevel(uid, result.ids);
+            await window.LearningService.setUnitLevel(uid, session.detectedUnit, promotedTo);
+            session.masteryProgress = null;
           }
         }
       } catch (e) {
-        console.error('카운터 증가 실패:', e);
+        console.error('승급 판정 실패:', e);
       }
     }
 
@@ -311,6 +316,20 @@ const FeedbackScreen = {
     }
   },
 
+  /* [폴백] 오개념 데이터가 없는 소단원의 승급 판정 — 예전 방식(합격 점수 + 누적 정답 횟수).
+     레벨별 목표는 예전 계산식의 하한값을 그대로 쓴다. */
+  async _legacyPromotionCheck(uid, session, isPassed) {
+    if (!isPassed) return false;
+    const target = { 1: 10, 2: 7, 3: 5 }[session.currentLevel] || 10;
+    const result = await window.LearningService.incrementCorrectCount(
+      uid, session.detectedUnit, target
+    );
+    session.correctCount = result.count;
+    session.masteryProgress = { mastered: result.count, total: target, legacy: true };
+    if (result.isPromoted) session.correctCount = 0;
+    return result.isPromoted;
+  },
+
   /* 승급 안내 배너 표시 */
   _showPromotionBanner(newLevel) {
     const area = document.getElementById('level-progress-area');
@@ -323,7 +342,7 @@ const FeedbackScreen = {
           ${isComplete ? '🏆 이 단원을 완전히 이해했어요!' : `🎉 Level ${newLevel}로 승급했어요!`}
         </div>
         <div style="font-size:13px;color:var(--text2)">
-          ${isComplete ? '마이페이지에서 학습 이력을 확인할 수 있어요' : `누적 정답 목표를 달성했어요`}
+          ${isComplete ? '마이페이지에서 학습 이력을 확인할 수 있어요' : '이 단계에서 확인할 내용을 모두 이해했어요'}
         </div>
       </div>
     `;
@@ -360,10 +379,14 @@ const FeedbackScreen = {
     const area = document.getElementById('level-progress-area');
     if (!area) return;
 
-    const count = window.AppState.session.correctCount || 0;
     const level = window.AppState.session.currentLevel;
-    const mcCount = window.AppState.session.misconceptionCount || 5;
-    const target = calcPromotionTarget(mcCount, level);
+    // 승급까지 남은 정도를 진행률(%)로만 보여준다. 내부적으로는 "레벨 대상 오개념 중 숙달한 비율"
+    // (설계 4-10)이지만, 학습자에게 오개념 개수를 노출하면 "몇 개짜리 단원인가"에 신경이 쏠려
+    // 학습 자체보다 숫자를 좇게 된다. 화면에는 진행도만 남긴다.
+    const mastery = window.AppState.session.masteryProgress;
+    const percent = (mastery && mastery.total)
+      ? Math.round((mastery.mastered / mastery.total) * 100)
+      : null;
 
     // 합격했으면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
     const retryBtn = isPassed ? '' : `
@@ -372,19 +395,29 @@ const FeedbackScreen = {
       </button>
     `;
 
+    const progressCard = percent === null ? `
+      <div class="level-progress-card"><span class="lp-label">현재 Level ${level}</span></div>
+    ` : `
+      <div class="level-progress-card">
+        <div class="lp-head">
+          <span class="lp-label">Level ${level} 진행도</span>
+          <strong class="lp-percent">${percent}%</strong>
+        </div>
+        <div class="lp-bar"><div class="lp-fill" style="width:${percent}%"></div></div>
+      </div>
+    `;
+
     area.style.display = 'block';
     area.innerHTML = `
-      <div style="margin:0 20px 12px;padding:12px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-md);text-align:center;font-size:13px;color:var(--text2)">
-        현재 Level ${level} · 누적 정답 <strong style="color:var(--accent2)">${count} / ${target}</strong>
-      </div>
+      ${progressCard}
       <div style="display:flex;gap:10px;margin:0 20px 12px;">
         ${retryBtn}
         <button id="btn-next-problem" class="primary-btn" style="margin:0;flex:1" onclick="FeedbackScreen.retrySimilar(this)">
           다음 문제 풀기
         </button>
       </div>
-      <div style="margin:0 20px 20px;">
-        <button class="primary-btn" style="margin:0;width:100%;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
+      <div style="display:flex;justify-content:center;margin:0 20px 20px;">
+        <button class="primary-btn" style="margin:0;width:auto;padding:12px 28px;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
           홈으로 나가기
         </button>
       </div>

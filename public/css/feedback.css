@@ -404,3 +404,37 @@
   font-size: 12.5px; font-weight: 500;
   border-radius: 100px;
 }
+
+/* 레벨 진행도 카드 — 승급까지 얼마나 왔는지 비율만 보여준다.
+   내부 계산(대상 오개념 중 숙달 비율)은 노출하지 않는다. */
+.level-progress-card {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+}
+.level-progress-card .lp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.level-progress-card .lp-label { font-size: 13px; color: var(--text2); }
+.level-progress-card .lp-percent {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent2);
+}
+.level-progress-card .lp-bar {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.level-progress-card .lp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #8b5cf6);
+  border-radius: 100px;
+  transition: width 0.4s ease;
+}

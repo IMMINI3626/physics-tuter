@@ -43,7 +43,8 @@ const DIMENSION_NAMES = {
   ME: '역학적 에너지 보존', WI:  '파동의 간섭',      MD: '물질의 이중성',
   EC: '전기 회로',         MF:  '자기장',           EMI:'전자기 유도',
   MO: '운동량',            AT:  '원자 모형',         EB: '에너지 띠와 반도체',
-  LD: '빛의 이중성',        WR:  '파동·굴절',
+  LD: '빛의 이중성',        WR:  '파동·굴절',       TH: '열역학',
+  SR: '특수 상대성',
 };
 
 /* 힌트를 볼수록 감점 (힌트 1개당 10점: 1차만 -10, 둘 다 -20).
@@ -104,7 +105,7 @@ const AppState = {
     currentLevel: 1,         // 현재 풀고 있는 레벨 (1/2/3)
     correctCount: 0,         // 같은 소단원 내 누적 정답 수
     misconceptionCount: 0,   // 현재 소단원의 오개념 총 개수 (승급 목표치 계산용)
-    isRetry: false,          // 다시 풀어보기(같은 문제 재시도) 여부 — true면 카운터 증가 안 함
+    isRetry: false,          // 다시 풀어보기(같은 문제 재시도) 여부 — true면 이해도 갱신·승급 판정 안 함
     hint1: null,             // 문제 세트 전체에 대한 1차 힌트
     hint2: null,             // 문제 세트 전체에 대한 2차 힌트
     quizMode: null,          // Level 2 출제 방식: 'A'(STEP1/2 혼합) | 'B'(계산 단답형)
