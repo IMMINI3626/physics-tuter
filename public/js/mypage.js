@@ -458,6 +458,8 @@ const MypageScreen = {
 
       AppState.session.detectedUnit = this._currentSubUnit;
       AppState.session.misconceptions = inherited.map(id => ({ id }));
+      // 사진 없이 들어온 경로 — 다른 단원에서 남은 키워드가 [단원 정보]에 뜨지 않도록 비운다
+      AppState.session.extractedKeywords = [];
       AppState.session.currentLevel = level;
       AppState.session.correctCount = this._currentCorrectCount;
       AppState.session.isRetry = false;

@@ -184,10 +184,13 @@
   <header class="topbar">
     <button class="back-btn" onclick="quizGoBack()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      <span id="calc-back-label">분석 결과</span>
+      <span id="calc-back-label">홈</span>
     </button>
     <div class="topbar-logo">Physi<span>Clinic</span></div>
-    <div style="width:72px"></div>
+    <button class="info-btn" onclick="openUnitInfo()" aria-label="단원 정보 보기">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8.01"/></svg>
+      <span>단원 정보</span>
+    </button>
   </header>
 
   <div class="question-header">
@@ -258,10 +261,13 @@
   <header class="topbar">
     <button class="back-btn" onclick="quizGoBack()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      <span id="l3-back-label">분석 결과</span>
+      <span id="l3-back-label">홈</span>
     </button>
     <div class="topbar-logo">Physi<span>Clinic</span></div>
-    <div style="width:72px"></div>
+    <button class="info-btn" onclick="openUnitInfo()" aria-label="단원 정보 보기">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8.01"/></svg>
+      <span>단원 정보</span>
+    </button>
   </header>
 
   <div class="question-header">
@@ -399,10 +405,13 @@
   <header class="topbar">
     <button class="back-btn" onclick="quizGoBack()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      <span id="step1-back-label">분석 결과</span>
+      <span id="step1-back-label">홈</span>
     </button>
     <div class="topbar-logo">Physi<span>Clinic</span></div>
-    <div style="width:72px"></div>
+    <button class="info-btn" onclick="openUnitInfo()" aria-label="단원 정보 보기">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8.01"/></svg>
+      <span>단원 정보</span>
+    </button>
   </header>
 
   <div class="progress-bar">
@@ -743,6 +752,22 @@
         <button class="modal-link-btn" id="btn-email-toggle-mode">계정이 없으신가요? 회원가입</button>
         <button class="modal-btn later" id="btn-email-back">뒤로가기</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     단원 정보 모달 — 문제를 푸는 도중 단원·키워드를 확인할 때
+     (화면을 벗어나지 않으므로 풀던 문제가 사라지지 않는다)
+     ============================================================ -->
+<div class="modal-overlay" id="unit-info-modal">
+  <div class="modal-sheet">
+    <h3 id="ui-unit">단원</h3>
+    <p id="ui-level"></p>
+    <img id="ui-photo" class="ui-photo" alt="업로드한 사진" style="display:none">
+    <div class="keyword-tags" id="ui-keywords" style="margin-top:14px"></div>
+    <div class="modal-btns">
+      <button class="modal-btn later" onclick="Modal.close('unit-info-modal')">닫기</button>
     </div>
   </div>
 </div>

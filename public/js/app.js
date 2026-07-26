@@ -198,10 +198,12 @@ const Router = {
 };
 
 /* ────────────────────────────────────────
-   Quiz 화면(step1/calc/level3)의 상단 "< 뒤로가기" 목적지
-   기본은 keyword("분석 결과")지만, 마이페이지 소단원 상세에서 문제를 새로 풀거나
-   과거 기록을 다시 풀 때는 mypage-detail("학습 현황")로, 문제풀기 탭 기록에서 다시 풀 때는
-   quiz-library("문제풀기")로 돌아가야 함
+   Quiz 화면(step1/calc/level3)의 상단 나가기 목적지
+
+   예전 기본값은 keyword("분석 결과")였는데, 거기로 돌아가면 문제를 이어서 풀 방법이 없고
+   "문제 풀기 시작"으로 새 문제를 다시 생성해야 했다(풀던 문제는 버려짐). 단원·키워드를
+   확인하려는 것뿐이라면 화면을 벗어날 필요가 없으므로, 확인은 [단원 정보] 모달로 옮기고
+   기본 목적지는 홈으로 바꿨다. 마이페이지·문제풀기 탭에서 들어온 경우는 원래 자리로 돌아간다.
 ──────────────────────────────────────── */
 const QUIZ_BACK_LABELS = {
   'mypage-detail': '학습 현황',
@@ -210,7 +212,7 @@ const QUIZ_BACK_LABELS = {
 
 function setQuizBackTarget(target) {
   AppState.session._quizBackTarget = target;
-  const label = QUIZ_BACK_LABELS[target] || '분석 결과';
+  const label = QUIZ_BACK_LABELS[target] || '홈';
   ['step1-back-label', 'calc-back-label', 'l3-back-label'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = label;
@@ -224,7 +226,36 @@ function quizGoBack() {
     window.QuizLibraryScreen?.init();
     return;
   }
-  Router.go(target === 'mypage-detail' ? 'mypage-detail' : 'keyword');
+  Router.go(target === 'mypage-detail' ? 'mypage-detail' : 'home');
+}
+
+/* 문제를 푸는 도중 "이게 무슨 단원이었지"를 확인하는 모달.
+   화면 전환이 아니라 오버레이라서 풀던 문제가 그대로 남는다. */
+function openUnitInfo() {
+  const s = AppState.session;
+
+  const unitEl = document.getElementById('ui-unit');
+  if (unitEl) unitEl.textContent = s.detectedUnit || '단원 정보 없음';
+
+  const levelEl = document.getElementById('ui-level');
+  if (levelEl) levelEl.textContent = `Level ${s.currentLevel || 1} 문제를 푸는 중이에요`;
+
+  // 업로드한 사진 미리보기 재사용 (사진 없이 들어온 경로에서는 숨김)
+  const photoEl = document.getElementById('ui-photo');
+  const src = document.getElementById('preview-img')?.src;
+  if (photoEl) {
+    const hasPhoto = !!src && !src.endsWith('/') && src !== window.location.href;
+    photoEl.style.display = hasPhoto ? 'block' : 'none';
+    if (hasPhoto) photoEl.src = src;
+  }
+
+  const kwEl = document.getElementById('ui-keywords');
+  if (kwEl) {
+    const kws = s.extractedKeywords || [];
+    kwEl.innerHTML = kws.map(kw => `<span class="keyword-tag">${escapeHtml(kw)}</span>`).join('');
+  }
+
+  Modal.open('unit-info-modal');
 }
 
 /* ────────────────────────────────────────
