@@ -10,9 +10,9 @@
  *
  * 시딩 대상:
  *   ✅ units                    (4개)
- *   ✅ misconception_dimensions  (17개)
- *   ✅ misconceptions            (87개 — unit1/2/3/4 전체)
- *   ✅ misconception_sentences   (166개)
+ *   ✅ misconception_dimensions  (19개)
+ *   ✅ misconceptions            (103개 — 14개 소단원 전체)
+ *   ✅ misconception_sentences   (214개)
  *   ✅ scoring_keywords          (54개, unit1 전용)
  *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
  *   ✅ item_misconception_map    (130개, unit1 전용 — 현재 앱 로직 미사용, 향후 정식 진단평가용)
@@ -59,6 +59,8 @@ const dims = [
   { id:'15', code:'EB',  name_ko:'에너지 띠',            name_en:'Energy Band',                       description:'에너지 띠·반도체 원리 오개념' },
   { id:'16', code:'LD',  name_ko:'빛의 이중성',          name_en:'Light Duality',                     description:'광전효과·물질파·입자-파동 이중성 오개념' },
   { id:'17', code:'WR',  name_ko:'파동·굴절',            name_en:'Wave Refraction',                   description:'빛의 굴절·전반사·파장 변화 오개념' },
+  { id:'18', code:'TH',  name_ko:'열역학',               name_en:'Thermodynamics',                    description:'열·온도·내부 에너지 구분, 열역학 제1·2법칙 관련 오개념' },
+  { id:'19', code:'SR',  name_ko:'특수 상대성',           name_en:'Special Relativity',                description:'광속 불변, 동시성·시간 지연·길이 수축, 질량-에너지 동등성 관련 오개념' },
 ];
 
 /* ============================================================
@@ -439,6 +441,74 @@ const misconceptions = [
     description:'빛의 간섭·회절 현상이 파동성이 아닌 입자성으로 설명된다고 믿음',
     correctConcept:'간섭과 회절은 파동의 특성으로 빛의 파동성을 보여주는 현상이다. 입자로는 간섭·회절을 설명할 수 없다',
     sourcePaper:'물리 예비교사들의 빛의 간섭과 회절에 대한 오개념 분석 (서울대 박사학위논문, 2006)' },
+
+  // ── 열역학 법칙 (unit 2) — TCE(Thermal Concept Evaluation) 및 열역학 오개념 연구 기반
+  { id:'TH1', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH1', name_ko:'열을 물체가 담고 있는 양으로 봄', name_en:'Heat as a substance stored in objects',
+    description:'물체가 열을 일정량 담고 있는 물질처럼 생각하여 열과 내부 에너지를 구분하지 못함',
+    correctConcept:'열은 온도 차이 때문에 이동하는 에너지의 흐름이고, 물체가 저장하고 있는 것은 내부 에너지다',
+    sourcePaper:'Yeo & Zadnik (2001), Introductory Thermal Concept Evaluation, The Physics Teacher 39(8)' },
+  { id:'TH2', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH2', name_ko:'온도와 내부 에너지 동일시', name_en:'Temperature equated with internal energy',
+    description:'온도가 높으면 내부 에너지도 항상 크다고 믿어, 물질의 양이 미치는 영향을 고려하지 못함',
+    correctConcept:'온도는 입자의 평균 운동 에너지를 나타내고, 내부 에너지는 입자 하나의 에너지뿐 아니라 입자 수에도 함께 영향을 받는다',
+    sourcePaper:'Yeo & Zadnik (2001), Introductory Thermal Concept Evaluation, The Physics Teacher 39(8)' },
+  { id:'TH3', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH3', name_ko:'등온 과정 = 열 출입 없음', name_en:'Isothermal process assumed adiabatic',
+    description:'온도가 일정하면 열의 출입도 없다고 믿어 등온 과정과 단열 과정을 혼동함',
+    correctConcept:'등온 과정에서는 내부 에너지가 일정하므로 흡수한 열이 모두 외부에 한 일로 쓰인다 (Q = W). 열 출입이 없는 것은 단열 과정이다',
+    sourcePaper:'Meltzer (2004), Investigation of students’ reasoning regarding heat, work, and the first law of thermodynamics, American Journal of Physics 72(11)' },
+  { id:'TH4', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH4', name_ko:'단열 과정의 온도 변화 방향 반대', name_en:'Reversed temperature change in adiabatic process',
+    description:'단열 압축에서 온도가 내려가고 단열 팽창에서 온도가 올라간다고 반대로 기억함',
+    correctConcept:'단열 압축은 외부에서 일을 받아 내부 에너지가 늘어 온도가 오르고, 단열 팽창은 외부에 일을 하여 온도가 내려간다',
+    sourcePaper:'Meltzer (2004), American Journal of Physics 72(11)' },
+  { id:'TH5', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH5', name_ko:'흡수한 열은 모두 내부 에너지로', name_en:'All absorbed heat raises internal energy',
+    description:'기체가 흡수한 열이 전부 내부 에너지(온도) 증가에 쓰인다고 믿어 외부에 한 일을 빠뜨림',
+    correctConcept:'열역학 제1법칙에 따라 흡수한 열은 내부 에너지 증가와 외부에 한 일로 나뉜다 (Q = ΔU + W)',
+    sourcePaper:'Meltzer (2004), American Journal of Physics 72(11)' },
+  { id:'TH6', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH6', name_ko:'부피 변화 없이도 일을 한다고 봄', name_en:'Work done without volume change',
+    description:'부피가 일정해도 압력이 커지면 기체가 외부에 일을 한다고 믿음',
+    correctConcept:'기체가 외부에 하는 일은 W = PΔV이므로 부피 변화가 없으면 일은 0이고, 흡수한 열은 모두 내부 에너지 증가에 쓰인다',
+    sourcePaper:'Meltzer (2004), American Journal of Physics 72(11)' },
+  { id:'TH7', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH7', name_ko:'열효율 100% 열기관이 가능', name_en:'Perfectly efficient heat engine believed possible',
+    description:'마찰과 열 손실만 없애면 흡수한 열을 모두 일로 바꾸는 기관을 만들 수 있다고 믿음',
+    correctConcept:'열역학 제2법칙에 따라 열기관은 흡수한 열의 일부를 반드시 저열원으로 방출하므로 열효율은 항상 1보다 작다',
+    sourcePaper:'Cochran & Heron (2006), Development and assessment of research-based tutorials on heat engines and the second law of thermodynamics, American Journal of Physics 74(8)' },
+  { id:'TH8', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH8', name_ko:'자연 현상의 방향성 부정', name_en:'Direction of spontaneous process ignored',
+    description:'에너지가 보존되기만 하면 자연 현상의 반대 과정도 저절로 일어날 수 있다고 믿어 비가역성을 인식하지 못함',
+    correctConcept:'고립계에서 자발적으로 일어나는 변화는 엔트로피가 증가하는 방향으로만 진행한다. 에너지 보존은 만족해도 반대 과정은 저절로 일어나지 않는다',
+    sourcePaper:'Sözbilir (2003), A review of selected literature on students’ misconceptions of heat and temperature' },
+
+  // ── 특수 상대성 이론 (unit 2) — 상대성 개념 이해 연구 및 Relativity Concept Inventory 기반
+  { id:'SR1', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR1', name_ko:'빛의 속력에 속도 합성 적용', name_en:'Galilean velocity addition applied to light',
+    description:'광원이나 관찰자가 움직이면 측정되는 빛의 속력이 달라진다고 믿음',
+    correctConcept:'광속 불변 원리에 따라 진공에서 빛의 속력은 광원과 관찰자의 운동과 무관하게 모든 관성 좌표계에서 같다',
+    sourcePaper:'Villani & Pacca (1987), Students’ spontaneous ideas about the speed of light, International Journal of Science Education 9(1)' },
+  { id:'SR2', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR2', name_ko:'동시성을 절대적인 것으로 봄', name_en:'Simultaneity treated as absolute',
+    description:'한 관성계에서 동시에 일어난 두 사건은 모든 관성계에서도 동시라고 믿음',
+    correctConcept:'서로 다른 위치에서 일어난 두 사건의 동시성은 관성 좌표계에 따라 달라진다',
+    sourcePaper:'Scherr, Shaffer & Vokos (2001), Student understanding of time in special relativity, American Journal of Physics 69(S1)' },
+  { id:'SR3', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR3', name_ko:'시간 지연을 착시나 오차로 봄', name_en:'Time dilation seen as illusion or measurement error',
+    description:'시간 지연이 실제 효과가 아니라 빛이 늦게 도달하거나 시계가 잘못 작동해 생긴 착각이라고 믿음',
+    correctConcept:'시간 지연은 관측 오차가 아니라 관성계에 따라 두 사건 사이의 시간 간격 자체가 다르게 측정되는 실제 효과다',
+    sourcePaper:'Scherr, Shaffer & Vokos (2001), American Journal of Physics 69(S1)' },
+  { id:'SR4', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR4', name_ko:'고유 시간의 기준을 반대로 판단', name_en:'Proper time frame misidentified',
+    description:'빠르게 이동하는 우주선 안의 사람이 자기 시계가 느리게 가는 것을 느낀다고 믿음',
+    correctConcept:'모든 관찰자는 자신의 시계를 정상으로 측정한다. 고유 시간은 두 사건이 같은 위치에서 일어난 관성계에서 잰 시간으로 가장 짧다',
+    sourcePaper:'Aslanides & Savage (2013), Relativity Concept Inventory, Physical Review Special Topics — PER 9(1)' },
+  { id:'SR5', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR5', name_ko:'길이 수축이 모든 방향으로 일어난다고 봄', name_en:'Length contraction applied to all directions',
+    description:'빠르게 움직이는 물체가 운동 방향뿐 아니라 모든 방향으로 줄어든다고 믿음',
+    correctConcept:'길이 수축은 운동 방향으로만 일어나고, 운동에 수직인 방향의 길이는 변하지 않는다',
+    sourcePaper:'Aslanides & Savage (2013), Physical Review Special Topics — PER 9(1)' },
+  { id:'SR6', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR6', name_ko:'길이 수축을 물체의 압축으로 봄', name_en:'Length contraction seen as physical compression',
+    description:'길이 수축을 물체가 힘을 받아 실제로 눌려 짧아진 현상으로 이해함',
+    correctConcept:'물체에 힘이 작용해 압축된 것이 아니라, 관성계에 따라 측정되는 길이가 다른 것이다. 물체와 함께 움직이는 관찰자가 재면 길이는 그대로다',
+    sourcePaper:'Dimitriadi & Halkia (2012), Secondary students’ understanding of basic ideas of special relativity, International Journal of Science Education 34(16)' },
+  { id:'SR7', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR7', name_ko:'절대 운동을 판별할 수 있다고 봄', name_en:'Absolute motion believed detectable',
+    description:'두 관성계 중 어느 쪽이 진짜로 움직이는지 실험으로 가려낼 수 있다고 믿음',
+    correctConcept:'상대성 원리에 따라 모든 관성 좌표계에서 물리 법칙이 동일하게 성립하므로 절대 운동은 판별할 수 없다',
+    sourcePaper:'Dimitriadi & Halkia (2012), International Journal of Science Education 34(16)' },
+  { id:'SR8', unitId:'2', subUnit:'특수 상대성 이론', dimensionCode:'SR', code:'SR8', name_ko:'핵반응에서 질량 결손 부정', name_en:'Mass defect denied in nuclear reactions',
+    description:'질량수와 전하량이 보존되므로 질량도 정확히 보존된다고 믿어 질량 결손을 인정하지 않음',
+    correctConcept:'반응 전후 줄어든 질량(질량 결손)이 질량-에너지 동등성 E = mc²에 따라 에너지로 방출된다',
+    sourcePaper:'Aslanides & Savage (2013), Physical Review Special Topics — PER 9(1)' },
 ];
 
 /* ============================================================
@@ -629,6 +699,58 @@ const sentences = [
   { id:'LD3-S02', misconceptionId:'LD3', isWrong:false, sentence:'드브로이 파장은 λ=h/mv 로 운동량에 반비례하며 입자의 크기와는 무관하다', difficulty:3 },
   { id:'LD4-S01', misconceptionId:'LD4', isWrong:true,  sentence:'빛의 간섭과 회절은 빛이 입자이기 때문에 나타나는 현상이다', difficulty:2 },
   { id:'LD4-S02', misconceptionId:'LD4', isWrong:false, sentence:'간섭과 회절은 파동의 특성으로 빛의 파동성을 보여주는 현상이다', difficulty:2 },
+
+  // ── 열역학 법칙
+  { id:'TH1-S01', misconceptionId:'TH1', isWrong:true,  sentence:'온도가 높은 물체는 그만큼 많은 열을 담고 있다', difficulty:2 },
+  { id:'TH1-S02', misconceptionId:'TH1', isWrong:true,  sentence:'두 물체를 접촉시키면 열을 많이 가진 물체에서 적게 가진 물체로 열이 이동한다', difficulty:2 },
+  { id:'TH1-S03', misconceptionId:'TH1', isWrong:false, sentence:'열은 온도 차이 때문에 이동하는 에너지이며, 물체가 저장하고 있는 것은 내부 에너지이다', difficulty:2 },
+  { id:'TH2-S01', misconceptionId:'TH2', isWrong:true,  sentence:'온도가 높은 물체는 언제나 내부 에너지가 더 크다', difficulty:2 },
+  { id:'TH2-S02', misconceptionId:'TH2', isWrong:true,  sentence:'100 ℃ 물 한 컵은 40 ℃ 욕조의 물보다 내부 에너지가 크다', difficulty:3 },
+  { id:'TH2-S03', misconceptionId:'TH2', isWrong:false, sentence:'온도는 입자의 평균 운동 에너지를 나타내고, 내부 에너지는 입자 수에도 영향을 받는다', difficulty:3 },
+  { id:'TH3-S01', misconceptionId:'TH3', isWrong:true,  sentence:'등온 과정에서는 온도가 일정하므로 열의 출입도 없다', difficulty:2 },
+  { id:'TH3-S02', misconceptionId:'TH3', isWrong:false, sentence:'등온 과정에서 기체가 흡수한 열은 모두 외부에 한 일로 쓰인다', difficulty:3 },
+  { id:'TH3-S03', misconceptionId:'TH3', isWrong:false, sentence:'열의 출입이 없는 과정은 등온 과정이 아니라 단열 과정이다', difficulty:2 },
+  { id:'TH4-S01', misconceptionId:'TH4', isWrong:true,  sentence:'기체를 단열 압축하면 온도가 내려간다', difficulty:2 },
+  { id:'TH4-S02', misconceptionId:'TH4', isWrong:true,  sentence:'산을 타고 올라간 공기 덩어리는 단열 팽창하여 온도가 올라간다', difficulty:3 },
+  { id:'TH4-S03', misconceptionId:'TH4', isWrong:false, sentence:'단열 팽창에서는 기체가 외부에 일을 하여 내부 에너지가 줄고 온도가 내려간다', difficulty:2 },
+  { id:'TH5-S01', misconceptionId:'TH5', isWrong:true,  sentence:'기체가 흡수한 열은 모두 내부 에너지를 늘리는 데 쓰인다', difficulty:2 },
+  { id:'TH5-S02', misconceptionId:'TH5', isWrong:false, sentence:'흡수한 열은 내부 에너지 증가와 외부에 한 일로 나뉜다', difficulty:2 },
+  { id:'TH5-S03', misconceptionId:'TH5', isWrong:false, sentence:'같은 열량을 가해도 등압 과정의 온도 상승은 등적 과정보다 작다', difficulty:3 },
+  { id:'TH6-S01', misconceptionId:'TH6', isWrong:true,  sentence:'부피가 일정한 상태에서 압력이 커지면 기체는 외부에 일을 한다', difficulty:2 },
+  { id:'TH6-S02', misconceptionId:'TH6', isWrong:false, sentence:'기체가 외부에 한 일은 W = PΔV 이므로 부피 변화가 없으면 0이다', difficulty:2 },
+  { id:'TH6-S03', misconceptionId:'TH6', isWrong:false, sentence:'등적 과정에서 흡수한 열은 모두 내부 에너지 증가에 쓰인다', difficulty:2 },
+  { id:'TH7-S01', misconceptionId:'TH7', isWrong:true,  sentence:'마찰과 열 손실을 완전히 없애면 열효율이 100 %인 열기관을 만들 수 있다', difficulty:2 },
+  { id:'TH7-S02', misconceptionId:'TH7', isWrong:false, sentence:'열기관은 흡수한 열의 일부를 저열원으로 방출하므로 열효율은 항상 1보다 작다', difficulty:2 },
+  { id:'TH7-S03', misconceptionId:'TH7', isWrong:false, sentence:'카르노 기관의 열효율은 고열원과 저열원의 절대 온도로 결정된다', difficulty:3 },
+  { id:'TH8-S01', misconceptionId:'TH8', isWrong:true,  sentence:'에너지가 보존되기만 하면 물에 퍼진 잉크가 저절로 다시 모이는 일도 일어날 수 있다', difficulty:2 },
+  { id:'TH8-S02', misconceptionId:'TH8', isWrong:true,  sentence:'열은 온도가 낮은 물체에서 높은 물체로 저절로 이동할 수 있다', difficulty:1 },
+  { id:'TH8-S03', misconceptionId:'TH8', isWrong:false, sentence:'고립계에서 저절로 일어나는 변화는 엔트로피가 증가하는 방향으로 진행한다', difficulty:2 },
+
+  // ── 특수 상대성 이론
+  { id:'SR1-S01', misconceptionId:'SR1', isWrong:true,  sentence:'빠르게 나는 우주선에서 앞으로 쏜 빛의 속력은 c보다 크게 측정된다', difficulty:2 },
+  { id:'SR1-S02', misconceptionId:'SR1', isWrong:true,  sentence:'광원이 관찰자에게서 멀어지면 그 빛의 속력은 느리게 측정된다', difficulty:2 },
+  { id:'SR1-S03', misconceptionId:'SR1', isWrong:false, sentence:'진공에서 빛의 속력은 광원과 관찰자의 운동과 관계없이 항상 같다', difficulty:1 },
+  { id:'SR2-S01', misconceptionId:'SR2', isWrong:true,  sentence:'한 관찰자가 동시라고 관측한 두 사건은 다른 관찰자에게도 반드시 동시이다', difficulty:2 },
+  { id:'SR2-S02', misconceptionId:'SR2', isWrong:false, sentence:'서로 다른 위치에서 일어난 두 사건의 동시성은 관성 좌표계에 따라 달라진다', difficulty:3 },
+  { id:'SR2-S03', misconceptionId:'SR2', isWrong:false, sentence:'우주선 안에서 동시에 일어난 두 사건이 지상 관찰자에게는 서로 다른 시각에 일어난 것으로 관측될 수 있다', difficulty:3 },
+  { id:'SR3-S01', misconceptionId:'SR3', isWrong:true,  sentence:'시간 지연은 실제 현상이 아니라 빛이 늦게 도달해 생기는 착시이다', difficulty:2 },
+  { id:'SR3-S02', misconceptionId:'SR3', isWrong:true,  sentence:'시간 지연은 빠르게 움직이는 시계가 제대로 작동하지 못해 생기는 현상이다', difficulty:2 },
+  { id:'SR3-S03', misconceptionId:'SR3', isWrong:false, sentence:'시간 지연은 관성계에 따라 두 사건 사이의 시간 간격 자체가 다르게 측정되는 실제 효과이다', difficulty:3 },
+  { id:'SR4-S01', misconceptionId:'SR4', isWrong:true,  sentence:'광속에 가깝게 이동하는 우주선 안의 사람은 자신의 시계가 느리게 가는 것을 느낀다', difficulty:2 },
+  { id:'SR4-S02', misconceptionId:'SR4', isWrong:false, sentence:'모든 관찰자는 자신이 들고 있는 시계가 정상적으로 간다고 측정한다', difficulty:2 },
+  { id:'SR4-S03', misconceptionId:'SR4', isWrong:false, sentence:'고유 시간은 두 사건이 같은 위치에서 일어난 관성계에서 잰 시간으로 가장 짧다', difficulty:3 },
+  { id:'SR5-S01', misconceptionId:'SR5', isWrong:true,  sentence:'빠르게 움직이는 물체는 모든 방향으로 길이가 줄어든다', difficulty:2 },
+  { id:'SR5-S02', misconceptionId:'SR5', isWrong:true,  sentence:'광속에 가깝게 나는 원통형 우주선은 길이와 지름이 모두 줄어든 것으로 관측된다', difficulty:3 },
+  { id:'SR5-S03', misconceptionId:'SR5', isWrong:false, sentence:'길이 수축은 운동 방향으로만 일어나고 운동에 수직인 방향의 길이는 변하지 않는다', difficulty:2 },
+  { id:'SR6-S01', misconceptionId:'SR6', isWrong:true,  sentence:'길이 수축은 빠른 속도 때문에 물체가 실제로 눌려 짧아진 것이다', difficulty:2 },
+  { id:'SR6-S02', misconceptionId:'SR6', isWrong:false, sentence:'길이 수축은 물체가 압축된 것이 아니라 관성계에 따라 측정되는 길이가 다른 것이다', difficulty:3 },
+  { id:'SR6-S03', misconceptionId:'SR6', isWrong:false, sentence:'우주선 안의 사람이 재는 우주선의 길이는 정지해 있을 때와 같다', difficulty:2 },
+  { id:'SR7-S01', misconceptionId:'SR7', isWrong:true,  sentence:'정밀한 실험을 하면 두 관성계 중 어느 쪽이 실제로 움직이는지 알아낼 수 있다', difficulty:3 },
+  { id:'SR7-S02', misconceptionId:'SR7', isWrong:true,  sentence:'등속도로 나는 우주선 안에서는 물리 법칙이 지상과 다르게 성립한다', difficulty:2 },
+  { id:'SR7-S03', misconceptionId:'SR7', isWrong:false, sentence:'모든 관성 좌표계에서 물리 법칙은 동일하게 성립한다', difficulty:2 },
+  { id:'SR8-S01', misconceptionId:'SR8', isWrong:true,  sentence:'핵반응에서는 질량수가 보존되므로 반응 전후의 질량도 정확히 같다', difficulty:2 },
+  { id:'SR8-S02', misconceptionId:'SR8', isWrong:false, sentence:'핵반응에서 줄어든 질량은 E = mc² 에 따라 에너지로 방출된다', difficulty:2 },
+  { id:'SR8-S03', misconceptionId:'SR8', isWrong:false, sentence:'핵융합에서도 반응 후 질량의 합이 반응 전보다 작아진다', difficulty:3 },
 ];
 
 /* ============================================================
@@ -1243,7 +1365,7 @@ async function seed() {
   await batchUpload('misconception_dimensions', dims, 'id');
   console.log(`    ✅ ${dims.length}개`);
 
-  console.log('3/8 🧠 misconceptions (전체 49개)...');
+  console.log('3/8 🧠 misconceptions...');
   await batchUpload('misconceptions', misconceptions, 'id');
   console.log(`    ✅ ${misconceptions.length}개`);
 
