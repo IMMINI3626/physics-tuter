@@ -11,8 +11,8 @@
  * 시딩 대상:
  *   ✅ units                    (4개)
  *   ✅ misconception_dimensions  (19개)
- *   ✅ misconceptions            (112개 — 14개 소단원 전체)
- *   ✅ misconception_sentences   (289개, 모든 오개념에 문장 있음)
+ *   ✅ misconceptions            (130개 — 14개 소단원 전체, 소단원별 5개 이상)
+ *   ✅ misconception_sentences   (343개, 모든 오개념에 문장 있음)
  *   ✅ scoring_keywords          (54개, unit1 전용)
  *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
  *   ✅ item_misconception_map    (130개, unit1 전용 — 현재 앱 로직 미사용, 향후 정식 진단평가용)
@@ -441,6 +441,86 @@ const misconceptions = [
     description:'빛의 간섭·회절 현상이 파동성이 아닌 입자성으로 설명된다고 믿음',
     correctConcept:'간섭과 회절은 파동의 특성으로 빛의 파동성을 보여주는 현상이다. 입자로는 간섭·회절을 설명할 수 없다',
     sourcePaper:'물리 예비교사들의 빛의 간섭과 회절에 대한 오개념 분석 (서울대 박사학위논문, 2006)' },
+
+  // ── 운동량과 충격량 (unit 2) 보강 — 충격량-운동량 정리 이해 연구 기반
+  { id:'MO4', unitId:'2', subUnit:'운동량과 충격량', dimensionCode:'MO', code:'MO4', name_ko:'충격량을 힘만으로 판단', name_en:'Impulse judged by force alone',
+    description:'힘의 크기가 같으면 충격량도 같다고 믿어 힘이 작용한 시간을 고려하지 못함',
+    correctConcept:'충격량은 힘과 작용 시간의 곱이며, 힘-시간 그래프에서는 그래프 아래 면적에 해당한다',
+    sourcePaper:'Lawson & McDermott (1987), American Journal of Physics 55(9)' },
+  { id:'MO5', unitId:'2', subUnit:'운동량과 충격량', dimensionCode:'MO', code:'MO5', name_ko:'완충 장치가 충격량을 줄인다고 봄', name_en:'Cushioning believed to reduce impulse',
+    description:'에어백이나 완충재가 충격량 자체를 줄여 준다고 믿음',
+    correctConcept:'운동량 변화량(=충격량)은 같고, 충돌 시간을 늘려 물체가 받는 힘의 크기를 줄이는 것이다',
+    sourcePaper:'Lawson & McDermott (1987), American Journal of Physics 55(9)' },
+  { id:'MO6', unitId:'2', subUnit:'운동량과 충격량', dimensionCode:'MO', code:'MO6', name_ko:'운동량과 운동 에너지 미분화', name_en:'Momentum and kinetic energy undiscriminated',
+    description:'운동량이 같으면 운동 에너지도 같다고 믿어 두 물리량을 구분하지 못함',
+    correctConcept:'운동량은 p = mv, 운동 에너지는 K = p²/2m 이므로 운동량이 같아도 질량이 다르면 운동 에너지는 다르다',
+    sourcePaper:'Singh & Rosengrant (2003), American Journal of Physics 71(6)' },
+  { id:'MO7', unitId:'2', subUnit:'운동량과 충격량', dimensionCode:'MO', code:'MO7', name_ko:'운동량을 스칼라로 취급', name_en:'Momentum treated as a scalar',
+    description:'운동량의 방향을 고려하지 않고 크기만 더해, 서로 반대로 움직이는 두 물체의 총 운동량을 크기의 합으로 계산함',
+    correctConcept:'운동량은 벡터이므로 방향이 반대면 부호가 반대다. 크기가 같고 방향이 반대인 두 운동량의 합은 0이다',
+    sourcePaper:'Singh & Rosengrant (2003), American Journal of Physics 71(6)' },
+  { id:'MO8', unitId:'2', subUnit:'운동량과 충격량', dimensionCode:'MO', code:'MO8', name_ko:'운동량 보존 조건 무시', name_en:'Momentum conservation applied without conditions',
+    description:'외력이 작용하는 상황에서도 계의 운동량이 항상 보존된다고 믿음',
+    correctConcept:'운동량 보존은 계에 작용하는 외력의 합이 0일 때 성립한다. 마찰 등 외력이 있으면 계의 운동량은 변한다',
+    sourcePaper:'Singh & Rosengrant (2003), American Journal of Physics 71(6)' },
+
+  // ── 에너지 띠와 반도체 (unit 3) 보강 — 전도 모형 이해 연구 기반
+  { id:'EB4', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB4', name_ko:'자유 전자가 전압으로 생긴다고 봄', name_en:'Free electrons believed created by voltage',
+    description:'도체 안에 자유 전자가 원래 있는 것이 아니라 전압을 걸어야 만들어진다고 믿음',
+    correctConcept:'금속 도체에는 전압을 걸지 않아도 자유 전자가 이미 존재하며, 전압은 그 전자들을 한 방향으로 이동시킨다',
+    sourcePaper:'Wittmann, Steinberg & Redish (2002), American Journal of Physics 70(3)' },
+  { id:'EB5', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB5', name_ko:'띠 간격에 전자가 있을 수 있다고 봄', name_en:'Electrons believed to exist in the band gap',
+    description:'전자가 원자가띠와 전도띠 사이의 띠 간격에도 머무를 수 있다고 믿음',
+    correctConcept:'띠 간격은 전자가 존재할 수 있는 상태가 없는 영역이므로, 전자는 띠 간격을 건너뛰어 전도띠로 올라간다',
+    sourcePaper:'Wittmann, Steinberg & Redish (2002), American Journal of Physics 70(3)' },
+  { id:'EB6', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB6', name_ko:'반도체 저항의 온도 변화를 금속과 동일시', name_en:'Semiconductor resistance change equated with metals',
+    description:'온도가 올라가면 반도체의 저항도 금속처럼 커진다고 믿음',
+    correctConcept:'온도가 오르면 반도체에서는 전도띠로 올라가는 전자가 늘어 저항이 작아진다. 금속과 반대 경향이다',
+    sourcePaper:'Wittmann, Steinberg & Redish (2002), American Journal of Physics 70(3)' },
+  { id:'EB7', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB7', name_ko:'양공을 실제 입자로 봄', name_en:'Holes seen as real particles',
+    description:'양공을 전자와 나란히 존재하는 별개의 입자라고 믿음',
+    correctConcept:'양공은 전자가 빠져나간 빈 자리이며, 양공의 이동은 전자의 이동을 반대 방향으로 기술한 것이다',
+    sourcePaper:'Wittmann, Steinberg & Redish (2002), American Journal of Physics 70(3)' },
+  { id:'EB8', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB8', name_ko:'도핑한 반도체가 전하를 띤다고 봄', name_en:'Doped semiconductor believed to be charged',
+    description:'n형 반도체는 전체적으로 음전하를, p형은 양전하를 띤다고 믿음',
+    correctConcept:'도핑을 해도 원자핵의 양전하와 전자의 음전하가 균형을 이루므로 반도체 전체는 전기적으로 중성이다',
+    sourcePaper:'Wittmann, Steinberg & Redish (2002), American Journal of Physics 70(3)' },
+
+  // ── 파동의 진동과 굴절 (unit 4) 보강 — 파동 전파·전자기파 이해 연구 기반
+  { id:'WR5', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR5', name_ko:'파동과 함께 매질이 이동한다고 봄', name_en:'Medium believed to travel with the wave',
+    description:'파동이 진행할 때 매질도 파동과 함께 이동한다고 믿음',
+    correctConcept:'매질은 제자리에서 진동할 뿐이며, 이동하는 것은 진동 상태(에너지)다',
+    sourcePaper:'Wittmann, Steinberg & Redish (1999), The Physics Teacher 37(1)' },
+  { id:'WR6', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR6', name_ko:'파동의 속력이 진폭·진동수로 정해진다고 봄', name_en:'Wave speed attributed to amplitude or frequency',
+    description:'줄을 더 세게 흔들거나 빠르게 흔들면 파동의 속력도 커진다고 믿음',
+    correctConcept:'같은 매질에서 파동의 속력은 일정하다. 진동수를 바꾸면 속력이 아니라 파장이 변한다 (v = fλ)',
+    sourcePaper:'Wittmann, Steinberg & Redish (1999), The Physics Teacher 37(1)' },
+  { id:'WR7', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR7', name_ko:'굴절 시 진동수가 변한다고 봄', name_en:'Frequency believed to change on refraction',
+    description:'빛이 다른 매질로 들어가면 진동수가 변해 색도 달라진다고 믿음',
+    correctConcept:'굴절할 때 진동수는 변하지 않는다. 속력과 파장이 함께 변하며 색은 진동수가 정하므로 바뀌지 않는다',
+    sourcePaper:'Ambrose, Heron, Vokos & McDermott (1999), American Journal of Physics 67(10)' },
+  { id:'WR8', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR8', name_ko:'빛도 매질이 필요하다고 봄', name_en:'Light believed to require a medium',
+    description:'빛이 전파되기 위해서도 소리처럼 매질이 필요하다고 믿음',
+    correctConcept:'빛은 전기장과 자기장의 진동이 스스로 전파되는 전자기파여서 진공에서도 진행한다',
+    sourcePaper:'Ambrose, Heron, Vokos & McDermott (1999), American Journal of Physics 67(10)' },
+
+  // ── 빛의 이중성 (unit 4) 보강 — 광전효과·양자 개념 검사 기반
+  { id:'LD5', unitId:'4', subUnit:'빛의 이중성', dimensionCode:'LD', code:'LD5', name_ko:'세기를 높이면 문턱 진동수를 넘는다고 봄', name_en:'Intensity believed to overcome threshold frequency',
+    description:'진동수가 문턱 진동수보다 낮아도 빛을 아주 세게 쬐면 광전자가 튀어나온다고 믿음',
+    correctConcept:'문턱 진동수보다 낮은 빛은 세기를 아무리 높여도 광전자를 방출시키지 못한다',
+    sourcePaper:'Wuttiprom, Sharma, Johnston, Chitaree & Soankwan (2009), International Journal of Science Education 31(5)' },
+  { id:'LD6', unitId:'4', subUnit:'빛의 이중성', dimensionCode:'LD', code:'LD6', name_ko:'광자 에너지가 누적된다고 봄', name_en:'Photon energies believed to accumulate',
+    description:'전자가 여러 광자의 에너지를 조금씩 모아 두었다가 튀어나온다고 믿음',
+    correctConcept:'광전효과는 광자 하나가 전자 하나에 에너지를 한 번에 전달하는 과정이며, 에너지가 누적되지 않는다',
+    sourcePaper:'Wuttiprom 외 (2009), International Journal of Science Education 31(5)' },
+  { id:'LD7', unitId:'4', subUnit:'빛의 이중성', dimensionCode:'LD', code:'LD7', name_ko:'광자를 질량 있는 알갱이로 봄', name_en:'Photon seen as a tiny massive ball',
+    description:'광자를 아주 작지만 질량과 크기를 가진 알갱이라고 믿음',
+    correctConcept:'광자는 정지 질량이 0인 에너지 덩어리이며, 에너지는 E = hf로 진동수가 정한다',
+    sourcePaper:'McKagan, Perkins & Wieman (2010), Physical Review Special Topics — PER 6(2)' },
+  { id:'LD8', unitId:'4', subUnit:'빛의 이중성', dimensionCode:'LD', code:'LD8', name_ko:'약한 빛에서는 간섭무늬가 없다고 봄', name_en:'No interference expected from very dim light',
+    description:'빛을 아주 약하게 하여 광자를 하나씩 보내면 간섭무늬가 생기지 않는다고 믿음',
+    correctConcept:'광자를 하나씩 보내도 오래 쌓으면 같은 간섭무늬가 나타난다. 간섭은 광자 하나의 파동성으로 일어난다',
+    sourcePaper:'McKagan, Perkins & Wieman (2010), Physical Review Special Topics — PER 6(2)' },
 
   // ── 파동의 간섭 (unit 4) 보강 — 빛의 간섭·회절 이해 연구 기반
   //    기존 WI1~WI5는 음파(종파) 간섭에 집중돼 있어, 교과서 비중이 큰 이중슬릿·회절을 추가한다.
@@ -882,6 +962,70 @@ const sentences = [
   { id:'MD7-S01', misconceptionId:'MD7', isWrong:true,  sentence:'물질파는 전자가 물결처럼 위아래로 흔들리며 지나가는 실제 경로이다', difficulty:2 },
   { id:'MD7-S02', misconceptionId:'MD7', isWrong:false, sentence:'물질파는 입자가 특정 위치에서 발견될 확률을 나타낸다', difficulty:3 },
   { id:'MD7-S03', misconceptionId:'MD7', isWrong:false, sentence:'전자의 파동성은 전자 자체가 진동한다는 뜻이 아니다', difficulty:3 },
+
+  /* ── 오개념이 3~4개뿐이던 소단원 보강분의 판별 문장 ── */
+
+  // 운동량과 충격량
+  { id:'MO4-S01', misconceptionId:'MO4', isWrong:true,  sentence:'힘의 크기가 같으면 물체가 받는 충격량도 같다', difficulty:2 },
+  { id:'MO4-S02', misconceptionId:'MO4', isWrong:false, sentence:'충격량은 힘과 작용 시간의 곱이다', difficulty:1 },
+  { id:'MO4-S03', misconceptionId:'MO4', isWrong:false, sentence:'힘-시간 그래프에서 그래프 아래 면적은 충격량을 나타낸다', difficulty:2 },
+  { id:'MO5-S01', misconceptionId:'MO5', isWrong:true,  sentence:'에어백은 충돌에서 받는 충격량을 줄여 준다', difficulty:2 },
+  { id:'MO5-S02', misconceptionId:'MO5', isWrong:false, sentence:'에어백은 충돌 시간을 늘려 사람이 받는 힘의 크기를 줄인다', difficulty:2 },
+  { id:'MO5-S03', misconceptionId:'MO5', isWrong:false, sentence:'같은 속도로 부딪힐 때 완충재가 있어도 운동량 변화량은 같다', difficulty:3 },
+  { id:'MO6-S01', misconceptionId:'MO6', isWrong:true,  sentence:'운동량의 크기가 같은 두 물체는 운동 에너지도 같다', difficulty:2 },
+  { id:'MO6-S02', misconceptionId:'MO6', isWrong:false, sentence:'운동량이 같아도 질량이 작은 물체의 운동 에너지가 더 크다', difficulty:3 },
+  { id:'MO6-S03', misconceptionId:'MO6', isWrong:false, sentence:'운동량은 벡터이고 운동 에너지는 스칼라이다', difficulty:2 },
+  { id:'MO7-S01', misconceptionId:'MO7', isWrong:true,  sentence:'서로 반대 방향으로 같은 속력으로 달리는 두 물체의 총 운동량은 각 운동량 크기의 합이다', difficulty:2 },
+  { id:'MO7-S02', misconceptionId:'MO7', isWrong:false, sentence:'크기가 같고 방향이 반대인 두 운동량의 합은 0이다', difficulty:2 },
+  { id:'MO7-S03', misconceptionId:'MO7', isWrong:false, sentence:'운동량을 더할 때는 방향을 부호로 구분해야 한다', difficulty:1 },
+  { id:'MO8-S01', misconceptionId:'MO8', isWrong:true,  sentence:'마찰이 있는 바닥에서 충돌하는 두 물체의 총 운동량도 항상 보존된다', difficulty:3 },
+  { id:'MO8-S02', misconceptionId:'MO8', isWrong:false, sentence:'운동량 보존은 계에 작용하는 외력의 합이 0일 때 성립한다', difficulty:2 },
+  { id:'MO8-S03', misconceptionId:'MO8', isWrong:false, sentence:'외력이 없는 충돌에서는 탄성·비탄성과 무관하게 총 운동량이 보존된다', difficulty:2 },
+
+  // 에너지 띠와 반도체
+  { id:'EB4-S01', misconceptionId:'EB4', isWrong:true,  sentence:'금속에 전압을 걸어야 자유 전자가 만들어진다', difficulty:2 },
+  { id:'EB4-S02', misconceptionId:'EB4', isWrong:false, sentence:'금속에는 전압을 걸지 않아도 자유 전자가 이미 존재한다', difficulty:2 },
+  { id:'EB4-S03', misconceptionId:'EB4', isWrong:false, sentence:'전압은 자유 전자를 만들어내는 것이 아니라 한 방향으로 이동하게 한다', difficulty:2 },
+  { id:'EB5-S01', misconceptionId:'EB5', isWrong:true,  sentence:'전자는 원자가띠와 전도띠 사이의 띠 간격에도 머무를 수 있다', difficulty:3 },
+  { id:'EB5-S02', misconceptionId:'EB5', isWrong:false, sentence:'띠 간격은 전자가 존재할 수 있는 상태가 없는 영역이다', difficulty:2 },
+  { id:'EB5-S03', misconceptionId:'EB5', isWrong:false, sentence:'전자가 전도띠로 올라가려면 띠 간격보다 큰 에너지를 얻어야 한다', difficulty:2 },
+  { id:'EB6-S01', misconceptionId:'EB6', isWrong:true,  sentence:'온도가 올라가면 반도체의 저항도 금속처럼 커진다', difficulty:2 },
+  { id:'EB6-S02', misconceptionId:'EB6', isWrong:false, sentence:'온도가 올라가면 반도체에서는 전도띠로 올라가는 전자가 늘어 저항이 작아진다', difficulty:2 },
+  { id:'EB6-S03', misconceptionId:'EB6', isWrong:false, sentence:'저항의 온도 변화 경향은 금속과 반도체가 서로 반대다', difficulty:3 },
+  { id:'EB7-S01', misconceptionId:'EB7', isWrong:true,  sentence:'양공은 전자와 나란히 존재하는 또 하나의 입자이다', difficulty:2 },
+  { id:'EB7-S02', misconceptionId:'EB7', isWrong:false, sentence:'양공은 전자가 빠져나간 빈 자리를 뜻한다', difficulty:1 },
+  { id:'EB7-S03', misconceptionId:'EB7', isWrong:false, sentence:'양공의 이동은 전자의 이동을 반대 방향으로 나타낸 것이다', difficulty:3 },
+  { id:'EB8-S01', misconceptionId:'EB8', isWrong:true,  sentence:'n형 반도체는 전체적으로 음전하를 띤다', difficulty:2 },
+  { id:'EB8-S02', misconceptionId:'EB8', isWrong:false, sentence:'도핑을 해도 반도체 전체는 전기적으로 중성이다', difficulty:3 },
+  { id:'EB8-S03', misconceptionId:'EB8', isWrong:false, sentence:'n형 반도체에서 늘어나는 것은 전체 전하가 아니라 전류를 나르는 자유 전자의 수다', difficulty:3 },
+
+  // 파동의 진동과 굴절
+  { id:'WR5-S01', misconceptionId:'WR5', isWrong:true,  sentence:'파동이 진행할 때 매질도 파동과 함께 이동한다', difficulty:1 },
+  { id:'WR5-S02', misconceptionId:'WR5', isWrong:false, sentence:'매질은 제자리에서 진동하고 이동하는 것은 진동 상태와 에너지다', difficulty:2 },
+  { id:'WR5-S03', misconceptionId:'WR5', isWrong:false, sentence:'물결 위에 뜬 나뭇잎은 파동과 함께 멀리 밀려가지 않고 제자리에서 위아래로 움직인다', difficulty:2 },
+  { id:'WR6-S01', misconceptionId:'WR6', isWrong:true,  sentence:'줄을 더 세게 흔들면 파동이 더 빠르게 전달된다', difficulty:2 },
+  { id:'WR6-S02', misconceptionId:'WR6', isWrong:true,  sentence:'같은 줄에서 진동수를 두 배로 하면 파동의 속력도 두 배가 된다', difficulty:2 },
+  { id:'WR6-S03', misconceptionId:'WR6', isWrong:false, sentence:'같은 매질에서 진동수를 바꾸면 속력이 아니라 파장이 변한다', difficulty:2 },
+  { id:'WR7-S01', misconceptionId:'WR7', isWrong:true,  sentence:'빛이 물속으로 들어가면 진동수가 변해 색도 달라진다', difficulty:2 },
+  { id:'WR7-S02', misconceptionId:'WR7', isWrong:false, sentence:'굴절할 때 진동수는 변하지 않고 속력과 파장이 변한다', difficulty:2 },
+  { id:'WR7-S03', misconceptionId:'WR7', isWrong:false, sentence:'빛의 색은 진동수가 정하므로 매질이 달라져도 색은 그대로다', difficulty:3 },
+  { id:'WR8-S01', misconceptionId:'WR8', isWrong:true,  sentence:'빛도 소리처럼 전달되려면 매질이 필요하다', difficulty:1 },
+  { id:'WR8-S02', misconceptionId:'WR8', isWrong:false, sentence:'빛은 전자기파여서 진공에서도 진행한다', difficulty:1 },
+  { id:'WR8-S03', misconceptionId:'WR8', isWrong:false, sentence:'태양의 빛이 지구까지 오는 동안 지나는 우주 공간에는 매질이 없다', difficulty:2 },
+
+  // 빛의 이중성
+  { id:'LD5-S01', misconceptionId:'LD5', isWrong:true,  sentence:'문턱 진동수보다 낮은 빛이라도 세기를 아주 높이면 광전자가 튀어나온다', difficulty:2 },
+  { id:'LD5-S02', misconceptionId:'LD5', isWrong:false, sentence:'문턱 진동수보다 낮은 빛은 세기를 높여도 광전자를 방출시키지 못한다', difficulty:2 },
+  { id:'LD5-S03', misconceptionId:'LD5', isWrong:false, sentence:'광전자 방출 여부는 빛의 세기가 아니라 진동수가 결정한다', difficulty:2 },
+  { id:'LD6-S01', misconceptionId:'LD6', isWrong:true,  sentence:'전자는 여러 광자의 에너지를 조금씩 모아 두었다가 튀어나온다', difficulty:3 },
+  { id:'LD6-S02', misconceptionId:'LD6', isWrong:false, sentence:'광전효과에서는 광자 하나가 전자 하나에 에너지를 한 번에 전달한다', difficulty:2 },
+  { id:'LD6-S03', misconceptionId:'LD6', isWrong:false, sentence:'빛을 쬐는 시간을 늘려도 문턱 진동수보다 낮은 빛에서는 광전자가 나오지 않는다', difficulty:3 },
+  { id:'LD7-S01', misconceptionId:'LD7', isWrong:true,  sentence:'광자는 아주 작지만 질량을 가진 알갱이이다', difficulty:2 },
+  { id:'LD7-S02', misconceptionId:'LD7', isWrong:false, sentence:'광자의 정지 질량은 0이다', difficulty:2 },
+  { id:'LD7-S03', misconceptionId:'LD7', isWrong:false, sentence:'광자 하나의 에너지는 진동수에 비례한다', difficulty:1 },
+  { id:'LD8-S01', misconceptionId:'LD8', isWrong:true,  sentence:'빛을 아주 약하게 하여 광자를 하나씩 보내면 간섭무늬가 생기지 않는다', difficulty:3 },
+  { id:'LD8-S02', misconceptionId:'LD8', isWrong:false, sentence:'광자를 하나씩 보내도 오래 쌓으면 간섭무늬가 나타난다', difficulty:3 },
+  { id:'LD8-S03', misconceptionId:'LD8', isWrong:false, sentence:'간섭무늬는 광자들이 서로 부딪혀 생기는 것이 아니다', difficulty:3 },
 ];
 
 /* ============================================================

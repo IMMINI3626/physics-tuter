@@ -544,26 +544,56 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 |---|---|---|
 | 물질의 이중성 오개념 수 | 1개 (단원 학습이 성립 안 함) | 7개 |
 | 파동의 간섭에 빛 간섭·회절 오개념 없음 | 5개 모두 음파 | 8개 (이중슬릿·회절 추가) |
+| 오개념 5개 미만 소단원 | 4개 (운동량 3, 에너지 띠 3, 파동 굴절 4, 빛의 이중성 4) | 0개 |
 | 판별 문장이 없는 오개념 | 17개 | 0개 |
-| 전체 오개념 / 문장 | 103 / 214 | 112 / 289 |
+| 전체 오개념 / 문장 | 103 / 214 | 130 / 343 |
 
-- 신규 오개념 9개: WI6(무늬 간격을 슬릿 폭으로 봄), WI7(단일슬릿에 무늬 없다고 봄),
+- 신규 오개념 27개. 먼저 파동의 간섭·물질의 이중성 9개를 채우고, 이어서 오개념이 3~4개뿐이던
+  4개 소단원에 18개를 채웠다(운동량과 충격량 MO4~MO8, 에너지 띠와 반도체 EB4~EB8,
+  파동의 진동과 굴절 WR5~WR8, 빛의 이중성 LD5~LD8). 이제 모든 소단원이 오개념 5개 이상이라
+  진단검사가 14개 소단원 전부에서 5문항으로 작동하고, 소단원 간 L1 학습량 편차도 줄었다.
+- 1차 신규 오개념 9개: WI6(무늬 간격을 슬릿 폭으로 봄), WI7(단일슬릿에 무늬 없다고 봄),
   WI8(상쇄간섭에서 에너지 소멸), MD2(거시 물체에 물질파 없음), MD3(파장이 속력에 비례),
   MD4(전자 간섭무늬를 충돌로 설명), MD5(슬릿 간격과 무늬 간격을 비례로 봄),
   MD6(전자 현미경 분해능을 입자 크기로 설명), MD7(물질파를 실제 궤적으로 봄).
-- 근거 문헌은 참고문헌의 파동 광학·양자 항목 5편. 모두 온라인 서지로 존재를 확인했다.
+- 2차 신규 오개념 18개의 근거: 충격량-운동량 정리 이해 연구, 에너지·운동량 개념 검사,
+  전도 모형 이해 연구, 파동 전파 및 전자기파 이해 연구, 광전효과·양자 개념 검사.
+- 근거 문헌은 참고문헌의 파동 광학·양자·역학 항목 10편. 모두 온라인 서지로 존재를 확인했다.
 - 판별 문장이 없던 기존 오개념 16개(뉴턴 9, 역학적 에너지 3, 파동의 간섭 3, 물질의 이중성 1)에
   문장 3개씩 추가. 기존 FCI/FMCE 기반 오개념의 설명·정개념을 그대로 문장화한 것이라 새 인용은 없다.
 - 개념 영역(dimension)은 19개 그대로. WI·MD가 이미 있어 추가하지 않았다.
 
-진단검사 가능 여부 (소단원별 문장 있는 오개념 수)
+보강 후 소단원별 오개념 수 (모두 진단검사 5문항 가능)
 
-| 5문항 가능 | 문항 수 제한 |
+| 오개념 수 | 소단원 |
 |---|---|
-| 물체의 운동 8, 뉴턴 운동 법칙 22, 역학적 에너지 보존 13, 파동의 간섭 8, 물질의 이중성 7, 전류의 자기 작용 13, 전자기 유도 5, 원자 모형과 전기력 6, 열역학 8, 특수 상대성 8 | 파동의 진동과 굴절 4, 빛의 이중성 4, 운동량과 충격량 3, 에너지 띠와 반도체 3 |
+| 22 | 뉴턴 운동 법칙 |
+| 13 | 역학적 에너지 보존, 전류의 자기 작용 |
+| 8 | 물체의 운동, 운동량과 충격량, 에너지 띠와 반도체, 파동의 진동과 굴절, 파동의 간섭, 빛의 이중성, 열역학 법칙, 특수 상대성 이론 |
+| 7 | 물질의 이중성 |
+| 6 | 원자 모형과 전기력 |
+| 5 | 전자기 유도 |
 
-오른쪽 4개 소단원은 오개념 자체가 5개 미만이라 진단검사가 3~4문항으로 줄어든다. 검사는 정상
-작동하지만 L1 학습량도 함께 짧아지므로(오개념 3개면 L1 4문제) 오개념 보강이 향후 과제로 남는다.
+L1 학습량은 오개념 5개면 6문제, 8개면 9문제, 22개면 24문제 수준으로 정리된다.
+
+### 남은 구조적 한계 — 오개념이 없는 개념은 측정되지 않는다
+
+출제 범위와 측정 범위가 다르다. 문제는 소단원명·기출 유형(`question_patterns` 116개)·오개념을
+함께 넣어 만들기 때문에 오개념 목록에 없는 개념도 문항에 등장하고, L1의 5문장 중 태그가 붙지
+않는 3~4문장이 실제로 그 역할을 한다. 그러나 이해도와 승급은 오개념 단위로만 계산되므로,
+오개념으로 등록되지 않은 개념은 학습에는 등장해도 측정에는 반영되지 않는다.
+
+해결 방향 세 가지 (Phase 3 이후 과제)
+
+| 방향 | 내용 | 비용 |
+|---|---|---|
+| A. 지식 요소 확장 | `misconceptions`에 `kind`를 두어 "오개념"과 "개념 요소"(예: 충격량-운동량 정리 적용, F-t 그래프 면적 해석)를 함께 지식 요소로 다룸. BKT·태깅·승급 파이프라인을 그대로 재사용 | 낮음 |
+| B. 유형 커버리지 축 | `question_patterns` 기준으로 "이 단원 유형 중 몇 개를 다뤘는지"를 측정과 별도로 표시 | 낮음 |
+| C. 현행 유지 | 측정 단위를 오개념으로 한정하고 논문 한계로 명시 | 없음 |
+
+A가 이론적으로도 표준에 가깝다. BKT의 지식 요소(KC)는 본래 기능·개념 단위이며, 오개념만을 KC로
+쓴 것이 오히려 본 시스템의 특수한 선택이다. 개념 요소의 근거는 논문 인용이 아니라 교육과정
+성취기준에서 가져올 수 있어 문헌 검증 부담도 없다.
 
 ---
 
@@ -599,3 +629,10 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 - McKagan, S. B., Perkins, K. K., & Wieman, C. E. (2010). Design and Validation of the Quantum Mechanics Conceptual Survey. *Physical Review Special Topics — Physics Education Research*, 6(2), 020121.
 - Matejak Cvenic, K., Ivanjek, L., Planinic, M., Jelicic, K., Susac, A., Hopf, M., & Cindric Brkic, M. (2023). Probing High School Students' Understanding of Interference and Diffraction of Light Using Standard Wave Optics Experiments. *Physical Review Physics Education Research*, 19(2), 020118.
 - Wittmann, M. C., Steinberg, R. N., & Redish, E. F. (1999). Making Sense of How Students Make Sense of Mechanical Waves. *The Physics Teacher*, 37(1), 15–21.
+- Ambrose, B. S., Heron, P. R. L., Vokos, S., & McDermott, L. C. (1999). Student Understanding of Light as an Electromagnetic Wave: Relating the Formalism to Physical Phenomena. *American Journal of Physics*, 67(10), 891–898.
+- Wittmann, M. C., Steinberg, R. N., & Redish, E. F. (2002). Investigating Student Understanding of Quantum Physics: Spontaneous Models of Conductivity. *American Journal of Physics*, 70(3), 218–226. doi:10.1119/1.1447542
+
+역학 오개념 추가 (단계 7-2 근거)
+
+- Lawson, R. A., & McDermott, L. C. (1987). Student Understanding of the Work-Energy and Impulse-Momentum Theorems. *American Journal of Physics*, 55(9), 811–817. doi:10.1119/1.14994
+- Singh, C., & Rosengrant, D. (2003). Multiple-choice Test of Energy and Momentum Concepts. *American Journal of Physics*, 71(6), 607–617.
