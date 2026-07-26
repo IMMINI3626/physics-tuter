@@ -11,8 +11,8 @@
  * 시딩 대상:
  *   ✅ units                    (4개)
  *   ✅ misconception_dimensions  (19개)
- *   ✅ misconceptions            (103개 — 14개 소단원 전체)
- *   ✅ misconception_sentences   (214개)
+ *   ✅ misconceptions            (112개 — 14개 소단원 전체)
+ *   ✅ misconception_sentences   (289개, 모든 오개념에 문장 있음)
  *   ✅ scoring_keywords          (54개, unit1 전용)
  *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
  *   ✅ item_misconception_map    (130개, unit1 전용 — 현재 앱 로직 미사용, 향후 정식 진단평가용)
@@ -442,6 +442,48 @@ const misconceptions = [
     correctConcept:'간섭과 회절은 파동의 특성으로 빛의 파동성을 보여주는 현상이다. 입자로는 간섭·회절을 설명할 수 없다',
     sourcePaper:'물리 예비교사들의 빛의 간섭과 회절에 대한 오개념 분석 (서울대 박사학위논문, 2006)' },
 
+  // ── 파동의 간섭 (unit 4) 보강 — 빛의 간섭·회절 이해 연구 기반
+  //    기존 WI1~WI5는 음파(종파) 간섭에 집중돼 있어, 교과서 비중이 큰 이중슬릿·회절을 추가한다.
+  { id:'WI6', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI6', name_ko:'무늬 간격을 슬릿 폭이 정한다고 봄', name_en:'Fringe spacing attributed to slit width',
+    description:'이중슬릿 간섭무늬의 간격이 슬릿의 폭에 의해 정해진다고 믿어, 슬릿 사이 간격·파장·스크린 거리의 역할을 구분하지 못함',
+    correctConcept:'이중슬릿 간섭무늬의 간격은 슬릿 사이 간격이 좁을수록, 파장이 길수록, 스크린까지 거리가 멀수록 넓어진다 (Δy = λL/d)',
+    sourcePaper:'Ambrose, Shaffer, Steinberg & McDermott (1999), American Journal of Physics 67(2)' },
+  { id:'WI7', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI7', name_ko:'슬릿 하나면 무늬가 없다고 봄', name_en:'No pattern expected from a single slit',
+    description:'슬릿이 하나일 때는 빛이 직진해 밝은 사각형만 생긴다고 믿어 회절 현상을 고려하지 못함 (기하광학을 그대로 적용)',
+    correctConcept:'슬릿이 하나여도 빛이 회절하여 중앙이 가장 밝고 좌우로 어두운 무늬가 반복되는 회절 무늬가 생긴다',
+    sourcePaper:'Ambrose, Shaffer, Steinberg & McDermott (1999), American Journal of Physics 67(2)' },
+  { id:'WI8', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI8', name_ko:'상쇄간섭에서 에너지가 사라진다고 봄', name_en:'Energy believed destroyed in destructive interference',
+    description:'상쇄간섭이 일어난 지점에서 빛이나 소리의 에너지가 없어진다고 믿음',
+    correctConcept:'상쇄간섭 지점의 에너지는 사라지지 않고 보강간섭 지점으로 재분배된다. 전체 에너지는 보존된다',
+    sourcePaper:'Matejak Cvenic 외 (2023), Physical Review Physics Education Research 19(2)' },
+
+  // ── 물질의 이중성 (unit 4) 보강 — 물질파·전자 회절 이해 연구 및 양자 개념 검사 기반
+  //    기존에는 MD1(불확정성) 하나뿐이어서 단원 학습이 성립하지 않았다.
+  { id:'MD2', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD2', name_ko:'물질파는 미시 입자만 갖는다고 봄', name_en:'Matter waves only for microscopic particles',
+    description:'물질파는 전자 같은 작은 입자에만 있고 야구공 같은 물체에는 아예 없다고 믿음',
+    correctConcept:'모든 물체가 물질파를 갖지만, 질량과 운동량이 크면 파장이 극히 짧아져 파동성을 관측할 수 없다',
+    sourcePaper:'Wuttiprom, Sharma, Johnston, Chitaree & Soankwan (2009), International Journal of Science Education 31(5)' },
+  { id:'MD3', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD3', name_ko:'물질파 파장이 속력에 비례한다고 봄', name_en:'de Broglie wavelength taken proportional to speed',
+    description:'입자가 빠를수록 물질파 파장이 길어진다고 믿어 반비례 관계를 거꾸로 이해함',
+    correctConcept:'물질파 파장은 운동량에 반비례하므로(λ = h/mv) 속력이 커지면 파장은 짧아진다',
+    sourcePaper:'Wuttiprom 외 (2009), International Journal of Science Education 31(5)' },
+  { id:'MD4', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD4', name_ko:'전자 회절 무늬가 충돌 때문이라고 봄', name_en:'Electron pattern attributed to collisions between electrons',
+    description:'전자 간섭무늬가 전자들이 서로 부딪혀 흩어져 생긴다고 믿어, 전자를 하나씩 보내면 무늬가 생기지 않는다고 예상함',
+    correctConcept:'전자를 하나씩 오래 보내도 같은 간섭무늬가 쌓인다. 무늬는 전자 사이의 충돌이 아니라 전자 하나의 파동성 때문에 생긴다',
+    sourcePaper:'Vokos, Ambrose, Shaffer & McDermott (2000), American Journal of Physics 68(S1)' },
+  { id:'MD5', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD5', name_ko:'슬릿 간격과 무늬 간격을 비례로 봄', name_en:'Slit spacing and fringe spacing taken proportional',
+    description:'전자 이중슬릿에서 슬릿 사이 간격을 넓히면 무늬 간격도 넓어진다고 믿음',
+    correctConcept:'무늬 간격은 슬릿 사이 간격에 반비례한다. 슬릿을 넓게 벌리면 무늬는 촘촘해진다',
+    sourcePaper:'Vokos, Ambrose, Shaffer & McDermott (2000), American Journal of Physics 68(S1)' },
+  { id:'MD6', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD6', name_ko:'전자 현미경 분해능을 입자 크기로 설명', name_en:'Electron microscope resolution attributed to particle size',
+    description:'전자 현미경이 광학 현미경보다 작은 것을 볼 수 있는 이유를 전자가 빛보다 작기 때문이라고 믿음',
+    correctConcept:'가속된 전자의 물질파 파장이 가시광선 파장보다 훨씬 짧기 때문에 분해능이 높다. 입자의 크기가 아니라 파장이 기준이다',
+    sourcePaper:'McKagan, Perkins & Wieman (2010), Physical Review Special Topics — PER 6(2)' },
+  { id:'MD7', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD7', name_ko:'물질파를 실제 운동 궤적으로 봄', name_en:'Matter wave seen as the particle’s physical trajectory',
+    description:'물질파를 입자가 물결처럼 위아래로 흔들리며 지나가는 실제 경로라고 믿음',
+    correctConcept:'물질파는 입자가 특정 위치에서 발견될 확률을 나타내는 파동이며, 입자가 실제로 그런 궤적을 그리며 움직이는 것이 아니다',
+    sourcePaper:'McKagan, Perkins & Wieman (2010), Physical Review Special Topics — PER 6(2)' },
+
   // ── 열역학 법칙 (unit 2) — TCE(Thermal Concept Evaluation) 및 열역학 오개념 연구 기반
   { id:'TH1', unitId:'2', subUnit:'열역학 법칙', dimensionCode:'TH', code:'TH1', name_ko:'열을 물체가 담고 있는 양으로 봄', name_en:'Heat as a substance stored in objects',
     description:'물체가 열을 일정량 담고 있는 물질처럼 생각하여 열과 내부 에너지를 구분하지 못함',
@@ -751,6 +793,95 @@ const sentences = [
   { id:'SR8-S01', misconceptionId:'SR8', isWrong:true,  sentence:'핵반응에서는 질량수가 보존되므로 반응 전후의 질량도 정확히 같다', difficulty:2 },
   { id:'SR8-S02', misconceptionId:'SR8', isWrong:false, sentence:'핵반응에서 줄어든 질량은 E = mc² 에 따라 에너지로 방출된다', difficulty:2 },
   { id:'SR8-S03', misconceptionId:'SR8', isWrong:false, sentence:'핵융합에서도 반응 후 질량의 합이 반응 전보다 작아진다', difficulty:3 },
+
+  /* ── 판별 문장이 없던 기존 오개념 보강 (사전 진단검사에 쓰이려면 문장이 필요함) ── */
+
+  // 뉴턴 운동 법칙
+  { id:'I2-S01', misconceptionId:'I2', isWrong:true,  sentence:'벽에 부딪혀 튕겨 나온 공은 운동을 이어가기 위해 힘을 다시 얻어야 한다', difficulty:2 },
+  { id:'I2-S02', misconceptionId:'I2', isWrong:true,  sentence:'물체가 방향을 바꾸는 순간에는 운동을 유지하던 힘이 사라졌다가 되살아난다', difficulty:2 },
+  { id:'I2-S03', misconceptionId:'I2', isWrong:false, sentence:'힘은 가속도를 만들 뿐이며 물체 안에 운동을 유지하는 힘이 저장되지는 않는다', difficulty:2 },
+  { id:'I4-S01', misconceptionId:'I4', isWrong:true,  sentence:'물체에 일정한 힘을 주기 시작하면 잠시 뒤부터 가속이 시작된다', difficulty:2 },
+  { id:'I4-S02', misconceptionId:'I4', isWrong:true,  sentence:'일정한 힘을 받는 물체는 힘이 쌓이는 동안 가속도가 점점 커진다', difficulty:3 },
+  { id:'I4-S03', misconceptionId:'I4', isWrong:false, sentence:'알짜힘이 작용하는 순간부터 가속도가 생긴다', difficulty:2 },
+  { id:'AF6-S01', misconceptionId:'AF6', isWrong:true,  sentence:'마찰이 없는 우주 공간에서도 일정한 힘을 계속 받는 물체는 어느 최대 속도에서 더 빨라지지 않는다', difficulty:2 },
+  { id:'AF6-S02', misconceptionId:'AF6', isWrong:false, sentence:'마찰이 없다면 일정한 힘을 계속 받는 물체의 속도는 계속 증가한다', difficulty:2 },
+  { id:'AF6-S03', misconceptionId:'AF6', isWrong:false, sentence:'낙하하는 물체가 종단속도에 이르는 것은 공기 저항력이 중력과 같아져 알짜힘이 0이 되기 때문이다', difficulty:3 },
+  { id:'AF7-S01', misconceptionId:'AF7', isWrong:true,  sentence:'일정한 출력으로 달리는 자동차의 엔진 힘은 시간이 지나면 저절로 약해진다', difficulty:2 },
+  { id:'AF7-S02', misconceptionId:'AF7', isWrong:true,  sentence:'던진 공이 느려지는 것은 손에서 받은 힘을 다 써버렸기 때문이다', difficulty:1 },
+  { id:'AF7-S03', misconceptionId:'AF7', isWrong:false, sentence:'던진 공이 느려지는 것은 공기 저항과 중력이 작용하기 때문이다', difficulty:2 },
+  { id:'CI2-S01', misconceptionId:'CI2', isWrong:true,  sentence:'동쪽으로 3 N, 북쪽으로 4 N의 힘을 받는 물체는 정확히 북동쪽 45° 방향으로 가속된다', difficulty:3 },
+  { id:'CI2-S02', misconceptionId:'CI2', isWrong:true,  sentence:'여러 힘이 작용할 때 운동 방향은 힘들의 방향을 절반씩 나눈 방향이 된다', difficulty:2 },
+  { id:'CI2-S03', misconceptionId:'CI2', isWrong:false, sentence:'가속도의 방향은 모든 힘을 벡터로 더한 알짜힘의 방향과 같다', difficulty:2 },
+  { id:'CI3-S01', misconceptionId:'CI3', isWrong:true,  sentence:'가장 나중에 작용한 힘이 물체의 이후 운동 방향을 결정한다', difficulty:2 },
+  { id:'CI3-S02', misconceptionId:'CI3', isWrong:true,  sentence:'여러 힘이 차례로 작용하면 마지막 힘만 남아 운동을 이끈다', difficulty:2 },
+  { id:'CI3-S03', misconceptionId:'CI3', isWrong:false, sentence:'운동은 그 순간 작용하는 모든 힘의 합으로 결정되며 힘이 작용한 순서와는 관계없다', difficulty:2 },
+  { id:'R3-S01', misconceptionId:'R3', isWrong:true,  sentence:'마찰은 힘이 아니라 물체가 지닌 운동의 기운을 깎아내는 성질이다', difficulty:2 },
+  { id:'R3-S02', misconceptionId:'R3', isWrong:false, sentence:'마찰력은 접촉면에서 운동 방향과 반대로 작용하는 힘이다', difficulty:1 },
+  { id:'R3-S03', misconceptionId:'R3', isWrong:false, sentence:'마찰력도 힘이므로 알짜힘을 구할 때 다른 힘들과 함께 벡터로 더한다', difficulty:2 },
+
+  // 물체의 운동 (중력)
+  { id:'G1-S01', misconceptionId:'G1', isWrong:true,  sentence:'공기가 위에서 눌러 주기 때문에 물체가 아래로 떨어진다', difficulty:1 },
+  { id:'G1-S02', misconceptionId:'G1', isWrong:true,  sentence:'진공에서는 공기가 눌러 주지 않으므로 물체가 떨어지지 않는다', difficulty:2 },
+  { id:'G1-S03', misconceptionId:'G1', isWrong:false, sentence:'진공에서도 중력이 작용하므로 물체는 떨어진다', difficulty:1 },
+  { id:'G2-S01', misconceptionId:'G2', isWrong:true,  sentence:'중력은 물체가 원래부터 지니고 있는 자기 성질이다', difficulty:2 },
+  { id:'G2-S02', misconceptionId:'G2', isWrong:false, sentence:'중력은 두 물체 사이에 서로 작용하는 힘이다', difficulty:1 },
+  { id:'G2-S03', misconceptionId:'G2', isWrong:false, sentence:'같은 물체라도 달에서 받는 중력의 크기는 지구에서보다 작다', difficulty:2 },
+
+  // 역학적 에너지 보존
+  { id:'ME3-S01', misconceptionId:'ME3', isWrong:true,  sentence:'마찰이 있는 면을 미끄러지는 물체도 역학적 에너지가 보존된다', difficulty:2 },
+  { id:'ME3-S02', misconceptionId:'ME3', isWrong:false, sentence:'역학적 에너지 보존은 마찰이나 공기 저항 같은 비보존력이 작용하지 않을 때만 성립한다', difficulty:2 },
+  { id:'ME3-S03', misconceptionId:'ME3', isWrong:false, sentence:'마찰이 있으면 줄어든 역학적 에너지는 열 등 다른 형태로 전환된다', difficulty:2 },
+  { id:'ME6-S01', misconceptionId:'ME6', isWrong:true,  sentence:'모든 충돌에서 충돌 전후의 운동 에너지 합은 같다', difficulty:2 },
+  { id:'ME6-S02', misconceptionId:'ME6', isWrong:false, sentence:'비탄성 충돌에서는 운동량은 보존되지만 운동 에너지의 일부가 열이나 변형으로 손실된다', difficulty:2 },
+  { id:'ME6-S03', misconceptionId:'ME6', isWrong:false, sentence:'완전 탄성 충돌에서만 충돌 전후 운동 에너지의 합이 같다', difficulty:3 },
+  { id:'ME7-S01', misconceptionId:'ME7', isWrong:true,  sentence:'위치 에너지는 기준면을 어디로 잡아도 항상 같은 값이다', difficulty:2 },
+  { id:'ME7-S02', misconceptionId:'ME7', isWrong:false, sentence:'위치 에너지는 선택한 기준면으로부터의 높이에 따라 달라지는 상대적인 값이다', difficulty:2 },
+  { id:'ME7-S03', misconceptionId:'ME7', isWrong:false, sentence:'기준면을 바꾸면 위치 에너지 값은 달라지지만 두 지점의 위치 에너지 차이는 같다', difficulty:3 },
+
+  // 파동의 간섭 (음파)
+  { id:'WI3-S01', misconceptionId:'WI3', isWrong:true,  sentence:'음파의 간섭은 매질 입자의 변위를 벡터로 더해서만 판단할 수 있다', difficulty:3 },
+  { id:'WI3-S02', misconceptionId:'WI3', isWrong:false, sentence:'음파의 간섭은 스칼라량인 음압을 더해서 분석한다', difficulty:3 },
+  { id:'WI3-S03', misconceptionId:'WI3', isWrong:false, sentence:'매질 입자의 진동 방향과 음압은 구분해서 다뤄야 한다', difficulty:2 },
+  { id:'WI4-S01', misconceptionId:'WI4', isWrong:true,  sentence:'소리의 간섭에서 진폭이 커진다는 것은 매질 입자의 변위 진폭이 커진다는 뜻이다', difficulty:3 },
+  { id:'WI4-S02', misconceptionId:'WI4', isWrong:false, sentence:'소리의 보강간섭에서 커지는 진폭은 음압의 진폭이다', difficulty:3 },
+  { id:'WI4-S03', misconceptionId:'WI4', isWrong:false, sentence:'간섭을 설명할 때는 어떤 물리량의 진폭인지 밝혀야 한다', difficulty:2 },
+  { id:'WI5-S01', misconceptionId:'WI5', isWrong:true,  sentence:'소리는 교과서 그림처럼 매질이 옆으로 흔들리며 전달되는 파동이다', difficulty:2 },
+  { id:'WI5-S02', misconceptionId:'WI5', isWrong:false, sentence:'소리는 매질이 진행 방향과 같은 방향으로 진동하는 종파이다', difficulty:1 },
+  { id:'WI5-S03', misconceptionId:'WI5', isWrong:false, sentence:'소리를 사인 곡선으로 그리는 것은 음압의 변화를 나타낸 표현이다', difficulty:3 },
+
+  // 파동의 간섭 (빛) — 신규 오개념
+  { id:'WI6-S01', misconceptionId:'WI6', isWrong:true,  sentence:'이중슬릿 간섭무늬의 간격은 슬릿의 폭이 넓을수록 넓어진다', difficulty:2 },
+  { id:'WI6-S02', misconceptionId:'WI6', isWrong:true,  sentence:'스크린을 슬릿에서 더 멀리 옮겨도 간섭무늬의 간격은 변하지 않는다', difficulty:2 },
+  { id:'WI6-S03', misconceptionId:'WI6', isWrong:false, sentence:'파장이 길수록 이중슬릿 간섭무늬의 간격은 넓어진다', difficulty:2 },
+  { id:'WI7-S01', misconceptionId:'WI7', isWrong:true,  sentence:'슬릿이 하나만 있으면 스크린에는 슬릿 모양의 밝은 부분만 생긴다', difficulty:2 },
+  { id:'WI7-S02', misconceptionId:'WI7', isWrong:false, sentence:'슬릿이 하나여도 회절이 일어나 중앙이 가장 밝고 좌우로 어두운 무늬가 반복된다', difficulty:2 },
+  { id:'WI7-S03', misconceptionId:'WI7', isWrong:false, sentence:'슬릿의 폭이 좁아질수록 회절 무늬는 더 넓게 퍼진다', difficulty:3 },
+  { id:'WI8-S01', misconceptionId:'WI8', isWrong:true,  sentence:'상쇄간섭이 일어난 지점에서는 빛의 에너지가 사라진다', difficulty:2 },
+  { id:'WI8-S02', misconceptionId:'WI8', isWrong:false, sentence:'상쇄간섭 지점의 에너지는 보강간섭 지점으로 재분배되며 전체 에너지는 보존된다', difficulty:3 },
+  { id:'WI8-S03', misconceptionId:'WI8', isWrong:false, sentence:'두 스피커의 소리가 상쇄되는 지점이 있어도 방 전체의 소리 에너지가 줄어드는 것은 아니다', difficulty:3 },
+
+  // 물질의 이중성
+  { id:'MD1-S01', misconceptionId:'MD1', isWrong:true,  sentence:'측정 장비가 더 정밀해지면 전자의 위치와 운동량을 동시에 정확히 알 수 있다', difficulty:2 },
+  { id:'MD1-S02', misconceptionId:'MD1', isWrong:false, sentence:'불확정성은 장비의 정밀도와 무관한 근본적인 한계이다', difficulty:2 },
+  { id:'MD1-S03', misconceptionId:'MD1', isWrong:false, sentence:'위치를 더 정확히 알수록 운동량의 불확정성은 커진다', difficulty:3 },
+  { id:'MD2-S01', misconceptionId:'MD2', isWrong:true,  sentence:'야구공에는 물질파가 존재하지 않는다', difficulty:2 },
+  { id:'MD2-S02', misconceptionId:'MD2', isWrong:false, sentence:'모든 물체가 물질파를 갖지만 질량이 크면 파장이 너무 짧아 관측할 수 없다', difficulty:2 },
+  { id:'MD2-S03', misconceptionId:'MD2', isWrong:false, sentence:'전자의 파동성이 쉽게 관측되는 것은 물질파 파장이 상대적으로 길기 때문이다', difficulty:3 },
+  { id:'MD3-S01', misconceptionId:'MD3', isWrong:true,  sentence:'전자의 속력이 빨라지면 물질파 파장도 길어진다', difficulty:2 },
+  { id:'MD3-S02', misconceptionId:'MD3', isWrong:true,  sentence:'같은 속력이라면 질량이 큰 입자의 물질파 파장이 더 길다', difficulty:3 },
+  { id:'MD3-S03', misconceptionId:'MD3', isWrong:false, sentence:'물질파 파장은 운동량에 반비례한다', difficulty:2 },
+  { id:'MD4-S01', misconceptionId:'MD4', isWrong:true,  sentence:'전자 간섭무늬는 전자들이 서로 부딪혀 흩어지면서 생긴다', difficulty:2 },
+  { id:'MD4-S02', misconceptionId:'MD4', isWrong:true,  sentence:'전자를 하나씩 오래 보내면 간섭무늬가 생기지 않는다', difficulty:3 },
+  { id:'MD4-S03', misconceptionId:'MD4', isWrong:false, sentence:'전자를 하나씩 보내도 오래 쌓으면 같은 간섭무늬가 나타난다', difficulty:3 },
+  { id:'MD5-S01', misconceptionId:'MD5', isWrong:true,  sentence:'두 슬릿 사이의 간격을 넓히면 전자 간섭무늬의 간격도 넓어진다', difficulty:3 },
+  { id:'MD5-S02', misconceptionId:'MD5', isWrong:false, sentence:'두 슬릿 사이의 간격을 넓히면 간섭무늬는 촘촘해진다', difficulty:3 },
+  { id:'MD5-S03', misconceptionId:'MD5', isWrong:false, sentence:'무늬 간격은 슬릿 사이의 간격에 반비례한다', difficulty:2 },
+  { id:'MD6-S01', misconceptionId:'MD6', isWrong:true,  sentence:'전자 현미경이 더 작은 것을 볼 수 있는 이유는 전자가 빛보다 작기 때문이다', difficulty:2 },
+  { id:'MD6-S02', misconceptionId:'MD6', isWrong:false, sentence:'전자 현미경의 분해능이 높은 이유는 전자의 물질파 파장이 가시광선보다 짧기 때문이다', difficulty:2 },
+  { id:'MD6-S03', misconceptionId:'MD6', isWrong:false, sentence:'전자를 더 높은 전압으로 가속하면 파장이 짧아져 분해능이 좋아진다', difficulty:3 },
+  { id:'MD7-S01', misconceptionId:'MD7', isWrong:true,  sentence:'물질파는 전자가 물결처럼 위아래로 흔들리며 지나가는 실제 경로이다', difficulty:2 },
+  { id:'MD7-S02', misconceptionId:'MD7', isWrong:false, sentence:'물질파는 입자가 특정 위치에서 발견될 확률을 나타낸다', difficulty:3 },
+  { id:'MD7-S03', misconceptionId:'MD7', isWrong:false, sentence:'전자의 파동성은 전자 자체가 진동한다는 뜻이 아니다', difficulty:3 },
 ];
 
 /* ============================================================

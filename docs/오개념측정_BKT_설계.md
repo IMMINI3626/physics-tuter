@@ -532,8 +532,38 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
   "정한 소단원의 오개념 중에서만 고르라"로 지시를 바꿨다. 저장 단계
   (`addDiagnosedMisconceptions`)에서도 실제 존재하고 소단원이 일치하는 id만 남기도록 걸렀다.
   이 정리가 없으면 열역학·특수 상대성 사진이 가짜 id로 진단돼 L2/L3 범위 축소가 작동하지 않는다.
-- 남은 결함: 기존 오개념 17개에 판별 문장이 없다(I2, I4, AF6, AF7, CI2, CI3, Ob, R3, G1, G2, ME3,
+- (단계 7-2에서 해소됨) 당시 남은 결함: 기존 오개념 17개에 판별 문장이 없다(I2, I4, AF6, AF7, CI2, CI3, Ob, R3, G1, G2, ME3,
   ME6, ME7, WI3, WI4, WI5, MD1). 단계 8(사전 진단검사)이 문장을 표본으로 쓰므로 그전에 보강 필요.
+
+### 단계 7-2 — 진단검사용 데이터 보강 (2026-07)
+
+단계 8(사전 진단검사)은 소단원의 `misconception_sentences`에서 서로 다른 오개념 5개의 문장을
+뽑아 쓴다. 착수 전 데이터를 점검해 두 가지 결함을 확인하고 보강했다.
+
+| 결함 | 이전 | 이후 |
+|---|---|---|
+| 물질의 이중성 오개념 수 | 1개 (단원 학습이 성립 안 함) | 7개 |
+| 파동의 간섭에 빛 간섭·회절 오개념 없음 | 5개 모두 음파 | 8개 (이중슬릿·회절 추가) |
+| 판별 문장이 없는 오개념 | 17개 | 0개 |
+| 전체 오개념 / 문장 | 103 / 214 | 112 / 289 |
+
+- 신규 오개념 9개: WI6(무늬 간격을 슬릿 폭으로 봄), WI7(단일슬릿에 무늬 없다고 봄),
+  WI8(상쇄간섭에서 에너지 소멸), MD2(거시 물체에 물질파 없음), MD3(파장이 속력에 비례),
+  MD4(전자 간섭무늬를 충돌로 설명), MD5(슬릿 간격과 무늬 간격을 비례로 봄),
+  MD6(전자 현미경 분해능을 입자 크기로 설명), MD7(물질파를 실제 궤적으로 봄).
+- 근거 문헌은 참고문헌의 파동 광학·양자 항목 5편. 모두 온라인 서지로 존재를 확인했다.
+- 판별 문장이 없던 기존 오개념 16개(뉴턴 9, 역학적 에너지 3, 파동의 간섭 3, 물질의 이중성 1)에
+  문장 3개씩 추가. 기존 FCI/FMCE 기반 오개념의 설명·정개념을 그대로 문장화한 것이라 새 인용은 없다.
+- 개념 영역(dimension)은 19개 그대로. WI·MD가 이미 있어 추가하지 않았다.
+
+진단검사 가능 여부 (소단원별 문장 있는 오개념 수)
+
+| 5문항 가능 | 문항 수 제한 |
+|---|---|
+| 물체의 운동 8, 뉴턴 운동 법칙 22, 역학적 에너지 보존 13, 파동의 간섭 8, 물질의 이중성 7, 전류의 자기 작용 13, 전자기 유도 5, 원자 모형과 전기력 6, 열역학 8, 특수 상대성 8 | 파동의 진동과 굴절 4, 빛의 이중성 4, 운동량과 충격량 3, 에너지 띠와 반도체 3 |
+
+오른쪽 4개 소단원은 오개념 자체가 5개 미만이라 진단검사가 3~4문항으로 줄어든다. 검사는 정상
+작동하지만 L1 학습량도 함께 짧아지므로(오개념 3개면 L1 4문제) 오개념 보강이 향후 과제로 남는다.
 
 ---
 
@@ -560,3 +590,12 @@ lastUpdated) CRUD 추가. 순수 데이터 계층이라 아직 호출부는 없�
 - Scherr, R. E., Shaffer, P. S., & Vokos, S. (2001). Student Understanding of Time in Special Relativity: Simultaneity and Reference Frames. *American Journal of Physics*, 69(S1), S24–S35. doi:10.1119/1.1371254
 - Aslanides, J. S., & Savage, C. M. (2013). Relativity Concept Inventory: Development, Analysis, and Results. *Physical Review Special Topics — Physics Education Research*, 9(1), 010118.
 - Dimitriadi, K., & Halkia, K. (2012). Secondary Students' Understanding of Basic Ideas of Special Relativity. *International Journal of Science Education*, 34(16), 2565–2582.
+
+파동 광학·양자 오개념 (단계 7-2 근거)
+
+- Ambrose, B. S., Shaffer, P. S., Steinberg, R. N., & McDermott, L. C. (1999). An Investigation of Student Understanding of Single-slit Diffraction and Double-slit Interference. *American Journal of Physics*, 67(2), 146–155.
+- Vokos, S., Ambrose, B. S., Shaffer, P. S., & McDermott, L. C. (2000). Student Understanding of the Wave Nature of Matter: Diffraction and Interference of Particles. *American Journal of Physics*, 68(S1), S42–S51.
+- Wuttiprom, S., Sharma, M. D., Johnston, I. D., Chitaree, R., & Soankwan, C. (2009). Development and Use of a Conceptual Survey in Introductory Quantum Physics. *International Journal of Science Education*, 31(5), 631–654.
+- McKagan, S. B., Perkins, K. K., & Wieman, C. E. (2010). Design and Validation of the Quantum Mechanics Conceptual Survey. *Physical Review Special Topics — Physics Education Research*, 6(2), 020121.
+- Matejak Cvenic, K., Ivanjek, L., Planinic, M., Jelicic, K., Susac, A., Hopf, M., & Cindric Brkic, M. (2023). Probing High School Students' Understanding of Interference and Diffraction of Light Using Standard Wave Optics Experiments. *Physical Review Physics Education Research*, 19(2), 020118.
+- Wittmann, M. C., Steinberg, R. N., & Redish, E. F. (1999). Making Sense of How Students Make Sense of Mechanical Waves. *The Physics Teacher*, 37(1), 15–21.
