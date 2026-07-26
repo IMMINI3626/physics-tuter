@@ -178,12 +178,6 @@ function validateCalcQuestion(q, label) {
 /* ────────────────────────────────────────
    보조 오개념 마스터 (FCI가 커버하지 못하는 비역학 등)
 ──────────────────────────────────────── */
-const SUPPLEMENTAL_MISCONCEPTIONS = [
-  { id: 'M-W01', description: '파동이 전파될 때 매질이 함께 이동한다는 오개념' },
-  { id: 'M-E01', description: '전류가 전구를 지나면서 소모된다는 오개념' },
-  { id: 'M-T01', description: '온도와 열을 같은 개념으로 혼동하는 오개념' },
-];
-
 /* ────────────────────────────────────────
    Function 1: extractKeywords (하이브리드 DB 연동 버전)
 ──────────────────────────────────────── */
@@ -192,10 +186,12 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
   if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
 
   try {
-    // 1. 메인 DB (FCI 역학 오개념) 불러오기
+    // 1. 오개념 DB 전체 불러오기 (14개 소단원 전부 수록 — 역학/비역학 구분 없음).
+    //    소단원명을 함께 넘겨야 AI가 "이 사진의 단원"과 "그 단원의 오개념"을 일관되게 고른다.
     const misRef = await db.collection('misconceptions').get();
     const dbMisconceptions = misRef.docs.map(doc => ({
       id: doc.data().id,
+      subUnit: doc.data().subUnit,
       description: doc.data().description
     }));
 
@@ -203,16 +199,13 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
     // 추론 불필요 → thinking 0. (입력이 큰 호출이라 여기서 지연을 가장 크게 줄인다)
     const model = getGeminiModel(0, { outputTokens: 1024 });
 
-    // 2. 하이브리드 프롬프트 + 소단원명 강제 지시
+    // 2. 소단원 분류 + 그 소단원의 오개념 매핑을 한 번에 요구하는 프롬프트
     const prompt = `
       다음 물리 교과서/필기 이미지를 분석하여 아래 JSON 형식으로 응답하세요.
       JSON 외 다른 텍스트는 절대 출력하지 마세요.
 
-      [제1기준: FCI/FMCE 물리 오개념 (역학 중심)]
+      [물리 오개념 목록 - 14개 소단원 전체]
       ${JSON.stringify(dbMisconceptions)}
-
-      [제2기준: 보조 물리 오개념 (비역학 중심)]
-      ${JSON.stringify(SUPPLEMENTAL_MISCONCEPTIONS)}
 
       {
         "unit": "고등학교 물리 소단원명 (예: '물체의 운동', '열역학 법칙', '파동의 간섭' 등 반드시 구체적인 소단원명만 출력하세요. '1단원'이나 '역학과 에너지' 같은 대분류는 절대 적지 마십시오.)",
@@ -231,9 +224,10 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
       - 파동: 파동의 진동과 굴절, 파동의 간섭, 빛의 이중성, 물질의 이중성
 
       [오개념 매핑 지시사항]
-      1. 역학 관련 이미지라면 반드시 [제1기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
-      2. 파동, 전자기학, 열역학 등 역학이 아니라면 [제2기준] 목록에서 가장 일치하는 id를 찾아 적으세요.
-      3. [제1기준], [제2기준] 두 곳 모두에 도저히 일치하는 내용이 없다면 id에 "ETC"라고 작성하세요.
+      1. 먼저 이미지의 소단원을 위 분류 리스트에서 정하세요.
+      2. 오개념은 반드시 위 목록에서 고르되, subUnit이 1번에서 정한 소단원과 같은 항목 중에서만 고르세요.
+      3. 그 소단원 안에 도저히 일치하는 내용이 없을 때만 id에 "ETC"라고 작성하세요.
+      4. 목록에 없는 id를 새로 지어내지 마세요.
     `;
 
     return await withRetry('extractKeywords', async () => {
