@@ -417,9 +417,7 @@ const FeedbackScreen = {
         </button>
       </div>
       <div style="display:flex;justify-content:center;margin:0 20px 20px;">
-        <button class="primary-btn" style="margin:0;width:auto;padding:12px 28px;background:var(--surface2);color:var(--text1);box-shadow:none" onclick="FeedbackScreen.continueNext()">
-          홈으로 나가기
-        </button>
+        <button class="text-link-btn" onclick="FeedbackScreen.continueNext()">홈으로 나가기</button>
       </div>
     `;
   },

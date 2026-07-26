@@ -438,3 +438,17 @@
   border-radius: 100px;
   transition: width 0.4s ease;
 }
+
+/* 테두리 없는 텍스트 버튼 — 주된 행동(다음 문제 풀기)과 시각적으로 구분되게
+   "홈으로 나가기" 같은 보조 행동에 쓴다. */
+.text-link-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: color 0.18s;
+}
+.text-link-btn:hover { color: var(--text1); }
