@@ -429,11 +429,11 @@ const LearningService = {
   /**
    * 승급 판정 (설계 4-10): 현재 레벨의 대상 오개념이 모두 숙달(P(L) ≥ τ)됐는지.
    * 대상이 하나도 없으면 승급시키지 않는다(데이터 누락으로 인한 오승급 방지).
-   * @returns {{ids, mastered, total, isPromoted, completed}}
+   * @returns {{ids, mastered, total, ratio, isPromoted, completed}}
    */
   async evaluatePromotion(uid, unitName, level = 1) {
     if (!window.BKT || !uid || !unitName) {
-      return { ids: [], mastered: 0, total: 0, isPromoted: false, completed: false };
+      return { ids: [], mastered: 0, total: 0, ratio: 0, isPromoted: false, completed: false };
     }
     const { ids, knowledge, completed } = await this._levelTargets(uid, unitName, level);
     const mastered = ids.filter(id => window.BKT.isMastered(this._pL(knowledge, id))).length;
@@ -441,9 +441,33 @@ const LearningService = {
       ids,
       mastered,
       total: ids.length,
+      ratio: this._masteryRatio(ids, knowledge),
       isPromoted: ids.length > 0 && mastered === ids.length,
       completed,
     };
+  },
+
+  /**
+   * 화면에 띄울 진행률 (설계 4-10). 숙달한 "개수"를 세면 계단이 너무 성겨서, 만점을 여러 번
+   * 받아도 막대가 0%에 머문다. 한 문제가 겨냥하는 오개념은 2개이고 숙달에는 정답 2번이
+   * 필요하므로, 오개념 N개짜리 소단원은 앞의 N/2문제 동안 숙달이 하나도 안 나온다.
+   * 그래서 개수 대신 "각 오개념이 임계값 τ에 얼마나 다가갔는지"를 평균 낸다.
+   *
+   *   문항별 = (P(L) − P(L₀)) / (τ − P(L₀))   ... 0~1로 자름
+   *
+   * 출발점(unknown 0.30)이 정확히 0, 전부 숙달이 정확히 1이 되고 틀리면 내려간다.
+   * 🔑 승급 판정은 이 값을 쓰지 않는다. 승급은 여전히 "전부 P(L) ≥ τ"만 본다.
+   */
+  _masteryRatio(ids, knowledge) {
+    if (!ids || !ids.length) return 0;
+    const floor = window.BKT.PRIOR.unknown;
+    const span = window.BKT.MASTERY - floor;
+    if (!(span > 0)) return 0;
+    const sum = ids.reduce((acc, id) => {
+      const p = (this._pL(knowledge, id) - floor) / span;
+      return acc + Math.min(1, Math.max(0, p));
+    }, 0);
+    return sum / ids.length;
   },
 
   /**

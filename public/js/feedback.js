@@ -263,7 +263,7 @@ const FeedbackScreen = {
         const result = await window.LearningService.evaluatePromotion(
           uid, session.detectedUnit, session.currentLevel
         );
-        session.masteryProgress = { mastered: result.mastered, total: result.total };
+        session.masteryProgress = { mastered: result.mastered, total: result.total, ratio: result.ratio };
 
         // 오개념 데이터가 없는 소단원은 이해도로 판정할 대상이 없다(안전망).
         // 그런 소단원에서만 예전 누적 정답 방식으로 승급시킨다.
@@ -325,7 +325,10 @@ const FeedbackScreen = {
       uid, session.detectedUnit, target
     );
     session.correctCount = result.count;
-    session.masteryProgress = { mastered: result.count, total: target, legacy: true };
+    session.masteryProgress = {
+      mastered: result.count, total: target, legacy: true,
+      ratio: Math.min(1, result.count / target),   // 폴백 경로는 누적 정답 비율이 곧 진행률
+    };
     if (result.isPromoted) session.correctCount = 0;
     return result.isPromoted;
   },
@@ -383,10 +386,15 @@ const FeedbackScreen = {
     // 승급까지 남은 정도를 진행률(%)로만 보여준다. 내부적으로는 "레벨 대상 오개념 중 숙달한 비율"
     // (설계 4-10)이지만, 학습자에게 오개념 개수를 노출하면 "몇 개짜리 단원인가"에 신경이 쏠려
     // 학습 자체보다 숫자를 좇게 된다. 화면에는 진행도만 남긴다.
+    // 🔑 숙달한 개수(mastered/total)가 아니라 이해도가 임계값에 다가간 비율(ratio)을 쓴다.
+    //    개수로 세면 만점을 4번 받아도 0%에 머문다(_masteryRatio 주석 참고).
     const mastery = window.AppState.session.masteryProgress;
-    const percent = (mastery && mastery.total)
-      ? Math.round((mastery.mastered / mastery.total) * 100)
+    let percent = (mastery && mastery.total && typeof mastery.ratio === 'number')
+      ? Math.round(mastery.ratio * 100)
       : null;
+    // 🔑 100%인데 승급이 안 되면 학습자는 화면이 고장난 줄 안다. 임계값 바로 아래(0.899)에
+    //    걸린 오개념이 있으면 반올림으로 100이 나올 수 있으므로 승급 전에는 99에서 막는다.
+    if (percent === 100 && mastery.mastered < mastery.total) percent = 99;
 
     // 합격했으면 다시 풀어보기 버튼 숨김 (마이페이지에서만 재시도)
     const retryBtn = isPassed ? '' : `
