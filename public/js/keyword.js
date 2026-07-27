@@ -100,8 +100,20 @@ const KeywordScreen = {
     ).join('');
   },
 
-  /* 문제 풀기 버튼 */
+  /* 문제 풀기 버튼.
+     이 소단원을 처음 시작하는 거라면 문제 생성 전에 사전 진단검사를 먼저 본다(설계 4-11).
+     검사가 끝나면 _generateAndGo가 이어서 실행돼 원래 하려던 문제 생성으로 돌아온다. */
   async startQuiz() {
+    const started = await DiagnosticScreen.startIfNeeded(
+      AppState.session.detectedUnit,
+      () => this._generateAndGo()
+    );
+    if (started) return;
+    await this._generateAndGo();
+  },
+
+  /* 문제 생성 후 알맞은 문제 화면으로 이동 */
+  async _generateAndGo() {
     const btn = document.getElementById('btn-start-quiz');
     if (btn) {
       btn.disabled = true;

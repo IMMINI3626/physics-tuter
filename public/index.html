@@ -178,6 +178,31 @@
 
 
 <!-- ============================================================
+     SCREEN 3-B: DIAGNOSTIC — 사전 진단검사 (소단원당 1회, 설계 4-11)
+     문장 5개를 O/X로 판단해 오개념별 초기 이해도를 세운다. 점수·정답은 보여주지 않는다.
+     ============================================================ -->
+<div id="screen-diagnostic" class="screen">
+  <header class="topbar">
+    <div style="width:72px"></div>
+    <div class="topbar-logo">Physi<span>Clinic</span></div>
+    <div style="width:72px"></div>
+  </header>
+
+  <div class="progress-bar">
+    <div class="progress-info">
+      <span class="progress-info-label">사전 확인</span>
+      <span class="progress-info-step" id="diag-unit-label">단원명</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="diag-progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div id="diag-body"></div>
+</div><!-- /screen-diagnostic -->
+
+
+<!-- ============================================================
      SCREEN 4-B: CALC — Level 2 Mode B 계산 단답형
      ============================================================ -->
 <div id="screen-calc" class="screen">
@@ -780,6 +805,7 @@
      ============================================================ -->
 <script src="js/app.js"></script>
 <script src="js/bkt.js"></script>
+<script src="js/diagnostic.js"></script>
 <script src="js/home.js"></script>
 <script src="js/quiz-library.js"></script>
 <script src="js/keyword.js"></script>

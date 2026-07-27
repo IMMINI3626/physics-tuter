@@ -148,8 +148,9 @@ const Router = {
 
   // 화면 ID → nav 아이템 ID 매핑
   navMap: {
-    home:     'nav-home',
-    keyword:  'nav-quiz',
+    home:       'nav-home',
+    keyword:    'nav-quiz',
+    diagnostic: 'nav-quiz',
     calc:     'nav-quiz',
     level3:   'nav-quiz',
     step1:    'nav-quiz',

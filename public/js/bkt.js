@@ -20,11 +20,18 @@ const BKT = {
      "스스로 앎"의 증거가 약하므로 그 정답의 증거력을 할인한다(설계 4-6). */
   HINT_GUESS: 0.50,
 
-  /* 초기 이해도 P(L₀) — 어디서 걸렸느냐로 결정 (설계 4-3) */
+  /* 사전 진단검사 문항에 적용할 추측 확률 (설계 4-11).
+     진단 문항은 문장 하나를 O/X로 판단하는 이지선다라, 몰라도 절반은 맞는다.
+     그래서 진단 결과를 "정답이면 0.70" 같은 손으로 정한 초기값으로 쓰지 않고,
+     unknown(0.30)에서 시작해 이 추측률로 관측 한 건을 반영한다. */
+  DIAGNOSTIC_GUESS: 0.50,
+
+  /* 초기 이해도 P(L₀) — 어디서 걸렸느냐로 결정 (설계 4-3)
+     🔑 진단검사 정답용 초기값(known 0.70)은 4-11에서 폐기했다. O/X 찍기 한 번 + 문제 한 번이면
+        숙달로 올라가 10%가 운으로 통과했다. 지금은 applyDiagnostic()이 값을 계산한다. */
   PRIOR: {
-    weak:    0.15,  // 진단검사 오답 / 사진에서 진단됨 (약점 확인)
-    known:   0.70,  // 진단검사 정답 (아마 앎)
-    unknown: 0.30,  // 아무데도 안 걸림 (미지)
+    weak:    0.15,  // 사진에서 진단됨 (약점 확인)
+    unknown: 0.30,  // 아직 아무 증거 없음 (미지) — 진단검사 전 모든 오개념의 출발점
   },
 
   /* 숙달 판정 임계값 τ (설계 4-3) */
@@ -40,6 +47,8 @@ const BKT = {
    * @param {boolean} isCorrect 이 관측이 정답인지
    * @param {object} [opts]
    * @param {boolean} [opts.usedHint] 힌트를 보고 맞혔는지 (정답일 때만 P(G) 상향)
+   * @param {number}  [opts.guess]    이 관측에만 쓸 추측 확률 (지정하면 usedHint보다 우선).
+   *                                  O/X 진단 문항처럼 문항 형식이 추측률을 바꿀 때 쓴다.
    * @returns {number} 갱신된 P(L) (0~1)
    */
   update(pL, isCorrect, opts = {}) {
@@ -47,15 +56,21 @@ const BKT = {
     // 입력 방어: 확률 범위를 벗어난 값이 들어오면 안전하게 클램프
     const prior = Math.min(1, Math.max(0, Number(pL)));
 
+    // 🔑 opts.guess와 usedHint는 적용 범위가 다르다.
+    //    - opts.guess: 문항 형식이 추측률을 정하는 경우(O/X 진단). 오답 쪽 P(오답|미숙달)=1-g에도
+    //      똑같이 적용해야 한 문항에 대해 일관된 모델이 된다.
+    //    - usedHint: "힌트를 봤다"는 정답에만 의미가 있다. 힌트를 보고도 틀렸다면 그건 오히려
+    //      강한 미숙달 증거라 할인하지 않는다. 그래서 정답 쪽에만 적용한다.
+    const itemGuess = Number.isFinite(opts.guess) ? opts.guess : null;
+
     let posterior;
     if (isCorrect) {
-      // 힌트로 맞힌 정답은 추측 확률을 높여 증거를 할인
-      const g = opts.usedHint ? this.HINT_GUESS : pG;
+      const g = itemGuess ?? (opts.usedHint ? this.HINT_GUESS : pG);
       const num = prior * (1 - pS);
       posterior = num / (num + (1 - prior) * g);
     } else {
       const num = prior * pS;
-      posterior = num / (num + (1 - prior) * (1 - pG));
+      posterior = num / (num + (1 - prior) * (1 - (itemGuess ?? pG)));
     }
     // 분모가 0이 되는 극단(모든 확률이 0/1)일 때 NaN 방지
     if (!Number.isFinite(posterior)) posterior = prior;
@@ -76,9 +91,21 @@ const BKT = {
     return Number(pL) >= this.MASTERY;
   },
 
-  /** 진단 결과/상황에 맞는 초기 P(L₀) 반환. status: 'weak' | 'known' | 'unknown' */
+  /** 상황에 맞는 초기 P(L₀) 반환. status: 'weak' | 'unknown' */
   initialPL(status) {
     return this.PRIOR[status] ?? this.PRIOR.unknown;
+  },
+
+  /**
+   * 사전 진단검사 한 문항의 답을 이해도로 환산한다 (설계 4-11).
+   * unknown(0.30)에서 시작해 추측률 0.50짜리 관측 한 건을 반영한 값. 손으로 정한 상수가 아니라
+   * 모델이 계산한 값이라, "왜 이 숫자인가"가 파라미터 하나(P(L₀))로 환원된다.
+   *   정답 → 0.5202 (숙달까지 문제 정답 2번)
+   *   오답 → 0.2171 (숙달까지 문제 정답 3번)
+   * 건너뛴 문항은 관측이 없으므로 이 함수를 부르지 않고 unknown(0.30)을 그대로 둔다.
+   */
+  applyDiagnostic(isCorrect) {
+    return this.update(this.PRIOR.unknown, !!isCorrect, { guess: this.DIAGNOSTIC_GUESS });
   },
 
   /**

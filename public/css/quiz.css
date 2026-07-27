@@ -527,3 +527,146 @@
   border: 0.5px solid var(--border);
 }
 
+/* ============================================================
+   사전 진단검사 (screen-diagnostic) — 설계 4-11
+   5문항을 한 화면에 시험지처럼 늘어놓고, 문항마다 O / X / 건너뛰기를 고른다.
+   점수·정답을 보여주지 않으므로 결과 표시 요소가 없다.
+   ============================================================ */
+
+.diag-sheet { padding: 24px 20px 32px; }
+
+.diag-sheet-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--text1);
+}
+.diag-sheet-title .mark-o { color: var(--green); font-family: var(--font-mono); }
+.diag-sheet-title .mark-x { color: var(--red);   font-family: var(--font-mono); }
+
+.diag-sheet-note {
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text3);
+}
+
+/* ── 문항 목록 ── */
+.diag-items {
+  margin-top: 20px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.diag-item {
+  padding: 15px 15px 13px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color 0.2s, background 0.2s;
+}
+.diag-item.answered {
+  border-color: rgba(108,99,255,0.32);
+  background: rgba(108,99,255,0.03);
+}
+
+.diag-item-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.diag-item-num {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text3);
+  line-height: 1.65;
+}
+.diag-item-text {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text1);
+}
+
+/* ── O / X / 건너뛰기 ── */
+.diag-item-opts {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.diag-opt {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--bg);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--r-sm);
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.diag-opt.opt-skip {
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text3);
+}
+.diag-opt:hover { border-color: var(--border3); }
+
+.diag-opt.opt-o.selected {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.diag-opt.opt-x.selected {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.diag-opt.opt-skip.selected {
+  background: var(--surface3);
+  border-color: var(--border3);
+  color: var(--text2);
+}
+
+/* ── 제출 ── */
+#diag-submit { margin-top: 24px; }
+#diag-submit:disabled {
+  background: var(--surface2);
+  color: var(--text3);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* ── 완료 ── */
+.diag-done {
+  padding: 60px 24px;
+  text-align: center;
+}
+.diag-done-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text1);
+}
+.diag-done-desc {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text2);
+}
+.diag-spinner {
+  width: 26px;
+  height: 26px;
+  margin: 26px auto 0;
+  border: 2.5px solid var(--surface3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: diag-spin 0.8s linear infinite;
+}
+@keyframes diag-spin { to { transform: rotate(360deg); } }

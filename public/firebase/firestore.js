@@ -450,6 +450,61 @@ const LearningService = {
       await this.saveKnowledge(uid, id, next, cur?.attempts || 0);
     }));
   },
+
+  /**
+   * 이 소단원의 사전 진단검사를 아직 안 봤는지 (설계 4-11). 소단원당 1회만 본다.
+   * 비로그인은 저장할 곳이 없으므로 검사를 건너뛴다(false).
+   */
+  async needsDiagnostic(uid, unitName) {
+    if (!uid || !unitName) return false;
+    try {
+      const progress = await this.getUnitProgress(uid, unitName);
+      return !progress.diagnosticDone;
+    } catch (e) {
+      // 조회 실패로 학습 자체를 막지는 않는다 — 검사를 건너뛰고 바로 문제로 보낸다
+      console.warn('진단검사 여부 조회 실패, 건너뜀:', e);
+      return false;
+    }
+  },
+
+  /**
+   * 사전 진단검사 결과를 이해도로 환산해 저장한다 (설계 4-11).
+   *
+   * 답한 문항만 관측으로 반영한다(건너뛴 문항은 기록을 남기지 않아 unknown 0.30으로 남는다).
+   * 오답인 오개념은 "확인된 약점"이므로 진단 풀(diagnosedMisconceptions)에도 넣어, 사진 없이
+   * 들어온 경우에도 Level 2/3의 출제 범위가 좁혀지게 한다.
+   *
+   * @param {Array<{misconceptionId, isCorrect, skipped}>} answers
+   * @returns {{answered:number, correct:number, wrongIds:string[]}}
+   */
+  async saveDiagnosticResult(uid, unitName, answers) {
+    const BKT = window.BKT;
+    if (!BKT || !uid || !unitName) return { answered: 0, correct: 0, wrongIds: [] };
+
+    const graded = (answers || []).filter(a => a && a.misconceptionId && !a.skipped);
+    const wrongIds = graded.filter(a => !a.isCorrect).map(a => a.misconceptionId);
+
+    await Promise.all(graded.map(a =>
+      this.saveKnowledge(uid, a.misconceptionId, BKT.applyDiagnostic(a.isCorrect), 1)
+    ));
+
+    // 🔑 diagnosticDone을 먼저 세우면 저장이 중간에 실패했을 때 다시 볼 수 없다.
+    //    이해도 저장이 끝난 뒤에 표시한다.
+    await setDoc(doc(db, 'users', uid, 'unitProgress', unitName), {
+      diagnosticDone: true,
+      diagnosticAt: serverTimestamp(),
+      chapter: window.getChapter?.(unitName) || null,
+    }, { merge: true });
+
+    // 오답 오개념을 진단 풀에 누적 (addDiagnosedMisconceptions가 소단원 일치까지 걸러준다)
+    if (wrongIds.length) await this.addDiagnosedMisconceptions(uid, unitName, wrongIds);
+
+    return {
+      answered: graded.length,
+      correct: graded.filter(a => a.isCorrect).length,
+      wrongIds,
+    };
+  },
 };
 
 const MisconceptionDB = {
@@ -489,7 +544,78 @@ const MisconceptionDB = {
     this._subUnitMapCache = map;
     return map;
   },
+
+  /**
+   * 사전 진단검사 문항 세트를 만든다 (설계 4-11).
+   *
+   * 규칙 (우선순위 순):
+   *   1. 문장 개수만큼 서로 다른 오개념 — 한 오개념을 두 번 묶지 않는다.
+   *   2. 개념 영역(dimensionCode)을 돌아가며 뽑아 한 영역에 몰리지 않게 한다.
+   *      (14개 소단원 중 11개는 영역이 하나뿐이라 이 규칙이 실제로 작동하는 건 3개 소단원이다)
+   *   3. 틀린 문장과 옳은 문장을 섞는다 — 전부 틀린 문장이면 "다 틀렸다" 찍기로 다 맞는다.
+   *
+   * @returns {Array<{misconceptionId, sentenceId, sentence, isWrong}>} 부족하면 있는 만큼만
+   */
+  async fetchDiagnosticSet(unitName, count = 5) {
+    const all = await this._loadAll();
+    const pool = all.filter(m => m.subUnit === unitName);
+    if (!pool.length) return [];
+
+    // 규칙 2: 영역별로 묶어 섞은 뒤 라운드로빈으로 뽑는다
+    const byDim = {};
+    pool.forEach(m => (byDim[m.dimensionCode || '?'] ||= []).push(m.id));
+    Object.values(byDim).forEach(shuffle);
+    const dimLists = shuffle(Object.values(byDim));
+
+    const picked = [];
+    for (let round = 0; picked.length < count; round++) {
+      const before = picked.length;
+      for (const list of dimLists) {
+        if (picked.length >= count) break;
+        if (list[round]) picked.push(list[round]);
+      }
+      if (picked.length === before) break;   // 모든 영역이 소진됨
+    }
+    if (!picked.length) return [];
+
+    // 규칙 3: 틀린 문장/옳은 문장을 절반씩 배정 (홀수면 틀린 문장이 하나 많게)
+    const wantWrong = Math.ceil(picked.length / 2);
+    const wanted = shuffle(picked.map((_, i) => i < wantWrong));
+
+    const snap = await getDocs(query(
+      collection(db, 'misconception_sentences'),
+      where('misconceptionId', 'in', picked)
+    ));
+    const byMc = {};
+    snap.docs.forEach(d => (byMc[d.data().misconceptionId] ||= []).push({ id: d.id, ...d.data() }));
+
+    const items = [];
+    picked.forEach((mcId, i) => {
+      const cands = byMc[mcId] || [];
+      if (!cands.length) return;   // 문장 없는 오개념(현재 데이터엔 없음) 방어
+      // 배정된 종류를 먼저 찾고, 그 종류가 없으면 아무 문장이나 쓴다
+      const preferred = cands.filter(s => !!s.isWrong === wanted[i]);
+      const s = shuffle(preferred.length ? preferred : cands.slice())[0];
+      items.push({
+        misconceptionId: mcId,
+        sentenceId: s.id,
+        sentence: s.sentence,
+        isWrong: !!s.isWrong,
+      });
+    });
+
+    return shuffle(items);
+  },
 };
+
+/* 제자리 셔플(Fisher-Yates). 배열을 그대로 반환해 체이닝에 쓴다. */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 // 🔑 글로벌로 노출
 window.LearningService = LearningService;

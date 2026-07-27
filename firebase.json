@@ -26,7 +26,16 @@
   },
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs20",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "serviceAccountKey.json",
+      "seed.js",
+      "fix-unitprogress-counts.js",
+      "test_api.js",
+      "report.html"
+    ]
   },
   "emulators": {
     "functions": {

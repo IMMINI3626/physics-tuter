@@ -434,8 +434,18 @@ const MypageScreen = {
     this._renderHistoryPage();
   },
 
-  /* 이 소단원 추가 문제 풀기 → 새 문제 생성 후 해당 레벨 화면으로 이동 */
+  /* 이 소단원 추가 문제 풀기 → 새 문제 생성 후 해당 레벨 화면으로 이동.
+     사진 없이 들어오는 경로라 이 소단원의 사전 진단검사를 아직 안 봤다면 여기서도 먼저 본다. */
   async retryUnit(btnEl) {
+    const started = await DiagnosticScreen.startIfNeeded(
+      this._currentSubUnit,
+      () => this._generateAndGo(btnEl)
+    );
+    if (started) return;
+    await this._generateAndGo(btnEl);
+  },
+
+  async _generateAndGo(btnEl) {
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = '문제 생성 중...'; }
 
     try {
