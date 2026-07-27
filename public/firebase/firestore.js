@@ -6,7 +6,7 @@ import { db } from './config.js';
 
 const LearningService = {
   async saveSession(feedbackData) {
-    // 🔑 window.AppState로 접근
+    // window.AppState로 접근
     const uid = window.AppState.user?.uid;
     if (!uid) throw new Error('Not authenticated');
 
@@ -26,13 +26,13 @@ const LearningService = {
       wrongCount,
       hintUsed:       sessionData.hintUsed,
       checkedCount:   sessionData.checkedStatements.size,
-      // 🔑 힌트도 저장 — 과거 기록 "다시 풀기"로 이 문제를 복원할 때 힌트까지 되살리기 위함.
-      //    (안 저장하면 재도전 시 힌트가 하드코딩 기본 문구로 떨어짐)
+      // 힌트도 저장 — 과거 기록 "다시 풀기"로 이 문제를 복원할 때 힌트까지 되살리기 위함.
+      // (안 저장하면 재도전 시 힌트가 하드코딩 기본 문구로 떨어짐)
       hint1:          sessionData.hint1 || null,
       hint2:          sessionData.hint2 || null,
       createdAt:      serverTimestamp(),
     };
-    // 🔑 재도전(다시 풀어보기/다시 풀기)이면 원본 문제 id를 같이 저장 —
+    // 재도전(다시 풀어보기/다시 풀기)이면 원본 문제 id를 같이 저장 —
     // 마이페이지 이력에서 같은 문제끼리 묶어 보여주는 데 사용
     if (sessionData.isRetry && sessionData._rootSessionId) {
       sessionDoc.retryOf = sessionData._rootSessionId;

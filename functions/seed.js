@@ -10,9 +10,9 @@
  *
  * 시딩 대상:
  *   ✅ units                    (4개)
- *   ✅ misconception_dimensions  (19개)
- *   ✅ misconceptions            (130개 — 14개 소단원 전체, 소단원별 5개 이상)
- *   ✅ misconception_sentences   (343개, 모든 오개념에 문장 있음)
+ *   ✅ misconception_dimensions  (20개)
+ *   ✅ misconceptions            (128개 — 14개 소단원 전체, 소단원별 5개 이상)
+ *   ✅ misconception_sentences   (342개, 모든 오개념이 틀린 문장·옳은 문장을 모두 가짐)
  *   ✅ scoring_keywords          (54개, unit1 전용)
  *   ✅ fci_fmce_items            (73개 — FMCE 43 + FCI 30, unit1 전용)
  *   ✅ item_misconception_map    (130개, unit1 전용 — 현재 앱 로직 미사용, 향후 정식 진단평가용)
@@ -60,6 +60,7 @@ const dims = [
   { id:'16', code:'LD',  name_ko:'빛의 이중성',          name_en:'Light Duality',                     description:'광전효과·물질파·입자-파동 이중성 오개념' },
   { id:'17', code:'WR',  name_ko:'파동·굴절',            name_en:'Wave Refraction',                   description:'빛의 굴절·전반사·파장 변화 오개념' },
   { id:'18', code:'TH',  name_ko:'열역학',               name_en:'Thermodynamics',                    description:'열·온도·내부 에너지 구분, 열역학 제1·2법칙 관련 오개념' },
+  { id:'20', code:'EF',  name_ko:'전기력',               name_en:'Electric Force',                    description:'쿨롱 법칙, 전기력의 상호작용성, 자기 극과 전하의 구분 관련 오개념' },
   { id:'19', code:'SR',  name_ko:'특수 상대성',           name_en:'Special Relativity',                description:'광속 불변, 동시성·시간 지연·길이 수축, 질량-에너지 동등성 관련 오개념' },
 ];
 
@@ -248,26 +249,6 @@ const misconceptions = [
     correctConcept:'초기 높이가 높을수록 전체 역학적에너지가 크며, 진자가 도달 가능한 최고점도 초기 높이로 제한된다',
     sourcePaper:'정현 (2021), 충북대학교 대학원 석사학위논문, p.50-68' },
   // 파동의 간섭 (unit 4) — Yun et al. (2025)
-  { id:'WI1', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI1', name_ko:'진폭 물리량 혼동', name_en:'Confusion about what "amplitude" represents',
-    description:'음파 간섭에서 합성파의 "진폭"을 음압 진폭이 아닌 매질 변위 진폭으로 해석함 (조사 대상 67%)',
-    correctConcept:'소리의 간섭은 스칼라량인 음압의 합성으로 설명되며, 같은 위상의 음파가 만나면 음압 진폭이 커져 보강간섭이 일어난다',
-    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.744, 752-753' },
-  { id:'WI2', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI2', name_ko:'마주보는 음원 중앙 간섭 오개념', name_en:'Misconception about interference at midpoint of opposing speakers',
-    description:'매질 변위를 벡터로 상쇄시키는 논리로, 마주보는 두 스피커 정중앙에서 상쇄간섭이 일어난다고 잘못 판단함',
-    correctConcept:'중앙에서는 두 음파가 위상차 없이 만나 음압 진폭이 최대가 되므로 보강간섭이 일어난다 (음압과 변위는 위상이 90˚ 어긋남)',
-    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.750, 752-753' },
-  { id:'WI3', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI3', name_ko:'종파 변위 벡터합 오용', name_en:'Incorrect application of displacement vector addition to longitudinal waves',
-    description:'종파인 음파의 간섭을 매질 변위 벡터의 합으로만 분석하려 하여 2차원 공간에서의 보강·상쇄를 올바로 구분하지 못함',
-    correctConcept:'음파 간섭은 스칼라량인 음압의 합으로 분석해야 하며, 변위 벡터합만으로는 압력 변화를 설명할 수 없다',
-    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.746-748' },
-  { id:'WI4', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI4', name_ko:'교과서 진폭 표기 모호성', name_en:"Textbook's ambiguous use of amplitude in interference description",
-    description:'"위상이 같으면 진폭이 커진다"는 교과서 서술이 음압 진폭인지 변위 진폭인지 명시하지 않아 변위로 오해하게 됨',
-    correctConcept:'간섭을 설명할 때는 다루는 진폭이 음압의 진폭임을 명확히 표기해야 한다',
-    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.750-751' },
-  { id:'WI5', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI5', name_ko:'횡파 표현으로 인한 종파 특성 간과', name_en:'Sinusoidal representation obscuring longitudinal nature of sound',
-    description:'교과서가 소리(종파)를 이해하기 쉽도록 사인곡선(횡파 형태)으로 표현하는 관행 때문에 종파 특성과 음압의 스칼라적 성질을 간과함',
-    correctConcept:'음파는 종파이며 음압은 스칼라량으로 단순 덧셈으로 합성된다는 점을 매질 입자의 진동 방향(벡터)과 구분해 이해해야 한다',
-    sourcePaper:'Yun, Kwak & Choi (2025), 새물리 75(10), p.747-748' },
   // 물질의 이중성 (unit 4) — 이창열 (2021)
   { id:'MD1', unitId:'4', subUnit:'물질의 이중성', dimensionCode:'MD', code:'MD1', name_ko:'불확정성 원리 원인 오해', name_en:'Misconception that uncertainty arises from measurement device limits',
     description:'전자 등 입자의 위치·운동량을 동시에 정확히 측정할 수 없는 불확정성의 원인을 측정 장비의 정밀도 한계로 오해함',
@@ -379,18 +360,29 @@ const misconceptions = [
     description:'원자 내 전자 에너지가 불연속적(양자화)이라는 개념을 이해하지 못하고 연속적으로 변한다고 생각함',
     correctConcept:'원자 내 전자는 특정 에너지 값(에너지 준위)만 가질 수 있으며, 그 사이 값의 에너지는 가질 수 없다',
     sourcePaper:'장숙경 (2014), 원자 모형과 그 변천 과정에 대한 고등학생들의 이해 조사, 이화여대 석사학위논문' },
-  { id:'AT4', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'AT', code:'AT4', name_ko:'오비탈 = 전자 궤도', name_en:'Orbital is the actual orbit of electron',
-    description:'오비탈이 확률밀도 분포가 아닌 전자가 실제로 도는 궤도라고 믿음',
-    correctConcept:'오비탈은 전자가 발견될 확률이 높은 공간 영역(확률밀도함수)이며, 전자가 일정한 궤도를 도는 것이 아니다',
-    sourcePaper:'장숙경 (2014), 원자 모형과 그 변천 과정에 대한 고등학생들의 이해 조사, 이화여대 석사학위논문' },
-  { id:'AT5', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'AT', code:'AT5', name_ko:'점밀도 그림 점 = 개별 전자', name_en:'Dots in electron cloud represent individual electrons',
-    description:'오비탈을 점밀도로 표현한 그림에서 각 점을 실제 전자의 위치로 인식함',
-    correctConcept:'점밀도 그림의 점은 전자가 그 위치에서 발견될 확률의 상대적 크기를 나타내며, 전자 개수를 의미하지 않는다',
-    sourcePaper:'장숙경 (2014), 원자 모형과 그 변천 과정에 대한 고등학생들의 이해 조사, 이화여대 석사학위논문' },
-  { id:'AT6', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'AT', code:'AT6', name_ko:'에너지 준위 = 원자핵 거리', name_en:'Energy level determined only by distance from nucleus',
-    description:'전자의 에너지 준위를 원자핵과의 거리로만 판단하는 보어 모형에 고착됨 (64명 조사에서 31.3%만 정답)',
-    correctConcept:'현대 원자 모형에서 전자의 에너지는 주양자수(n)와 각운동량 양자수(l) 등 여러 양자수로 결정되며 단순한 거리와 1:1 대응이 아니다',
-    sourcePaper:'장숙경 (2013/2014), 과학 글쓰기를 통한 원자 모형과 오비탈에 대한 고등학생들의 개념 분석, 이화여대' },
+  { id:'AT7', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'AT', code:'AT7', name_ko:'스펙트럼 선을 에너지 준위 자체로 봄', name_en:'Spectral line mapped to a single energy level',
+    description:'방출 스펙트럼의 선 하나가 전자가 머무는 에너지 준위 하나에 대응한다고 믿어, 선이 두 준위 사이의 전이에서 나온다는 점을 이해하지 못함',
+    correctConcept:'스펙트럼 선 하나는 에너지 준위 하나가 아니라 두 준위 사이의 전이 하나에 대응하며, 선의 파장은 두 준위의 에너지 차이가 정한다',
+    sourcePaper:'Ivanjek, Shaffer, McDermott, Planinic & Veza (2015), American Journal of Physics 83(1), 85-90' },
+  { id:'AT8', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'AT', code:'AT8', name_ko:'흡수·방출 스펙트럼 파장이 다르다고 봄', name_en:'Absorption and emission wavelengths seen as different',
+    description:'같은 원자의 흡수 스펙트럼과 방출 스펙트럼이 서로 다른 파장에 나타난다고 믿음',
+    correctConcept:'같은 원자에서는 같은 두 준위 사이의 전이가 흡수와 방출 모두에 관여하므로, 흡수선과 방출선은 같은 파장에 나타난다',
+    sourcePaper:'Ivanjek, Shaffer, McDermott, Planinic & Veza (2015), American Journal of Physics 83(1), 85-90' },
+
+  // ── 전기력 (unit 3) — Maloney 외 (2001) CSEM, Maloney (1985) ────────────
+  // 소단원 이름이 "원자 모형과 전기력"인데 전기력 쪽 오개념이 하나도 없었다(오비탈 오개념 폐기 시 발견).
+  { id:'EF1', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'EF', code:'EF1', name_ko:'전하량이 큰 쪽이 더 큰 전기력', name_en:'Larger charge exerts larger force',
+    description:'전하량이 서로 다른 두 전하 사이에서 전하량이 큰 쪽이 상대에게 더 큰 전기력을 가한다고 믿음',
+    correctConcept:'두 전하가 서로에게 가하는 전기력은 뉴턴 제3법칙에 따라 크기가 같고 방향이 반대이며, 전하량 차이와 무관하다',
+    sourcePaper:'Maloney, O\'Kuma, Hieggelke & Van Heuvelen (2001), American Journal of Physics 69(S1), S12-S23' },
+  { id:'EF2', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'EF', code:'EF2', name_ko:'전기력이 거리에 반비례한다고 봄', name_en:'Electric force seen as inversely proportional to distance',
+    description:'전기력이 거리의 제곱이 아니라 거리 자체에 반비례한다고 믿어, 거리를 2배로 하면 힘이 1/2이 된다고 계산함',
+    correctConcept:'쿨롱 법칙에서 전기력은 거리의 제곱에 반비례하므로(F ∝ 1/r²), 거리가 2배가 되면 힘은 1/4이 된다',
+    sourcePaper:'Maloney, O\'Kuma, Hieggelke & Van Heuvelen (2001), American Journal of Physics 69(S1), S12-S23' },
+  { id:'EF3', unitId:'3', subUnit:'원자 모형과 전기력', dimensionCode:'EF', code:'EF3', name_ko:'자석의 극을 전하처럼 봄', name_en:'Magnetic poles treated as electric charges',
+    description:'자석의 N극이 양전하처럼, S극이 음전하처럼 정지한 전하를 끌어당기거나 밀어낸다고 믿음',
+    correctConcept:'자기장은 정지한 전하에 힘을 주지 않는다. 자기력은 전하가 자기장 속에서 움직일 때만 작용한다',
+    sourcePaper:'Maloney (1985), Charged poles?, Physics Education 20, 310-316' },
 
   // ── 에너지 띠와 반도체 (unit 3) — 장숙경(2014) 간접 근거 기반 추론 ──────
   { id:'EB1', unitId:'3', subUnit:'에너지 띠와 반도체', dimensionCode:'EB', code:'EB1', name_ko:'에너지 띠 ≠ 에너지 준위 연장', name_en:'Energy band not seen as extension of atomic energy levels',
@@ -410,10 +402,6 @@ const misconceptions = [
   { id:'WR1', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR1', name_ko:'굴절 시 속도 불변', name_en:'Speed unchanged during refraction',
     description:'빛이 굴절할 때 속도는 변하지 않고 방향만 바뀐다고 믿음',
     correctConcept:'빛이 굴절하는 근본 원인은 매질에 따라 빛의 속도가 달라지기 때문이다 (v=c/n)',
-    sourcePaper:'최정훈 (2015), 중학교 학생들의 빛 관련 오개념 연구, 충북대학교 석사학위논문' },
-  { id:'WR2', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR2', name_ko:'굴절각 클수록 속도 증가', name_en:'Larger refraction angle means faster speed',
-    description:'굴절각이 클수록 빛의 속도가 빠르다고 믿음',
-    correctConcept:'굴절각이 클수록 해당 매질에서의 빛의 속도가 빠른 것은 맞으나, 굴절각 자체가 속도를 결정하는 것이 아니라 매질의 굴절률이 속도를 결정한다',
     sourcePaper:'최정훈 (2015), 중학교 학생들의 빛 관련 오개념 연구, 충북대학교 석사학위논문' },
   { id:'WR3', unitId:'4', subUnit:'파동의 진동과 굴절', dimensionCode:'WR', code:'WR3', name_ko:'전반사 = 모든 각도 가능', name_en:'Total internal reflection can occur at any angle',
     description:'전반사가 어떤 각도에서도 일어날 수 있다고 믿음',
@@ -536,6 +524,14 @@ const misconceptions = [
     description:'상쇄간섭이 일어난 지점에서 빛이나 소리의 에너지가 없어진다고 믿음',
     correctConcept:'상쇄간섭 지점의 에너지는 사라지지 않고 보강간섭 지점으로 재분배된다. 전체 에너지는 보존된다',
     sourcePaper:'Matejak Cvenic 외 (2023), Physical Review Physics Education Research 19(2)' },
+  { id:'WI9', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI9', name_ko:'경로차와 간섭 조건을 반대로 이해', name_en:'Path difference condition for interference reversed',
+    description:'두 슬릿에서 온 빛의 경로차가 파장의 정수배인 지점에서 상쇄간섭이 일어난다고 반대로 기억함',
+    correctConcept:'경로차가 파장의 정수배이면 두 파동이 같은 위상으로 만나 보강간섭이 일어나고, 반파장의 홀수배이면 상쇄간섭이 일어난다',
+    sourcePaper:'Wosilait, Heron, Shaffer & McDermott (1999), American Journal of Physics 67(S1), S5-S15' },
+  { id:'WI10', unitId:'4', subUnit:'파동의 간섭', dimensionCode:'WI', code:'WI10', name_ko:'슬릿 하나를 막아도 무늬가 남는다고 봄', name_en:'Pattern believed to persist when one slit is blocked',
+    description:'이중슬릿 중 하나를 막으면 간섭무늬의 절반이 그대로 남는다고 믿어, 간섭이 두 슬릿을 지난 빛이 함께 만나야 생긴다는 점을 이해하지 못함',
+    correctConcept:'슬릿 하나를 막으면 간섭무늬는 사라지고, 남은 슬릿 하나에 의한 단일슬릿 회절무늬로 바뀐다',
+    sourcePaper:'Wosilait, Heron, Shaffer & McDermott (1999), American Journal of Physics 67(S1), S5-S15' },
 
   // ── 물질의 이중성 (unit 4) 보강 — 물질파·전자 회절 이해 연구 및 양자 개념 검사 기반
   //    기존에는 MD1(불확정성) 하나뿐이어서 단원 학습이 성립하지 않았다.
@@ -637,8 +633,8 @@ const misconceptions = [
    4. MISCONCEPTION SENTENCES
    ============================================================ */
 const sentences = [
-  { id:'I3-S01', misconceptionId:'I3', isWrong:true,  sentence:'물체가 등속도로 운동하려면 계속 힘을 주어야 한다', difficulty:2 },
-  { id:'I3-S02', misconceptionId:'I3', isWrong:true,  sentence:'힘이 사라지면 물체는 곧 속도가 줄어 멈추게 된다', difficulty:2 },
+  { id:'I3-S01', misconceptionId:'I3', isWrong:true,  sentence:'마찰이 없는 면에서 물체가 등속도로 운동하려면 계속 힘을 주어야 한다', difficulty:2 },
+  { id:'I3-S02', misconceptionId:'I3', isWrong:true,  sentence:'마찰이 없는 우주 공간에서도 힘이 사라지면 물체는 곧 속도가 줄어 멈추게 된다', difficulty:2 },
   { id:'I3-S03', misconceptionId:'I3', isWrong:false, sentence:'외력의 합이 0이면 물체는 등속도 직선 운동을 유지한다', difficulty:2 },
   { id:'I3-S04', misconceptionId:'I3', isWrong:false, sentence:'마찰이 없는 경우 처음에만 힘을 주면 이후 등속 운동이 유지된다', difficulty:2 },
   { id:'I3-S05', misconceptionId:'I3', isWrong:false, sentence:'등속 운동에서도 중력과 수직항력 같은 힘은 작용할 수 있다', difficulty:3 },
@@ -681,7 +677,7 @@ const sentences = [
   { id:'G5-S01', misconceptionId:'G5',  isWrong:true,  sentence:'위로 던진 공은 최고점에 도달해야 비로소 중력의 영향을 받기 시작한다', difficulty:2 },
   { id:'G5-S02', misconceptionId:'G5',  isWrong:false, sentence:'위로 던진 순간부터 중력이 작용하여 공은 계속 아래 방향 가속도를 받는다', difficulty:2 },
   { id:'I1-S01', misconceptionId:'I1',  isWrong:true,  sentence:'야구공을 치면 배트의 힘이 공 안에 담겨 공이 날아간다', difficulty:2 },
-  { id:'I1-S02', misconceptionId:'I1',  isWrong:false, sentence:'배트가 공에 가하는 힘은 접촉 중에만 작용하고 공이 떠난 후에는 힘이 없다', difficulty:2 },
+  { id:'I1-S02', misconceptionId:'I1',  isWrong:false, sentence:'배트가 공에 가하는 힘은 접촉하는 동안에만 작용한다', difficulty:2 },
   { id:'I5-S01', misconceptionId:'I5',  isWrong:true,  sentence:'원형 튜브 안을 구르던 구슬은 튜브를 벗어난 후에도 곡선 경로를 따른다', difficulty:3 },
   { id:'I5-S02', misconceptionId:'I5',  isWrong:false, sentence:'원형 경로를 따르던 물체는 구속이 풀리면 그 순간 접선 방향 직선 운동을 한다', difficulty:3 },
   { id:'Ob-S01', misconceptionId:'Ob',  isWrong:true,  sentence:'정지한 바닥은 그 위에 있는 물체에 힘을 가하지 않는다', difficulty:1 },
@@ -700,30 +696,26 @@ const sentences = [
   { id:'ME4-S02', misconceptionId:'ME4',  isWrong:false, sentence:'운동량이 보존되므로 공을 던진 사람은 던진 반대 방향으로 움직인다', difficulty:3 },
   { id:'ME5-S01', misconceptionId:'ME5',  isWrong:true,  sentence:'무거운 물체가 가벼운 물체보다 아래 방향으로 더 가속되어 바닥에서 속력이 더 크다', difficulty:2 },
   { id:'ME5-S02', misconceptionId:'ME5',  isWrong:false, sentence:'마찰이 없다면 질량과 무관하게 같은 높이에서 내려온 물체들의 바닥 속력은 같다', difficulty:2 },
-  { id:'ME8-S01', misconceptionId:'ME8',  isWrong:true,  sentence:'물체가 2배 먼 거리를 이동했으므로 운동에너지도 2배이다', difficulty:2 },
+  { id:'ME8-S01', misconceptionId:'ME8',  isWrong:true,  sentence:'속력이 2배가 되면 운동에너지도 2배가 된다', difficulty:2 },
   { id:'ME8-S02', misconceptionId:'ME8',  isWrong:false, sentence:'속력이 2배이면 운동에너지는 속력의 제곱에 비례하므로 4배가 된다', difficulty:3 },
-  { id:'ME9-S01', misconceptionId:'ME9',  isWrong:true,  sentence:'높이 차이와 절대 높이를 혼동해 위치에너지가 2배라고 판단한다', difficulty:2 },
+  { id:'ME9-S01', misconceptionId:'ME9',  isWrong:true,  sentence:'기준면을 2배 높은 곳으로 옮기면 물체의 위치에너지도 2배가 된다', difficulty:2 },
   { id:'ME9-S02', misconceptionId:'ME9',  isWrong:false, sentence:'위치에너지는 질량과 기준면으로부터의 높이의 곱에 비례하므로 높이가 3배면 위치에너지도 3배이다', difficulty:2 },
-  { id:'ME10-S01', misconceptionId:'ME10', isWrong:true,  sentence:'운동에너지가 움직여야 위치에너지가 움직인다', difficulty:2 },
-  { id:'ME10-S02', misconceptionId:'ME10', isWrong:true,  sentence:'위치에 따라 빨라지거나 느려진다고만 말할 뿐 에너지 전환은 언급하지 않는다', difficulty:2 },
+  { id:'ME10-S01', misconceptionId:'ME10', isWrong:true,  sentence:'물체가 아래로 내려갈 때 위치에너지가 줄어들면 운동에너지도 함께 줄어든다', difficulty:2 },
+  { id:'ME10-S02', misconceptionId:'ME10', isWrong:true,  sentence:'마찰이 없는 빗면을 내려오는 물체는 속력만 빨라질 뿐 에너지가 다른 형태로 바뀌지는 않는다', difficulty:2 },
   { id:'ME10-S03', misconceptionId:'ME10', isWrong:false, sentence:'위치에너지가 감소하는 만큼 운동에너지가 증가하며 그 합인 역학적에너지는 일정하다', difficulty:2 },
   { id:'ME11-S01', misconceptionId:'ME11', isWrong:true,  sentence:'위치에너지와 운동에너지는 항상 반비례하므로 높이가 높아질수록 운동에너지는 줄어들기만 한다', difficulty:3 },
   { id:'ME11-S02', misconceptionId:'ME11', isWrong:false, sentence:'한 지점에서는 위치·운동에너지가 반비례 관계이지만, 초기 높이가 높을수록 최저점에서의 운동에너지는 더 커진다', difficulty:3 },
-  { id:'ME12-S01', misconceptionId:'ME12', isWrong:true,  sentence:'높이가 높을수록 속력이 빠르다', difficulty:1 },
+  { id:'ME12-S01', misconceptionId:'ME12', isWrong:true,  sentence:'같은 진자에서 높이가 더 높은 지점을 지날 때 속력이 더 빠르다', difficulty:1 },
   { id:'ME12-S02', misconceptionId:'ME12', isWrong:false, sentence:'운동에너지는 속력의 제곱에 비례하는 물리량으로 속력 자체와는 다르다', difficulty:2 },
-  { id:'ME13-S01', misconceptionId:'ME13', isWrong:true,  sentence:'진자의 현재 위치만 보고 판단할 뿐 처음에 놓은 높이는 고려하지 않는다', difficulty:2 },
+  { id:'ME13-S01', misconceptionId:'ME13', isWrong:true,  sentence:'마찰이 없는 진자가 반대편에서 올라갈 수 있는 최고 높이는 처음 놓은 높이와 관계없다', difficulty:2 },
   { id:'ME13-S02', misconceptionId:'ME13', isWrong:false, sentence:'초기 높이가 높을수록 전체 역학적에너지가 크고 최저점에서의 속력도 커진다', difficulty:2 },
   // 파동의 간섭 (unit 4)
-  { id:'WI1-S01', misconceptionId:'WI1',  isWrong:true,  sentence:'진폭이란 매질의 변위(m)를 의미한다', difficulty:2 },
-  { id:'WI1-S02', misconceptionId:'WI1',  isWrong:false, sentence:'소리 간섭에서 말하는 진폭은 음압의 진폭(Pa)이다', difficulty:2 },
-  { id:'WI2-S01', misconceptionId:'WI2',  isWrong:true,  sentence:'마주보는 두 스피커 정중앙에서는 매질이 서로 반대 방향으로 진동하므로 상쇄간섭이 일어난다', difficulty:3 },
-  { id:'WI2-S02', misconceptionId:'WI2',  isWrong:false, sentence:'두 음원으로부터 거리차가 없어 위상차 없이 만나므로 정중앙에서는 보강간섭이 일어난다', difficulty:3 },
 
   // 운동량 (unit 2)
   { id:'MO1-S01', misconceptionId:'MO1', isWrong:true,  sentence:'충돌 후 질량이 큰 물체가 더 빠르게 움직인다', difficulty:2 },
   { id:'MO1-S02', misconceptionId:'MO1', isWrong:true,  sentence:'무거운 공이 가벼운 공과 충돌하면 충돌 후 무거운 공의 속도가 더 크다', difficulty:2 },
   { id:'MO1-S03', misconceptionId:'MO1', isWrong:false, sentence:'충돌 후 각 물체의 속도는 운동량 보존 법칙으로 결정되며 질량이 클수록 속도가 크다고 단정할 수 없다', difficulty:3 },
-  { id:'MO1-S04', misconceptionId:'MO1', isWrong:false, sentence:'운동량 보존에 의해 충돌 전후 전체 운동량의 합은 같으며, 속도는 질량에 반비례하는 경향이 있다', difficulty:3 },
+  { id:'MO1-S04', misconceptionId:'MO1', isWrong:false, sentence:'운동량 보존에 의해 충돌 전후 전체 운동량의 합은 같다', difficulty:3 },
   { id:'MO2-S01', misconceptionId:'MO2', isWrong:true,  sentence:'두 물체가 충돌하여 합쳐지면 전체 운동량이 줄어든다', difficulty:2 },
   { id:'MO2-S02', misconceptionId:'MO2', isWrong:false, sentence:'완전비탄성충돌에서도 외력이 없으면 충돌 전후 총 운동량은 보존된다', difficulty:2 },
   { id:'MO3-S01', misconceptionId:'MO3', isWrong:true,  sentence:'운동량이 큰 물체는 가속도도 크다', difficulty:2 },
@@ -784,13 +776,6 @@ const sentences = [
   { id:'AT2-S02', misconceptionId:'AT2', isWrong:false, sentence:'스펙트럼 선은 전자가 높은 에너지 준위에서 낮은 준위로 전이할 때 방출되는 빛으로, 두 준위의 에너지 차이가 선의 파장을 결정한다', difficulty:3 },
   { id:'AT3-S01', misconceptionId:'AT3', isWrong:true,  sentence:'원자 내 전자는 어떤 에너지 값이든 가질 수 있다', difficulty:2 },
   { id:'AT3-S02', misconceptionId:'AT3', isWrong:false, sentence:'원자 내 전자는 특정 에너지 값(에너지 준위)만 가질 수 있으며, 그 사이 에너지는 가질 수 없다', difficulty:2 },
-  { id:'AT4-S01', misconceptionId:'AT4', isWrong:true,  sentence:'오비탈은 전자가 실제로 원운동하는 경로이다', difficulty:2 },
-  { id:'AT4-S02', misconceptionId:'AT4', isWrong:false, sentence:'오비탈은 전자가 발견될 확률 분포를 나타내는 것으로, 전자가 도는 궤도가 아니다', difficulty:2 },
-  { id:'AT5-S01', misconceptionId:'AT5', isWrong:true,  sentence:'전자구름 그림에서 점의 개수가 그 위치에 있는 전자의 수를 나타낸다', difficulty:2 },
-  { id:'AT5-S02', misconceptionId:'AT5', isWrong:false, sentence:'점밀도 그림의 점은 전자가 그 위치에서 발견될 확률의 상대적 크기를 나타내며 전자 개수를 의미하지 않는다', difficulty:2 },
-  { id:'AT6-S01', misconceptionId:'AT6', isWrong:true,  sentence:'전자가 원자핵에서 멀수록 에너지 준위가 높다', difficulty:2 },
-  { id:'AT6-S02', misconceptionId:'AT6', isWrong:true,  sentence:'같은 거리에 있는 전자들은 모두 같은 에너지 준위를 가진다', difficulty:3 },
-  { id:'AT6-S03', misconceptionId:'AT6', isWrong:false, sentence:'현대 원자 모형에서 전자의 에너지는 주양자수(n) 외에 여러 양자수로 결정되며 단순한 거리와 1:1 대응이 아니다', difficulty:3 },
 
   // 에너지 띠와 반도체 (unit 3)
   { id:'EB1-S01', misconceptionId:'EB1', isWrong:true,  sentence:'고체의 에너지 띠는 원자 에너지 준위와 완전히 다른 새로운 개념이다', difficulty:3 },
@@ -803,8 +788,6 @@ const sentences = [
   // 파동·굴절 (unit 4)
   { id:'WR1-S01', misconceptionId:'WR1', isWrong:true,  sentence:'빛이 물에서 공기로 진행할 때 방향만 바뀌고 속도는 그대로이다', difficulty:2 },
   { id:'WR1-S02', misconceptionId:'WR1', isWrong:false, sentence:'빛이 굴절하는 것은 매질에 따라 빛의 속도가 달라지기 때문이다 (v=c/n)', difficulty:2 },
-  { id:'WR2-S01', misconceptionId:'WR2', isWrong:true,  sentence:'굴절각이 클수록 그 매질에서 빛의 속도가 빠르다는 뜻이다', difficulty:3 },
-  { id:'WR2-S02', misconceptionId:'WR2', isWrong:false, sentence:'빛의 속도는 굴절각이 아닌 매질의 굴절률로 결정된다 (v=c/n)', difficulty:3 },
   { id:'WR3-S01', misconceptionId:'WR3', isWrong:true,  sentence:'전반사는 빛이 어떤 각도로 입사해도 일어날 수 있다', difficulty:2 },
   { id:'WR3-S02', misconceptionId:'WR3', isWrong:false, sentence:'전반사는 빛이 굴절률이 큰 매질에서 작은 매질로 진행할 때 입사각이 임계각보다 클 경우에만 일어난다', difficulty:2 },
   { id:'WR4-S01', misconceptionId:'WR4', isWrong:true,  sentence:'빛이 굴절할 때 진동수와 파장 모두 변하지 않는다', difficulty:2 },
@@ -919,15 +902,6 @@ const sentences = [
   { id:'ME7-S03', misconceptionId:'ME7', isWrong:false, sentence:'기준면을 바꾸면 위치 에너지 값은 달라지지만 두 지점의 위치 에너지 차이는 같다', difficulty:3 },
 
   // 파동의 간섭 (음파)
-  { id:'WI3-S01', misconceptionId:'WI3', isWrong:true,  sentence:'음파의 간섭은 매질 입자의 변위를 벡터로 더해서만 판단할 수 있다', difficulty:3 },
-  { id:'WI3-S02', misconceptionId:'WI3', isWrong:false, sentence:'음파의 간섭은 스칼라량인 음압을 더해서 분석한다', difficulty:3 },
-  { id:'WI3-S03', misconceptionId:'WI3', isWrong:false, sentence:'매질 입자의 진동 방향과 음압은 구분해서 다뤄야 한다', difficulty:2 },
-  { id:'WI4-S01', misconceptionId:'WI4', isWrong:true,  sentence:'소리의 간섭에서 진폭이 커진다는 것은 매질 입자의 변위 진폭이 커진다는 뜻이다', difficulty:3 },
-  { id:'WI4-S02', misconceptionId:'WI4', isWrong:false, sentence:'소리의 보강간섭에서 커지는 진폭은 음압의 진폭이다', difficulty:3 },
-  { id:'WI4-S03', misconceptionId:'WI4', isWrong:false, sentence:'간섭을 설명할 때는 어떤 물리량의 진폭인지 밝혀야 한다', difficulty:2 },
-  { id:'WI5-S01', misconceptionId:'WI5', isWrong:true,  sentence:'소리는 교과서 그림처럼 매질이 옆으로 흔들리며 전달되는 파동이다', difficulty:2 },
-  { id:'WI5-S02', misconceptionId:'WI5', isWrong:false, sentence:'소리는 매질이 진행 방향과 같은 방향으로 진동하는 종파이다', difficulty:1 },
-  { id:'WI5-S03', misconceptionId:'WI5', isWrong:false, sentence:'소리를 사인 곡선으로 그리는 것은 음압의 변화를 나타낸 표현이다', difficulty:3 },
 
   // 파동의 간섭 (빛) — 신규 오개념
   { id:'WI6-S01', misconceptionId:'WI6', isWrong:true,  sentence:'이중슬릿 간섭무늬의 간격은 슬릿의 폭이 넓을수록 넓어진다', difficulty:2 },
@@ -1026,6 +1000,35 @@ const sentences = [
   { id:'LD8-S01', misconceptionId:'LD8', isWrong:true,  sentence:'빛을 아주 약하게 하여 광자를 하나씩 보내면 간섭무늬가 생기지 않는다', difficulty:3 },
   { id:'LD8-S02', misconceptionId:'LD8', isWrong:false, sentence:'광자를 하나씩 보내도 오래 쌓으면 간섭무늬가 나타난다', difficulty:3 },
   { id:'LD8-S03', misconceptionId:'LD8', isWrong:false, sentence:'간섭무늬는 광자들이 서로 부딪혀 생기는 것이 아니다', difficulty:3 },
+
+  // ── 단계 8-1 검증에서 폐기한 오개념을 대체 (AT7·AT8·EF1~EF3·WI9·WI10) ──
+  { id:'AT7-S01', misconceptionId:'AT7', isWrong:true,  sentence:'방출 스펙트럼에 나타난 선의 개수는 그 원자가 가진 에너지 준위의 개수와 같다', difficulty:2 },
+  { id:'AT7-S02', misconceptionId:'AT7', isWrong:false, sentence:'스펙트럼 선 하나는 두 에너지 준위 사이의 전이 하나에 대응한다', difficulty:2 },
+  { id:'AT7-S03', misconceptionId:'AT7', isWrong:false, sentence:'스펙트럼 선의 파장은 두 에너지 준위의 에너지 차이가 정한다', difficulty:2 },
+
+  { id:'AT8-S01', misconceptionId:'AT8', isWrong:true,  sentence:'같은 원자라도 흡수 스펙트럼의 어두운 선과 방출 스펙트럼의 밝은 선은 서로 다른 파장에 나타난다', difficulty:3 },
+  { id:'AT8-S02', misconceptionId:'AT8', isWrong:false, sentence:'같은 원자의 흡수선과 방출선은 같은 파장에 나타난다', difficulty:3 },
+  { id:'AT8-S03', misconceptionId:'AT8', isWrong:false, sentence:'전자가 낮은 준위에서 높은 준위로 올라갈 때는 두 준위의 에너지 차이만큼의 빛을 흡수한다', difficulty:2 },
+
+  { id:'EF1-S01', misconceptionId:'EF1', isWrong:true,  sentence:'전하량이 큰 전하가 전하량이 작은 전하에 더 큰 전기력을 가한다', difficulty:2 },
+  { id:'EF1-S02', misconceptionId:'EF1', isWrong:false, sentence:'두 전하가 서로에게 가하는 전기력은 전하량이 달라도 크기가 같고 방향이 반대이다', difficulty:2 },
+  { id:'EF1-S03', misconceptionId:'EF1', isWrong:false, sentence:'전기력에도 뉴턴 제3법칙이 그대로 성립한다', difficulty:2 },
+
+  { id:'EF2-S01', misconceptionId:'EF2', isWrong:true,  sentence:'두 전하 사이의 거리를 2배로 늘리면 전기력은 1/2이 된다', difficulty:2 },
+  { id:'EF2-S02', misconceptionId:'EF2', isWrong:false, sentence:'두 전하 사이의 거리를 2배로 늘리면 전기력은 1/4이 된다', difficulty:2 },
+  { id:'EF2-S03', misconceptionId:'EF2', isWrong:false, sentence:'전기력의 크기는 거리의 제곱에 반비례한다 (F ∝ 1/r²)', difficulty:1 },
+
+  { id:'EF3-S01', misconceptionId:'EF3', isWrong:true,  sentence:'자석의 N극은 양전하처럼 정지한 음전하를 끌어당긴다', difficulty:3 },
+  { id:'EF3-S02', misconceptionId:'EF3', isWrong:false, sentence:'자기장은 정지해 있는 전하에는 힘을 가하지 않는다', difficulty:3 },
+  { id:'EF3-S03', misconceptionId:'EF3', isWrong:false, sentence:'자기력은 전하가 자기장 속에서 움직일 때만 작용한다', difficulty:2 },
+
+  { id:'WI9-S01', misconceptionId:'WI9', isWrong:true,  sentence:'두 슬릿에서 온 빛의 경로차가 파장의 정수배인 지점에서는 상쇄간섭이 일어난다', difficulty:2 },
+  { id:'WI9-S02', misconceptionId:'WI9', isWrong:false, sentence:'경로차가 파장의 정수배인 지점에서는 보강간섭이 일어나 밝은 무늬가 생긴다', difficulty:2 },
+  { id:'WI9-S03', misconceptionId:'WI9', isWrong:false, sentence:'경로차가 반파장의 홀수배인 지점에서는 상쇄간섭이 일어난다', difficulty:2 },
+
+  { id:'WI10-S01', misconceptionId:'WI10', isWrong:true,  sentence:'이중슬릿 중 하나를 막으면 간섭무늬의 절반이 그대로 남는다', difficulty:2 },
+  { id:'WI10-S02', misconceptionId:'WI10', isWrong:false, sentence:'슬릿 하나를 막으면 간섭무늬는 사라지고 단일슬릿 회절무늬로 바뀐다', difficulty:2 },
+  { id:'WI10-S03', misconceptionId:'WI10', isWrong:false, sentence:'간섭무늬는 두 슬릿을 지난 빛이 함께 만나야 생긴다', difficulty:1 },
 ];
 
 /* ============================================================
@@ -1473,6 +1476,7 @@ const itemMap = [
   { id:'FCI-5-B-G5', itemId:'FCI-5', choice:'B', misconceptionId:'G5' },
   { id:'FCI-16-D-G5', itemId:'FCI-16', choice:'D', misconceptionId:'G5' },
   { id:'FCI-23-E-G5', itemId:'FCI-23', choice:'E', misconceptionId:'G5' },
+
 ];
 
 /* ============================================================
@@ -1616,7 +1620,24 @@ const questionPatterns = [
 /* ============================================================
    UPLOAD
    ============================================================ */
+/* 이 파일의 배열을 Firestore의 정답으로 삼아 컬렉션을 맞춘다.
+   🔑 set()은 덮어쓰기만 하고 지우지는 않는다. 이 파일에서 항목을 삭제해도 Firestore에는
+   그대로 남아, 앱이 폐기한 오개념·문장을 계속 출제하게 된다(WR2·AT6 폐기 때 발견).
+   그래서 업로드 전에 "여기 없는 문서"를 먼저 지운다.
+   대상은 seed가 관리하는 정적 컬렉션뿐이며, users/* 는 건드리지 않는다. */
 async function batchUpload(collectionName, items, idField) {
+  if (idField) {
+    const keep = new Set(items.map(it => it[idField]));
+    const existing = await db.collection(collectionName).select().get();
+    const stale = existing.docs.filter(d => !keep.has(d.id));
+    for (let i = 0; i < stale.length; i += 400) {
+      const batch = db.batch();
+      stale.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+    if (stale.length) console.log(`    🗑  폐기 문서 ${stale.length}개 삭제: ${stale.map(d => d.id).join(', ')}`);
+  }
+
   const chunks = [];
   for (let i = 0; i < items.length; i += 400) chunks.push(items.slice(i, i + 400));
   for (const chunk of chunks) {
