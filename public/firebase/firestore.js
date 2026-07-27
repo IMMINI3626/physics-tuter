@@ -12,9 +12,10 @@ const LearningService = {
 
     const sessionData = window.AppState.session;
 
-    // 마이페이지 소단원 상세의 "틀린 문항 개수" 표시용
+    // 마이페이지 소단원 상세의 "틀린 문항 개수" 표시용.
+    // 검수에서 걸린 문항(isVoided)은 학생 잘못이 아니므로 틀린 문항으로 세지 않는다.
     const wrongCount = feedbackData.items.filter(
-      item => !(item.isCorrectAnswer ?? !item.isWrong)
+      item => !item.isVoided && item.isCorrectAnswer === false
     ).length;
 
     const sessionDoc = {
@@ -46,7 +47,10 @@ const LearningService = {
         questionText:    item.text,
         isWrongQ:        item.isWrong,
         userSelected:    sessionData.checkedStatements.has(item.id),
-        isCorrectAnswer: item.isCorrectAnswer ?? !item.isWrong,
+        // 🔑 서버가 확정해서 보낸 값을 그대로 남긴다. 검수에서 걸린 문항은 null(판정 불가)이다.
+        //    예전엔 `?? !item.isWrong`으로 채워, 학생이 안 푼 문항까지 정답으로 기록됐다.
+        isCorrectAnswer: typeof item.isCorrectAnswer === 'boolean' ? item.isCorrectAnswer : null,
+        isVoided:        !!item.isVoided,   // 문항 검수 불일치 — 논문용 오류율 집계에도 쓴다
         userReason:      item.userReason || null,
         // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
         explanation:     item.explanation || null,
@@ -203,6 +207,7 @@ const LearningService = {
         text: data.questionText,               // DB의 questionText -> UI의 text
         isWrong: data.isWrongQ,                // DB의 isWrongQ -> UI의 isWrong
         isCorrectAnswer: data.isCorrectAnswer,
+        isVoided: !!data.isVoided,             // 검수에서 걸린 문항은 과거 기록에서도 따로 표시
         userReason: data.userReason,
         explanation: data.explanation || '과거 데이터라 해설이 저장되지 않았습니다.',
         // 🔑 계산형 문제(Level 2 방식B, Level 3)일 때만 존재 — "다시 풀기" 복원에 사용
@@ -360,7 +365,14 @@ const LearningService = {
     const byId = {};
     (items || []).forEach(it => {
       if (!it.targetMisconceptionId) return;
-      const isCorrect = it.isCorrectAnswer ?? !it.isWrong;
+      // 🔑 문항 검수에서 걸린 문항(문장의 참·거짓 판정이 엇갈린 것)은 관측으로 쓰지 않는다.
+      //    서버가 태그를 떼어 보내지만, 과거 기록을 다시 읽는 경로를 위해 여기서도 막는다.
+      if (it.isVoided) return;
+      // 🔑 isCorrectAnswer는 서버가 확정해서 보낸다(고름/안 고름/헛다리를 모두 반영).
+      //    값이 없는 옛 기록만 "안 골랐으면 못 찾은 것"으로 보수적으로 처리한다.
+      //    예전엔 `?? !it.isWrong` 이라, 손도 안 댄 틀린 문장이 정답 관측으로 들어가
+      //    안 푼 문제로 이해도가 오르는 일이 있었다.
+      const isCorrect = typeof it.isCorrectAnswer === 'boolean' ? it.isCorrectAnswer : false;
       (byId[it.targetMisconceptionId] ||= []).push(isCorrect);
     });
 

@@ -32,6 +32,7 @@
       ".git",
       "serviceAccountKey.json",
       "seed.js",
+      "reset-knowledge.js",
       "fix-unitprogress-counts.js",
       "test_api.js",
       "report.html"

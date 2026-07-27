@@ -772,17 +772,28 @@ ${answerText}
 1. 어투: 모든 설명(explanation)은 반드시 "~습니다", "~합니다" 형태의 경어체를 사용하세요.
 2. 피드백 구조화 (매우 중요): 'explanation'을 작성할 때, **무조건 학생이 작성한 답변을 먼저 언급하며 칭찬하거나 교정**해 주세요. (예: "학생이 작성한 '...'라는 답변처럼 핵심을 정확히 짚었습니다.", "학생의 답변대로 ...입니다.") 그 후, 심화 물리 법칙을 자연스럽게 보충 설명하세요. 단순히 "이 문장은 틀린 진술입니다"로 시작하는 기계적인 답변을 절대 금지합니다.
 3. 유연한 채점 (핵심): 학생의 답변이 완벽하지 않더라도 오개념을 지적하는 핵심 논리를 포함했다면 \`isCorrectAnswer\`를 \`true\`로 평가하세요.
+   - 표현이 교과서와 달라도, 법칙 이름을 대지 않아도, 핵심 주장이 물리적으로 맞으면 정답입니다.
+   - 학생이 더 깊거나 다른 관점에서 옳게 설명한 경우도 정답입니다. 예상한 표현과 다르다는 이유로 오답 처리하지 마세요.
 4. 보충 설명 분리: 학생이 핵심을 맞췄다면 정답 처리하고, 부족한 부가 설명은 explanation 텍스트에만 부드럽게 덧붙이세요.
-5. 명확한 배점 기준 (학생이 찾아야 할 오개념 문장은 총 ${targetWrongCount}개이며, 문항당 최대 배점은 ${maxScorePerItem}점입니다):
+5. 자기 모순 금지 (매우 중요): explanation에서 학생의 판단이 옳다고 인정했다면 \`isCorrectAnswer\`는 반드시 \`true\`여야 합니다. 해설과 판정이 어긋나면 안 됩니다.
+6. 명확한 배점 기준 (학생이 찾아야 할 오개념 문장은 총 ${targetWrongCount}개이며, 문항당 최대 배점은 ${maxScorePerItem}점입니다):
    - 만점 (${maxScorePerItem}점): 핵심을 올바르게 지적한 답변 (\`isCorrectAnswer: true\`)
    - 부분 점수 (${partialScoreRange}): 오개념 문장으로 골랐으나, 작성한 이유가 틀린 경우 (\`isCorrectAnswer: false\`)
    - 0점: 답변을 아예 작성하지 않은 경우
+
+[문장 참·거짓 재판정 - 매우 중요]
+\`statementIsWrong\`에는 **학생의 답변과 무관하게**, 그 문장 자체가 물리적으로 틀렸는지를 적으세요.
+- 문장이 물리적으로 거짓이면 true, 참이면 false
+- 학생이 무엇을 골랐는지, 어떻게 썼는지는 이 판단에 영향을 주면 안 됩니다
+- 문제를 낸 쪽의 의도를 추측하지 말고, 문장만 읽고 물리 법칙으로 판단하세요
+이 값은 문제 생성 단계의 판정과 대조해 검수하는 데 쓰입니다.
 
 JSON만 출력하세요 (다른 텍스트 금지):
 {
   "items": [
     {
       "questionId": 번호(정수),
+      "statementIsWrong": true/false,
       "isCorrectAnswer": true/false,
       "score": 0~${maxScorePerItem} 사이 이 문항 점수 (미답변이면 0),
       "explanation": "학생 답변에 대한 직접적인 코멘트 + 상세한 물리 해설 (최소 2~3문장 이상)"
@@ -808,16 +819,36 @@ JSON만 출력하세요 (다른 텍스트 금지):
     });
 
     let rawTotalScore = 0;
+    let voidedCount = 0;
 
     const feedbackItems = questions.map(q => {
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
 
-      // 1. 점수 계산 로직 변경: 맞춘 건 더하고, 엄한 걸 잡으면 감점!
-      if (q.isWrong) {
-        // 진짜 오개념을 찾은 경우: AI가 채점한 점수 합산
+      /* 🔑 문항 검수 — 문제를 만든 AI와 채점하는 AI의 참·거짓 판정이 어긋나면 그 문항은 무효로 한다.
+         실제로 "옳은 문장인데 틀렸다고 라벨"된 문항이 나와, 물리적으로 옳게 판단한 학생이
+         오답 처리되고 이해도까지 깎였다. 문항 오류의 책임을 학생에게 지울 수는 없으므로
+         점수·이해도 양쪽에서 빼고, 화면에는 검수 중이라고 알린다.
+         재판정 값이 없으면(구버전 응답) 검수를 건너뛴다 — 없다고 무효로 만들면 안 된다. */
+      const rejudged = gradedItem?.statementIsWrong;
+      const isVoided = typeof rejudged === 'boolean' && rejudged !== !!q.isWrong;
+      if (isVoided) voidedCount++;
+
+      /* isCorrectAnswer를 여기서 확정한다. 예전엔 AI 값을 그대로 쓰고 없으면 !isWrong으로
+         채웠는데, 그러면 학생이 손도 대지 않은 문항에 AI의 임의 판단이 들어가 "안 푼 문제로
+         이해도가 오르는" 일이 생겼다. 세 경우를 명시적으로 나눈다. */
+      let isCorrectAnswer;
+      if (isVoided)        isCorrectAnswer = null;                            // 무효 — 집계에서 제외
+      else if (!answered)  isCorrectAnswer = !q.isWrong;                      // 안 고름: 틀린 문장이면 못 찾은 것
+      else if (!q.isWrong) isCorrectAnswer = false;                           // 옳은 문장을 고름 (헛다리)
+      else                 isCorrectAnswer = gradedItem?.isCorrectAnswer === true;
+
+      // 점수: 맞춘 건 더하고, 엄한 걸 잡으면 감점. 무효 문항은 가감 없음.
+      if (isVoided) {
+        // 점수 변동 없음
+      } else if (q.isWrong) {
         rawTotalScore += (gradedItem?.score || 0);
-      } else if (!q.isWrong && answered) {
+      } else if (answered) {
         // 맞는 문장인데 오개념이라고 억울하게 고른 경우(헛다리): 무지성 체크 방지용 감점.
         // 🔑 고정 -20이 아니라 문항당 배점에 비례(절반)시킨다. 예전엔 틀린 문장이 1개인
         //    문제(문항 만점 100)와 2개인 문제(만점 50)에 똑같이 -20이라, 같은 "다 찍기"인데도
@@ -829,16 +860,24 @@ JSON만 출력하세요 (다른 텍스트 금지):
         id:              q.id,
         text:            q.text,
         isWrong:         q.isWrong,
-        isCorrectAnswer: gradedItem?.isCorrectAnswer ?? !q.isWrong,
+        isCorrectAnswer,
+        isVoided,
         userReason:      answered?.reason || answered?.answer,
-        explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
+        explanation:     isVoided
+          ? '이 문항은 문장의 참·거짓 판정이 엇갈려 검수 대상으로 분류했습니다. 점수와 이해도에는 반영하지 않았습니다.'
+          : (gradedItem?.explanation || '설명이 누락되었습니다.'),
         // 🆕 문항이 겨냥한 오개념(있으면) — 저장 후 BKT 관측으로 쓰임. 태그 없으면 null.
-        targetMisconceptionId: q.targetMisconceptionId ?? null,
+        //    무효 문항은 관측으로 쓰면 안 되므로 태그를 떼어 낸다.
+        targetMisconceptionId: isVoided ? null : (q.targetMisconceptionId ?? null),
       };
     });
 
-    const wrongAnswered = feedbackItems.filter(i => i.isWrong && !i.isCorrectAnswer);
-    const correctAnswered = feedbackItems.filter(i => i.isWrong && i.isCorrectAnswer);
+    // 🔑 "N개 중 M개 정답"은 학생이 실제로 고른 문항만 센다. 예전엔 미체크 문항까지 세어,
+    //    화면의 "정답" 칸은 비었는데 부제만 1개 정답이라고 나오는 일이 있었다.
+    const answeredItems   = feedbackItems.filter(i => !i.isVoided && i.userReason !== undefined && i.userReason !== null);
+    const wrongAnswered   = answeredItems.filter(i => i.isWrong && !i.isCorrectAnswer);
+    const correctAnswered = answeredItems.filter(i => i.isWrong && i.isCorrectAnswer);
+    const gradableWrong   = feedbackItems.filter(i => !i.isVoided && i.isWrong).length;
 
     const misconceptionTags = [
       ...wrongAnswered.map(i => ({
@@ -853,13 +892,28 @@ JSON만 출력하세요 (다른 텍스트 금지):
 
     // 2. 점수 정제 로직 변경: 마이너스 점수가 나오지 않도록 하한선(0점) 추가
     rawTotalScore = Math.max(0, Math.min(rawTotalScore, 100)); // 0점 ~ 100점 사이로 고정
-    const finalScore = Math.round(rawTotalScore / 5) * 5; 
+    // 무효 문항이 있으면 그만큼 만점이 줄어든 셈이므로, 남은 문항 기준으로 100점 만점에 환산한다.
+    // (무효 문항 때문에 학생이 만점을 받을 수 없게 되는 것을 막는다)
+    if (voidedCount && gradableWrong > 0 && gradableWrong < targetWrongCount) {
+      rawTotalScore = Math.min(100, Math.round(rawTotalScore * targetWrongCount / gradableWrong));
+    }
+    const finalScore = Math.round(rawTotalScore / 5) * 5;
+
+    const subtitle = gradableWrong > 0
+      ? `틀린 문장 ${gradableWrong}개 중 ${correctAnswered.length}개 정답`
+      : '채점할 수 있는 문항이 없었어요';
+
+    if (voidedCount) {
+      console.warn(`[gradeAnswers] 문항 검수 불일치 ${voidedCount}건 — unit: ${unit}`,
+        feedbackItems.filter(i => i.isVoided).map(i => ({ id: i.id, isWrong: i.isWrong, text: i.text.slice(0, 40) })));
+    }
 
     return {
       score: finalScore,
       title: finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
-      subtitle: `틀린 문장 ${targetWrongCount}개 중 ${correctAnswered.length}개 정답`,
+      subtitle: voidedCount ? `${subtitle} · 검수 문항 ${voidedCount}개 제외` : subtitle,
       misconceptions: misconceptionTags,
+      voidedCount,
       items: feedbackItems,
     };
   } catch (err) {
