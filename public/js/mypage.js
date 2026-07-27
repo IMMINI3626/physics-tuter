@@ -15,13 +15,14 @@ const MypageScreen = {
 
     try {
       const uid = AppState.user.uid;
-      const [stats, allProgress, recentSessions] = await Promise.all([
+      const [stats, allProgress, recentSessions, mastery] = await Promise.all([
         LearningService.fetchStats(uid),
         LearningService.fetchAllUnitProgress(uid),
         LearningService.fetchRecentSessions(uid, 20),
+        LearningService.fetchMasteryStats(uid),
       ]);
 
-      this._renderStats(stats);
+      this._renderStats(stats, mastery);
       this._renderWeakUnits(recentSessions);
       this._renderChapterList(allProgress);
     } catch (e) {
@@ -30,10 +31,16 @@ const MypageScreen = {
     }
   },
 
-  _renderStats(stats) {
+  _renderStats(stats, mastery) {
     const el = (id) => document.getElementById(id);
     if (el('mp-total'))    el('mp-total').textContent    = stats.total;
     if (el('mp-avgscore')) el('mp-avgscore').textContent = stats.avgScore;
+    // 교정한 오개념 = 이해도가 숙달 기준을 넘은 개수. 분모는 측정을 시작한 개수(설계 단계 9).
+    if (el('mp-corrected')) {
+      el('mp-corrected').textContent = mastery && mastery.measured
+        ? `${mastery.corrected}/${mastery.measured}`
+        : '—';
+    }
   },
 
   /* 마이페이지 메인에서, 소단원 상세 화면에 들어가지 않아도 어디가 취약한지 바로 보여주는
@@ -162,10 +169,11 @@ const MypageScreen = {
 
     try {
       const uid = AppState.user.uid;
-      const [sessions, progress, weakConcepts] = await Promise.all([
+      const [sessions, progress, weakConcepts, mastery] = await Promise.all([
         LearningService.fetchSessionsByUnit(uid, subUnit),
         LearningService.getUnitProgress(uid, subUnit),
         LearningService.fetchWeakConcepts(uid, subUnit),
+        LearningService.fetchUnitMastery(uid, subUnit),
       ]);
 
       this._currentLevel = progress.level || 1;
@@ -174,6 +182,7 @@ const MypageScreen = {
       this._currentCompleted = !!progress.completed;
 
       this._renderChart(sessions);
+      this._renderMastery(mastery);
       this._renderWeakConcepts(weakConcepts);
       this._renderHistory(sessions);
       this._updateRetryButton();
@@ -278,6 +287,47 @@ const MypageScreen = {
     if (count >= 5) return { text: '자주', cls: 'high' };
     if (count >= 3) return { text: '종종', cls: 'mid' };
     return { text: '가끔', cls: 'low' };
+  },
+
+  /* "개념별 이해도" (설계 단계 9) — 이 소단원 오개념들의 이해도를 낮은 순으로.
+     문제 화면에는 소단원 진행도 하나만 띄우고 개별 오개념은 감춘다. 문제를 푸는 중에
+     "몇 개짜리 단원인가"가 보이면 학습보다 숫자를 좇게 되기 때문이다(feedback.js 주석).
+     마이페이지는 돌아보는 화면이라 그 제약이 없다 — 여기가 개별 값을 볼 유일한 자리다.
+     % 계산은 문제 화면과 같은 식(BKT.progressRatio)을 쓴다. 두 화면의 숫자가 어긋나면
+     "어느 쪽이 맞냐"는 질문만 남는다. 이 목록의 평균 = 문제 화면의 진행도. */
+  _renderMastery(mastery) {
+    const card = document.getElementById('d-mastery-card');
+    const summaryEl = document.getElementById('d-mastery-summary');
+    const listEl = document.getElementById('d-mastery-list');
+    if (!card || !summaryEl || !listEl) return;
+
+    // 오개념 데이터가 없는 소단원(있으면 안 되지만 데이터 누락 대비)은 카드를 숨긴다
+    if (!mastery || !mastery.total) {
+      card.style.display = 'none';
+      return;
+    }
+
+    const pct = Math.round(mastery.ratio * 100);
+    summaryEl.innerHTML = `
+      <div class="ms-head">
+        <span class="ms-label">이 소단원 이해도</span>
+        <strong class="ms-percent">${pct}%</strong>
+      </div>
+      <div class="ms-bar"><div class="ms-fill" style="width:${pct}%"></div></div>
+      <div class="ms-sub">확인 끝난 개념 ${mastery.mastered} / ${mastery.total}</div>
+    `;
+
+    listEl.innerHTML = mastery.rows.map(r => `
+      <div class="ms-row${r.mastered ? ' done' : ''}">
+        <div class="ms-row-top">
+          <span class="ms-name">${escapeHtml(r.name)}</span>
+          <span class="ms-val">${r.mastered ? '✓' : `${r.pct}%`}</span>
+        </div>
+        <div class="ms-track"><div class="ms-track-fill" style="width:${r.pct}%"></div></div>
+      </div>
+    `).join('');
+
+    card.style.display = '';
   },
 
   /* "집중하면 좋을 개념" — 개별 오개념 대신 개념 영역으로 묶어 부드럽게 표시.

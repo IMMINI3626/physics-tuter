@@ -91,6 +91,24 @@ const BKT = {
     return Number(pL) >= this.MASTERY;
   },
 
+  /**
+   * 화면에 띄울 이해도 비율 0~1 (설계 4-10).
+   *
+   *   (P(L) − P(L₀)) / (τ − P(L₀))   ... 0~1로 자름
+   *
+   * P(L)을 그대로 %로 보여주면 아무것도 안 한 오개념이 30%로 표시된다("30%는 안다"로 읽힌다).
+   * 출발점을 0, 숙달을 100으로 놓아야 학습자가 읽는 대로의 의미가 된다.
+   * 🔑 문제 화면의 진행도(feedback.js)와 마이페이지의 이해도(mypage.js)가 반드시 같은 식을
+   *    써야 한다. 한쪽만 바꾸면 같은 상태를 두 화면이 다른 숫자로 말한다.
+   */
+  progressRatio(pL) {
+    const floor = this.PRIOR.unknown;
+    const span = this.MASTERY - floor;
+    if (!(span > 0)) return 0;
+    const r = (Number(pL) - floor) / span;
+    return Number.isFinite(r) ? Math.min(1, Math.max(0, r)) : 0;
+  },
+
   /** 상황에 맞는 초기 P(L₀) 반환. status: 'weak' | 'unknown' */
   initialPL(status) {
     return this.PRIOR[status] ?? this.PRIOR.unknown;

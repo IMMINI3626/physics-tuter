@@ -505,10 +505,10 @@ const FeedbackScreen = {
     const container = document.getElementById('feedback-list');
     if (!container || !items) return;
 
-    // 🔑 검수에서 걸린 문항(문장의 참·거짓 판정이 엇갈린 것)은 어느 분류에도 넣지 않고 따로 뺀다.
-    //    학생이 옳게 판단했는데 문항 오류로 오답 처리되던 문제를 막는다.
-    const voidedItems = items.filter(i => i.isVoided);
-    const valid       = items.filter(i => !i.isVoided);
+    /* 🔑 "채점에서 뺀 문항" 그룹은 없앴다 (단계 8-5). 참·거짓 라벨 검증을 문제를 만들 때로
+       옮겼기 때문에, 어긋난 문장은 학생에게 도달하기 전에 걸러져 다시 만들어진다.
+       예전에 저장된 세션에는 isVoided가 남아 있으므로 그것만 조용히 걸러낸다. */
+    const valid = items.filter(i => !i.isVoided);
 
     // userReason이 있으면 체크한 것으로 판단
     const checkedItems = valid.filter(i => i.userReason !== undefined && i.userReason !== null);
@@ -587,25 +587,8 @@ const FeedbackScreen = {
         </div>`).join('');
     }
 
-    // ── 그룹 5: 검수에서 걸린 문항 ──
-    // 문제를 만든 판정과 채점하는 판정이 엇갈린 문항. 문항 쪽 문제일 가능성이 높으므로
-    // 점수·이해도에서 빼고, 학생에게는 "네 잘못이 아니다"를 분명히 알린다.
-    if (voidedItems.length) {
-      html += `<div class="fb-section-title" style="margin-top:24px">검수 중인 문항</div>`;
-      html += voidedItems.map(item => `
-        <div class="feedback-card">
-          <div class="fb-card-header">
-            <span class="fb-stmt">${escapeHtml(item.text)}</span>
-          </div>
-          <div class="fb-explanation">
-            <div class="fb-exp-label ideal">🔧 안내</div>
-            <div class="fb-correct-ans">이 문항은 참·거짓 판정이 엇갈려 채점에서 제외했어요. 점수와 이해도에 영향을 주지 않습니다.</div>
-          </div>
-        </div>`).join('');
-    }
-
     // 아무것도 없을 때 (퍼펙트 클리어)
-    if (!checkedItems.length && !missedItems.length && !voidedItems.length) {
+    if (!checkedItems.length && !missedItems.length) {
       html = `<div style="text-align:center;padding:30px;color:var(--text3);font-size:14px">모든 문장을 정확히 판단했어요! 🎉</div>`;
     }
 

@@ -640,6 +640,10 @@
       <div class="stat-val" id="mp-avgscore">—</div>
       <div class="stat-lbl">평균 점수</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-val" id="mp-corrected">—</div>
+      <div class="stat-lbl">교정한 오개념</div>
+    </div>
   </div>
 
   <div class="weak-section">
@@ -685,6 +689,13 @@
     <svg class="improve-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     <div class="improve-col"><div class="lbl">최근 세션</div><div class="val" id="d-last">-</div></div>
     <div class="improve-delta"><div class="val" id="d-delta">-</div><div class="lbl">점</div></div>
+  </div>
+
+  <div class="mp-card" id="d-mastery-card" style="display:none">
+    <div class="mp-card-title">개념별 이해도</div>
+    <div class="mastery-summary" id="d-mastery-summary"></div>
+    <div id="d-mastery-list"></div>
+    <p class="mastery-note">문제를 풀 때마다 이 값이 오르내려요. 100%가 되면 그 개념은 확인이 끝난 거예요.</p>
   </div>
 
   <div class="mp-card" id="d-mc-card" style="display:none">

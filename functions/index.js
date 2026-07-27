@@ -72,6 +72,50 @@ function getGeminiModel(temperature = 0, opts = {}) {
 }
 
 /**
+ * 생성된 판별 문장의 참·거짓 라벨을 독립된 호출로 검증합니다 (단계 8-5).
+ *
+ * 왜 별도 호출인가 — 문장을 만드는 호출은 오개념 겨냥, 개수 맞추기, 소재 다양화, 공식 문장
+ * 혼합을 동시에 처리한다. 그 와중에 isWrong을 반대로 다는 사고가 실제로 났다. 이 호출은
+ * "이 문장이 물리적으로 거짓인가"만 본다. 문장 외의 맥락(오개념 목록, 겨냥 지시, 학생 답변)은
+ * 일부러 주지 않는다 — 힌트를 주면 생성 호출의 판단을 그대로 따라가 검증이 되지 않는다.
+ *
+ * @returns {boolean[] | null} 문장별 "거짓인가" 판정. 형식이 깨지면 null(검증 생략).
+ */
+async function verifyStatementLabels(unit, questions) {
+  const list = questions.map((q, i) => `${i + 1}. ${q.text}`).join('\n');
+  const prompt = `
+당신은 고등학교 물리 교사입니다. 아래 문장들이 물리적으로 참인지 거짓인지만 판정하세요.
+단원: "${unit}"
+
+${list}
+
+판정 기준
+- 고등학교 교육과정 수준에서 판단합니다.
+- 표기 관례(부호, 벡터 화살표, 기호 이름)만 다르고 물리적 내용이 맞으면 **참**입니다.
+- 교과서에 따라 다르게 쓸 수 있어 참·거짓을 단정할 수 없는 문장은 "ambiguous"로 표시하세요.
+
+JSON만 출력:
+{"results":[{"n":1,"isFalse":true},{"n":2,"isFalse":false},{"n":3,"ambiguous":true}]}
+`;
+  try {
+    const model = getGeminiModel(0, { thinkingBudget: 256, outputTokens: 512 });
+    const parsed = parseJSON((await model.generateContent(prompt)).response.text());
+    const rows = parsed?.results;
+    if (!Array.isArray(rows) || rows.length !== questions.length) return null;
+    return questions.map((_, i) => {
+      const row = rows.find(r => Number(r?.n) === i + 1);
+      if (!row) return null;
+      if (row.ambiguous === true) return 'ambiguous';
+      return typeof row.isFalse === 'boolean' ? row.isFalse : null;
+    });
+  } catch (err) {
+    // 검증이 실패했다고 문제 생성을 막지는 않는다. 검증은 품질 장치이지 필수 경로가 아니다.
+    console.warn(`[verifyStatementLabels] 검증 호출 실패, 생략함: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * AI 호출을 재시도로 감쌉니다.
  *
  * LLM은 특성상 일정 비율로 형식을 어깁니다 — 응답이 중간에 잘려 JSON 파싱이 깨지거나,
@@ -498,6 +542,20 @@ JSON만 출력하세요:
 
 공식 판별 문장도 일반 문장과 동일하게 isWrong: true/false로 표시하고, 같은 5문항 배열 안에 섞어서 출력하세요.
 계산을 직접 수행해야 하는 문제는 절대 포함하지 마세요. (Level 1은 계산 없이 옳고 그름만 판별하는 단계입니다)
+
+[공식 판별 문장에서 금지 - 매우 중요]
+참·거짓이 교과서 표기 관례에 따라 달라지는 문장은 만들지 마세요. 채점하는 사람마다 답이
+갈리는 문장은 문제로서 성립하지 않습니다. 다음은 전부 금지입니다.
+
+- 부호 관례만 다른 식
+  예: "유도 기전력은 ε = -N(ΔΦ/Δt) 이다" — 교과서에 따라 크기만 ε = N(ΔΦ/Δt)로 쓰므로
+      맞다고도 틀리다고도 할 수 있습니다. 이런 문장은 만들지 마세요.
+- 벡터/스칼라 표기 차이만 있는 식 (F = ma 와 F⃗ = ma⃗)
+- 단위계나 기호 이름만 다른 식 (v 대신 u를 쓴 경우 등)
+- 근사식·조건부 성립식을 조건 없이 제시한 것 (예: 공기 저항 무시 여부에 따라 갈리는 식)
+
+틀린 공식은 **누가 봐도 틀린 형태**로만 만드세요. 변수가 바뀌었거나(W = mv²), 분자·분모가
+뒤집혔거나(a = m/F), 지수가 틀린(E = mc) 경우처럼 표기 관례와 무관하게 틀린 것이어야 합니다.
 `;
 
     // Level 2 Mode A: 참/거짓 3문항 + 계산 서술 2문항 혼합
@@ -529,8 +587,15 @@ ${patternInstruction}
 (출제 다양성 참조 시드: ${varietySeed} - 이 값은 매번 다른 문제를 만들기 위한 내부 참고용이며 출력에 포함하지 마세요)
 
 위 오개념과 학술적 참고 자료의 논리를 바탕으로, 이를 진단하기 위한 문장 5개를 만드세요.
-- 오개념이 담긴 틀린 문장: ${wrongCount}개 (isWrong: true)
-- 올바른 물리 개념 문장: ${rightCount}개 (isWrong: false)
+
+[문장 구성 - 반드시 지킬 것]
+- isWrong: true 인 문장은 **정확히 ${wrongCount}개**입니다. ${wrongCount}개보다 많아도 적어도 안 됩니다.
+- isWrong: false 인 문장은 **정확히 ${rightCount}개**입니다.
+- 출력하기 전에 isWrong: true의 개수를 직접 세어 ${wrongCount}개가 맞는지 확인하세요.
+  개수가 다르면 문장을 고쳐서 맞춘 뒤에 출력하세요.
+- 아래의 다른 규칙(공식 판별 문장 혼합 등)은 이 개수를 바꾸지 않습니다. 공식 판별 문장도
+  ${wrongCount}개 / ${rightCount}개 안에 포함해서 세세요.
+
 - 문장들을 무작위 순서로 섞어주세요
 - 자연스러운 한국어로, 고등학생이 이해할 수 있는 수준
 ${levelInstruction}
@@ -572,7 +637,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
 `;
 
     const model = getGeminiModel(0.8, { thinkingBudget: 512, outputTokens: 1536 });
-    return await withRetry('generateQuestions', async () => {
+    return await withRetry('generateQuestions', async (attempt) => {
       const result = await model.generateContent(prompt);
       const parsed = parseJSON(result.response.text());
 
@@ -587,8 +652,20 @@ JSON만 출력하세요 (다른 텍스트 금지):
         if (typeof q.isWrong !== 'boolean') throw new Error(`${i + 1}번 문장 isWrong 누락`);
         if (typeof q.id !== 'number') q.id = i + 1;
       });
-      if (!questions.some(q => q.isWrong)) {
+      /* 🔑 틀린 문장 개수는 프롬프트로 지시하는 것만으로는 지켜지지 않는다. Level 1에서
+         "1개"로 요청했는데 3개가 나온 사례가 확인됐다. 이 개수에 배점(100 ÷ 틀린 문장 수),
+         체감 난이도, 헛다리 감점폭이 전부 걸려 있으므로 서버에서 검사하고 다시 만들게 한다.
+         마지막 시도에서는 생성 자체를 실패시키지 않는다 — 개수가 어긋나도 1개 이상이면
+         채점은 성립하고, 학생에게 "문제 생성 실패"를 띄우는 쪽이 더 나쁘다. */
+      const actualWrong = questions.filter(q => q.isWrong).length;
+      if (!actualWrong) {
         throw new Error('틀린 문장이 하나도 없음');   // 채점 자체가 성립 안 함
+      }
+      if (actualWrong !== wrongCount) {
+        if (attempt < MAX_AI_ATTEMPTS) {
+          throw new Error(`틀린 문장 개수 불일치 (요청 ${wrongCount}, 생성 ${actualWrong})`);
+        }
+        console.warn(`[generateQuestions] 틀린 문장 개수 불일치 — 요청 ${wrongCount}, 생성 ${actualWrong}, unit: ${unit}, level: ${level} (마지막 시도라 그대로 사용)`);
       }
       // 오개념 태그(targetMisconceptionId) 정리: 틀린 문장이면서 실제 목록에 있는 id만 남기고
       // 나머지(옳은 문장, 목록 밖 id, 공식/계산 판별 문장 등)는 제거한다. 태깅은 BKT 관측용
@@ -603,6 +680,41 @@ JSON만 출력하세요 (다른 텍스트 금지):
       if (typeof parsed.hint1 !== 'string' || !parsed.hint1.trim() ||
           typeof parsed.hint2 !== 'string' || !parsed.hint2.trim()) {
         throw new Error('힌트 누락');
+      }
+
+      /* 🔑 라벨 검증 (단계 8-5) — 학생에게 보내기 전에 독립된 호출로 참·거짓을 다시 판정한다.
+         예전에는 이 대조를 채점할 때 했다. 그래서 라벨이 어긋난 문항을 학생이 이미 다 푼 뒤에야
+         발견했고, 결과 화면에 "채점에서 뺀 문항"이라는 이상한 카드가 남았다. 지금은 어긋나면
+         그 세트를 통째로 버리고 다시 만든다 — 학생은 검증을 통과한 문장만 본다.
+         참·거짓을 단정할 수 없는 문장(ambiguous)도 같은 이유로 버린다. 문제로 성립하지 않는다. */
+      const verdicts = await verifyStatementLabels(unit, questions);
+      if (verdicts) {
+        const bad = questions
+          .map((q, i) => ({ q, i, v: verdicts[i] }))
+          .filter(({ q, v }) => v === 'ambiguous' || (typeof v === 'boolean' && v !== q.isWrong));
+        if (bad.length) {
+          const detail = bad.map(({ q, i, v }) =>
+            `${i + 1}번(생성:${q.isWrong ? '거짓' : '참'} 검증:${v === 'ambiguous' ? '모호' : (v ? '거짓' : '참')})`
+          ).join(', ');
+          if (attempt < MAX_AI_ATTEMPTS) throw new Error(`라벨 검증 불일치 ${bad.length}건 — ${detail}`);
+          // 마지막 시도: 문제 생성 실패를 띄우느니 검증 결과를 라벨로 채택한다. 판정만 하는
+          // 호출이 여러 일을 겸하는 생성 호출보다 라벨에 관해서는 더 믿을 만하다.
+          // 모호한 문장은 손댈 근거가 없으므로 생성 라벨을 그대로 둔다.
+          const flips = bad.filter(({ v }) => typeof v === 'boolean');
+          // 다 채택했을 때 틀린 문장이 0개가 되면 채점이 성립하지 않는다. 그럴 땐 채택하지 않고
+          // 원래 라벨로 내보낸다(채점 단계의 대조 로그가 다시 잡아준다).
+          const wrongAfter = questions.filter(q => {
+            const f = flips.find(b => b.q === q);
+            return f ? f.v : q.isWrong;
+          }).length;
+          if (wrongAfter > 0) {
+            flips.forEach(({ q, v }) => {
+              q.isWrong = v;
+              if (!v) q.targetMisconceptionId = null;   // 옳은 문장에는 오개념 태그가 붙을 수 없다
+            });
+          }
+          console.warn(`[generateQuestions] 라벨 검증 불일치 — unit: ${unit}, level: ${level}, ${detail} (마지막 시도, 채택 ${wrongAfter > 0 ? '함' : '안 함'})`);
+        }
       }
 
       return {
@@ -819,34 +931,35 @@ JSON만 출력하세요 (다른 텍스트 금지):
     });
 
     let rawTotalScore = 0;
-    let voidedCount = 0;
+    const mismatched = [];   // 라벨 대조가 갈린 문항 (로그·오류율 집계용)
 
     const feedbackItems = questions.map(q => {
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
       const answered   = answers.find(a => a.questionId === q.id);
 
-      /* 🔑 문항 검수 — 문제를 만든 AI와 채점하는 AI의 참·거짓 판정이 어긋나면 그 문항은 무효로 한다.
-         실제로 "옳은 문장인데 틀렸다고 라벨"된 문항이 나와, 물리적으로 옳게 판단한 학생이
-         오답 처리되고 이해도까지 깎였다. 문항 오류의 책임을 학생에게 지울 수는 없으므로
-         점수·이해도 양쪽에서 빼고, 화면에는 검수 중이라고 알린다.
-         재판정 값이 없으면(구버전 응답) 검수를 건너뛴다 — 없다고 무효로 만들면 안 된다. */
+      /* 🔑 라벨 대조는 여기서 "기록만" 한다 (단계 8-5).
+         예전에는 문제를 만든 판정과 채점하는 판정이 어긋나면 그 문항을 무효로 만들고 결과
+         화면에 "채점에서 뺀 문항"으로 띄웠다. 학생이 이미 다 푼 뒤에 시스템 사정을 통보하는
+         셈이라 보기에 좋지 않았다. 지금은 생성 단계에서 독립 호출로 검증하고 어긋나면 그
+         세트를 버리고 다시 만든다(verifyStatementLabels). 그래서 학생은 검증을 통과한 문장만 본다.
+         그럼에도 세 번째 판정이 갈리는 경우가 남는데, 그때는 화면을 건드리지 않고
+         이해도 관측에서만 빼고 로그를 남긴다 — 점수 한 문항보다 이해도 오염이 오래간다. */
       const rejudged = gradedItem?.statementIsWrong;
-      const isVoided = typeof rejudged === 'boolean' && rejudged !== !!q.isWrong;
-      if (isVoided) voidedCount++;
+      const labelMismatch = typeof rejudged === 'boolean' && rejudged !== !!q.isWrong;
+      if (labelMismatch) {
+        mismatched.push({ id: q.id, 생성: q.isWrong ? '거짓' : '참', 채점: rejudged ? '거짓' : '참', text: q.text.slice(0, 40) });
+      }
 
       /* isCorrectAnswer를 여기서 확정한다. 예전엔 AI 값을 그대로 쓰고 없으면 !isWrong으로
          채웠는데, 그러면 학생이 손도 대지 않은 문항에 AI의 임의 판단이 들어가 "안 푼 문제로
          이해도가 오르는" 일이 생겼다. 세 경우를 명시적으로 나눈다. */
       let isCorrectAnswer;
-      if (isVoided)        isCorrectAnswer = null;                            // 무효 — 집계에서 제외
-      else if (!answered)  isCorrectAnswer = !q.isWrong;                      // 안 고름: 틀린 문장이면 못 찾은 것
+      if (!answered)       isCorrectAnswer = !q.isWrong;                      // 안 고름: 틀린 문장이면 못 찾은 것
       else if (!q.isWrong) isCorrectAnswer = false;                           // 옳은 문장을 고름 (헛다리)
       else                 isCorrectAnswer = gradedItem?.isCorrectAnswer === true;
 
-      // 점수: 맞춘 건 더하고, 엄한 걸 잡으면 감점. 무효 문항은 가감 없음.
-      if (isVoided) {
-        // 점수 변동 없음
-      } else if (q.isWrong) {
+      // 점수: 맞춘 건 더하고, 엄한 걸 잡으면 감점.
+      if (q.isWrong) {
         rawTotalScore += (gradedItem?.score || 0);
       } else if (answered) {
         // 맞는 문장인데 오개념이라고 억울하게 고른 경우(헛다리): 무지성 체크 방지용 감점.
@@ -861,23 +974,20 @@ JSON만 출력하세요 (다른 텍스트 금지):
         text:            q.text,
         isWrong:         q.isWrong,
         isCorrectAnswer,
-        isVoided,
         userReason:      answered?.reason || answered?.answer,
-        explanation:     isVoided
-          ? '이 문항은 문장의 참·거짓 판정이 엇갈려 검수 대상으로 분류했습니다. 점수와 이해도에는 반영하지 않았습니다.'
-          : (gradedItem?.explanation || '설명이 누락되었습니다.'),
+        explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
         // 🆕 문항이 겨냥한 오개념(있으면) — 저장 후 BKT 관측으로 쓰임. 태그 없으면 null.
-        //    무효 문항은 관측으로 쓰면 안 되므로 태그를 떼어 낸다.
-        targetMisconceptionId: isVoided ? null : (q.targetMisconceptionId ?? null),
+        //    라벨 대조가 갈린 문항은 태그를 떼어 이해도에서 뺀다(화면에는 그대로 보인다).
+        targetMisconceptionId: labelMismatch ? null : (q.targetMisconceptionId ?? null),
       };
     });
 
     // 🔑 "N개 중 M개 정답"은 학생이 실제로 고른 문항만 센다. 예전엔 미체크 문항까지 세어,
     //    화면의 "정답" 칸은 비었는데 부제만 1개 정답이라고 나오는 일이 있었다.
-    const answeredItems   = feedbackItems.filter(i => !i.isVoided && i.userReason !== undefined && i.userReason !== null);
+    const answeredItems   = feedbackItems.filter(i => i.userReason !== undefined && i.userReason !== null);
     const wrongAnswered   = answeredItems.filter(i => i.isWrong && !i.isCorrectAnswer);
     const correctAnswered = answeredItems.filter(i => i.isWrong && i.isCorrectAnswer);
-    const gradableWrong   = feedbackItems.filter(i => !i.isVoided && i.isWrong).length;
+    const gradableWrong   = feedbackItems.filter(i => i.isWrong).length;
 
     const misconceptionTags = [
       ...wrongAnswered.map(i => ({
@@ -892,28 +1002,24 @@ JSON만 출력하세요 (다른 텍스트 금지):
 
     // 2. 점수 정제 로직 변경: 마이너스 점수가 나오지 않도록 하한선(0점) 추가
     rawTotalScore = Math.max(0, Math.min(rawTotalScore, 100)); // 0점 ~ 100점 사이로 고정
-    // 무효 문항이 있으면 그만큼 만점이 줄어든 셈이므로, 남은 문항 기준으로 100점 만점에 환산한다.
-    // (무효 문항 때문에 학생이 만점을 받을 수 없게 되는 것을 막는다)
-    if (voidedCount && gradableWrong > 0 && gradableWrong < targetWrongCount) {
-      rawTotalScore = Math.min(100, Math.round(rawTotalScore * targetWrongCount / gradableWrong));
-    }
     const finalScore = Math.round(rawTotalScore / 5) * 5;
 
     const subtitle = gradableWrong > 0
       ? `틀린 문장 ${gradableWrong}개 중 ${correctAnswered.length}개 정답`
       : '채점할 수 있는 문항이 없었어요';
 
-    if (voidedCount) {
-      console.warn(`[gradeAnswers] 문항 검수 불일치 ${voidedCount}건 — unit: ${unit}`,
-        feedbackItems.filter(i => i.isVoided).map(i => ({ id: i.id, isWrong: i.isWrong, text: i.text.slice(0, 40) })));
+    /* 라벨 대조가 갈린 건수는 화면에 띄우지 않고 로그로만 남긴다. 생성 단계 검증(단계 8-5)을
+       통과한 문장에서 이게 얼마나 나오는지가 곧 문항 오류율이라, 논문의 실측치로 쓴다. */
+    if (mismatched.length) {
+      console.warn(`[gradeAnswers] 라벨 대조 불일치 ${mismatched.length}건 (이해도 관측에서만 제외) — unit: ${unit}`, mismatched);
     }
 
     return {
       score: finalScore,
       title: finalScore >= 80 ? '훌륭해요! 🎉' : finalScore >= 60 ? '잘 하셨어요! 👍' : '조금 더 공부해봐요 📚',
-      subtitle: voidedCount ? `${subtitle} · 검수 문항 ${voidedCount}개 제외` : subtitle,
+      subtitle,
       misconceptions: misconceptionTags,
-      voidedCount,
+      mismatchCount: mismatched.length,
       items: feedbackItems,
     };
   } catch (err) {
