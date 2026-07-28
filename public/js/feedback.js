@@ -12,9 +12,27 @@ const PROMOTION_SCORE = { 1: 100, 2: 100, 3: 90 };
 /* 승급 판정은 Phase 3 단계 7에서 "누적 정답 횟수"(calcPromotionTarget의 임의 계수)에서
    "레벨 대상 오개념의 이해도 P(L)이 모두 0.90 이상인가"로 교체됐다. 설계: docs/오개념측정_BKT_설계.md 4-10 */
 
+/* 문항 신고 사유 (설계 단계 9-1).
+   자유 입력만 받으면 아무도 안 쓰고, 고르기만 시키면 예상 밖의 오류를 못 듣는다.
+   자주 나올 것을 고정 항목으로 두고 마지막에 '기타'로 서술 칸을 연다. */
+const REPORT_REASONS = [
+  { code: 'label_should_be_correct', text: '이 문장은 맞는 것 같아요' },
+  { code: 'label_should_be_wrong',   text: '이 문장은 틀린 것 같아요' },
+  { code: 'bad_explanation',         text: '해설이 이상해요' },
+  { code: 'bad_grading',             text: '채점이 잘못됐어요' },
+  { code: 'unclear',                 text: '문제가 이해가 안 돼요' },
+  { code: 'etc',                     text: '기타 (직접 입력)' },
+];
+
 const FeedbackScreen = {
+  _reportItem: null,     // 지금 신고 중인 문항
+  _reportReason: null,   // 고른 사유 code
+  _reportedIds: null,    // 이번 결과 화면에서 이미 신고한 문항 (중복 전송 방지)
+
   // isHistory 파라미터 추가, returnTo로 돌아갈 화면 지정 (기본값: mypage)
   async render(data, isHistory = false, returnTo = 'mypage') {
+    this._reportedIds = new Set();
+    this._reportSessionId = null;
     this._renderScore(data.score, data.title, data.subtitle);
     this._renderFeedbackList(data.items);
     this._bktApplied = null;   // 직전 문제의 갱신 promise가 남아있지 않도록 초기화
@@ -27,6 +45,8 @@ const FeedbackScreen = {
         if (!window.AppState.session.isRetry) {
           window.AppState.session._rootSessionId = newId;
         }
+        // 문항 신고에서 "어느 세션의 문항이었나"를 남기기 위해 기억해둔다
+        this._reportSessionId = newId;
       }).catch(console.error);
       // 태그된 오개념 관측을 BKT로 반영해 이해도(knowledgeState) 갱신.
       // 🔑 "다시 풀어보기"(isRetry)는 정답을 이미 본 같은 문제라서 맞히는 게 당연하다.
@@ -504,6 +524,7 @@ const FeedbackScreen = {
   _renderFeedbackList(items) {
     const container = document.getElementById('feedback-list');
     if (!container || !items) return;
+    this._lastItems = items;   // 문항 신고에서 id로 원본을 되찾는 데 쓴다
 
     /* 🔑 "채점에서 뺀 문항" 그룹은 없앴다 (단계 8-5). 참·거짓 라벨 검증을 문제를 만들 때로
        옮겼기 때문에, 어긋난 문장은 학생에게 도달하기 전에 걸러져 다시 만들어진다.
@@ -535,6 +556,7 @@ const FeedbackScreen = {
             <div class="fb-exp-label ideal">✅ 피드백</div>
             <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
+          ${this._reportBtn(item)}
         </div>`).join('');
     }
 
@@ -552,6 +574,7 @@ const FeedbackScreen = {
             <div class="fb-exp-label ideal">💡 올바른 피드백</div>
             <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
+          ${this._reportBtn(item)}
         </div>`).join('');
     }
 
@@ -569,6 +592,7 @@ const FeedbackScreen = {
             <div class="fb-exp-label ideal">💡 올바른 피드백</div>
             <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
+          ${this._reportBtn(item)}
         </div>`).join('');
     }
 
@@ -584,6 +608,7 @@ const FeedbackScreen = {
             <div class="fb-exp-label ideal">💡 틀린 이유</div>
             <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
           </div>
+          ${this._reportBtn(item)}
         </div>`).join('');
     }
 
@@ -593,6 +618,106 @@ const FeedbackScreen = {
     }
 
     container.innerHTML = html;
+  },
+
+  /* ────────────────────────────────────────
+     문항 신고 (설계 단계 9-1)
+
+     왜 필요한가 — 문장의 참·거짓은 생성 단계에서 독립 호출로 검증하지만(단계 8-5), 계산 문제·
+     해설·서술형 채점은 여전히 AI가 혼자 판단한다. 그쪽에서 틀렸을 때 학생이 말할 곳이 없다.
+
+     🔑 신고해도 점수와 이해도는 바뀌지 않는다. 신고가 관측을 지우게 만들면 "틀릴 때마다
+        신고"가 최적 전략이 되어 이해도가 영원히 안 떨어진다. 모아서 사람이 보고 고친다.
+  ──────────────────────────────────────── */
+
+  _reportBtn(item) {
+    // 비로그인은 저장할 uid가 없다. 버튼을 띄워놓고 눌렀을 때 막으면 더 나쁘므로 아예 안 보인다.
+    if (!window.AppState?.isLoggedIn) return '';
+    const done = this._reportedIds?.has(item.id);
+    return `
+      <button class="fb-report-btn${done ? ' done' : ''}"
+              ${done ? 'disabled' : `onclick="FeedbackScreen.openReport(${item.id})"`}>
+        ${done ? '접수됐어요' : '이 문항 이상해요 ⚑'}
+      </button>`;
+  },
+
+  openReport(itemId) {
+    const item = (this._lastItems || []).find(i => i.id === itemId);
+    if (!item) return;
+    this._reportItem = item;
+    this._reportReason = null;
+
+    const stmtEl = document.getElementById('report-stmt');
+    if (stmtEl) stmtEl.textContent = item.text;
+
+    const list = document.getElementById('report-reasons');
+    if (list) {
+      list.innerHTML = REPORT_REASONS.map(r => `
+        <button class="report-reason" data-code="${r.code}"
+                onclick="FeedbackScreen.pickReportReason('${r.code}')">${r.text}</button>
+      `).join('');
+    }
+    const etcWrap = document.getElementById('report-etc-wrap');
+    const etc = document.getElementById('report-etc');
+    if (etcWrap) etcWrap.style.display = 'none';
+    if (etc) etc.value = '';
+    const submit = document.getElementById('report-submit');
+    if (submit) { submit.disabled = true; submit.textContent = '보내기'; }
+
+    Modal.open('report-modal');
+  },
+
+  pickReportReason(code) {
+    this._reportReason = code;
+    document.querySelectorAll('#report-reasons .report-reason').forEach(b => {
+      b.classList.toggle('selected', b.dataset.code === code);
+    });
+    const isEtc = code === 'etc';
+    const wrap = document.getElementById('report-etc-wrap');
+    if (wrap) wrap.style.display = isEtc ? '' : 'none';
+    if (isEtc) document.getElementById('report-etc')?.focus();
+    // 기타는 뭐라도 적어야 보낼 수 있다. 빈 '기타'는 아무 정보도 주지 않는다.
+    this._syncReportSubmit();
+  },
+
+  _syncReportSubmit() {
+    const submit = document.getElementById('report-submit');
+    if (!submit) return;
+    const etc = document.getElementById('report-etc');
+    const needsText = this._reportReason === 'etc';
+    submit.disabled = !this._reportReason || (needsText && !etc?.value.trim());
+  },
+
+  async submitReport() {
+    const item = this._reportItem;
+    if (!item || !this._reportReason) return;
+    const submit = document.getElementById('report-submit');
+    if (submit) { submit.disabled = true; submit.textContent = '보내는 중...'; }
+
+    const detail = this._reportReason === 'etc'
+      ? (document.getElementById('report-etc')?.value || '').trim().slice(0, 300)
+      : '';
+
+    try {
+      await window.LearningService.submitQuestionReport({
+        item,
+        reason: this._reportReason,
+        detail,
+        unit: window.AppState.session.detectedUnit || null,
+        level: window.AppState.session.currentLevel || null,
+        sessionId: this._reportSessionId || null,
+      });
+      this._reportedIds.add(item.id);
+      Modal.close('report-modal');
+      Toast.show('접수됐어요. 확인해볼게요');
+      // 버튼만 '접수됨'으로 바꾼다. 목록을 다시 그리면 스크롤 위치가 튄다.
+      const btn = document.querySelector(`.fb-report-btn[onclick*="openReport(${item.id})"]`);
+      if (btn) { btn.classList.add('done'); btn.disabled = true; btn.removeAttribute('onclick'); btn.textContent = '접수됐어요'; }
+    } catch (e) {
+      console.error('문항 신고 실패:', e);
+      Toast.show('전송에 실패했어요. 잠시 후 다시 시도해주세요');
+      if (submit) { submit.disabled = false; submit.textContent = '보내기'; }
+    }
   },
 
   /* 다음 학습 */

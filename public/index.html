@@ -746,6 +746,27 @@
 
 
 <!-- ============================================================
+     QUESTION REPORT MODAL (문항 신고)
+     ============================================================ -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-sheet">
+    <h3>이 문항 이상해요</h3>
+    <p id="report-stmt" class="report-stmt"></p>
+    <div class="report-reasons" id="report-reasons"></div>
+    <!-- '기타'를 골랐을 때만 열린다. -->
+    <div id="report-etc-wrap" style="display:none">
+      <textarea class="report-etc" id="report-etc" rows="3" maxlength="300"
+                oninput="FeedbackScreen._syncReportSubmit()"
+                placeholder="어떤 점이 이상했는지 적어주세요"></textarea>
+    </div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="modal-btn email" id="report-submit" onclick="FeedbackScreen.submitReport()" disabled>보내기</button>
+      <button class="modal-btn later" onclick="Modal.close('report-modal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      LOGIN MODAL
      ============================================================ -->
 <div class="modal-overlay" id="login-modal">

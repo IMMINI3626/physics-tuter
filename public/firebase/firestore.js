@@ -339,6 +339,38 @@ const LearningService = {
     };
   },
 
+  /**
+   * 문항 신고 저장 (설계 단계 9-1).
+   *
+   * 문장 원문·해설·라벨을 통째로 복사해 넣는다. 세션 참조만 남기면 나중에 신고를 모아 볼 때
+   * 매번 사용자 하위 컬렉션을 뒤져야 하고, 문제를 고쳐서 다시 시딩하면 원래 뭐가 문제였는지가
+   * 사라진다. 신고 문서 하나만 읽어도 판단이 서야 한다.
+   *
+   * 🔑 이 함수는 점수·이해도를 건드리지 않는다. 신고가 관측을 지우면 "틀리면 신고"가
+   *    최적 전략이 된다(feedback.js 주석 참고).
+   */
+  async submitQuestionReport({ item, reason, detail, unit, level, sessionId }) {
+    const uid = window.AppState?.user?.uid;
+    if (!uid || !item || !reason) throw new Error('신고 정보가 부족합니다');
+
+    await addDoc(collection(db, 'question_reports'), {
+      uid,
+      sessionId: sessionId || null,
+      unit: unit || null,
+      level: level || null,
+      questionId: item.id,
+      questionText: item.text || '',
+      isWrong: !!item.isWrong,               // 시스템이 정한 참·거짓
+      isCorrectAnswer: typeof item.isCorrectAnswer === 'boolean' ? item.isCorrectAnswer : null,
+      userReason: item.userReason || null,   // 학생이 쓴 답변
+      explanation: item.explanation || '',   // 학생이 본 해설
+      targetMisconceptionId: item.targetMisconceptionId || null,
+      reason,                                // REPORT_REASONS의 code
+      detail: detail || '',                  // 기타를 골랐을 때만 채워진다
+      createdAt: serverTimestamp(),
+    });
+  },
+
   /** 특정 오개념 하나의 이해도 조회 (없으면 null) */
   async getKnowledge(uid, misconceptionId) {
     const snap = await getDoc(doc(db, 'users', uid, 'knowledgeState', misconceptionId));

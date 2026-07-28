@@ -33,5 +33,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 4. 문항 신고 (설계 단계 9-1) — 로그인한 사용자가 자기 uid로 "만들기"만 할 수 있다.
+    //    읽기를 막는 이유: 학생끼리 남의 신고 내용을 볼 이유가 없고, 신고에는 그 사람이 쓴
+    //    답변까지 들어간다. 검토는 관리자 SDK(functions/list-reports.js)로 한다.
+    //    수정·삭제도 막는다 — 신고 기록은 논문 집계에 쓰므로 사후에 바뀌면 안 된다.
+    match /question_reports/{reportId} {
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
   }
 }

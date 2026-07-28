@@ -324,6 +324,81 @@
 .improve-delta .val { color: var(--green); font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
 .improve-delta .lbl { font-size: 10.5px; color: var(--green); opacity: 0.85; }
 
+/* 문항 신고 (설계 단계 9-1) — 카드 안에서 눈에 띄지 않게. 이 버튼이 강조되면
+   채점 결과보다 먼저 읽히고, 틀릴 때마다 누르는 버튼이 된다. */
+.fb-report-btn {
+  display: block;
+  width: 100%;
+  padding: 9px 15px 11px;
+  border: none;
+  border-top: 0.5px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 11.5px;
+  text-align: right;
+  cursor: pointer;
+}
+.fb-report-btn:hover { color: var(--text2); background: var(--surface2); }
+.fb-report-btn.done  { color: var(--green); cursor: default; background: transparent; }
+
+/* 🔑 사유 6개 + 서술 칸까지 열리면 시트가 화면보다 길어진다. 오버레이가 아래 정렬이라
+   넘치면 위쪽(제목·문장)이 잘려서 뭘 신고하는지 안 보인다. 시트 안에서 스크롤시킨다. */
+#report-modal .modal-sheet {
+  max-height: calc(100vh - 32px);   /* 오버레이 padding 16px × 2 */
+  overflow-y: auto;
+  padding: 24px 20px 26px;
+}
+
+.report-stmt {
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text2);
+  margin-bottom: 16px !important;
+  /* 문장이 길어도 사유 목록을 밀어내지 않게 */
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.report-reasons { display: flex; flex-direction: column; gap: 7px; }
+.report-reason {
+  padding: 12px 14px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.report-reason:hover { border-color: var(--accent); }
+.report-reason.selected {
+  border-color: var(--accent);
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--text1);
+  font-weight: 500;
+}
+
+.report-etc {
+  width: 100%;
+  margin-top: 9px;
+  padding: 12px 14px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--r-md);
+  background: var(--surface2);
+  color: var(--text1);
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.report-etc:focus { outline: none; border-color: var(--accent); }
+.report-etc::placeholder { color: var(--text3); }
+
 /* 소단원 이해도 (설계 단계 9) */
 .mastery-summary { margin-bottom: 0; }
 .ms-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
