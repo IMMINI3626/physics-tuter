@@ -310,59 +310,32 @@ const LearningService = {
   },
 
   /**
-   * 마이페이지 소단원 상세용 — 이 소단원 오개념들의 이해도 (설계 단계 9).
-   * 아직 한 번도 측정 안 된 오개념도 unknown(0.30) = 0%로 함께 넣는다. 측정된 것만 보여주면
-   * "남은 게 얼마나 되는지"가 안 보여서, 3개 중 3개 숙달인지 8개 중 3개인지 구분이 안 된다.
-   * @returns {{rows: Array, mastered: number, total: number, ratio: number, measured: number}}
+   * 마이페이지 소단원 상세용 — 이 소단원의 이해도 요약 (설계 단계 9).
+   *
+   * 🔑 오개념 하나하나의 값은 화면에 내보내지 않는다. 학습자에게 필요한 건 "이 소단원이
+   *    얼마나 남았나"이고, 개별 오개념 목록은 "몇 개짜리 단원인가"에 신경이 쏠리게 한다
+   *    (문제 화면에서 같은 이유로 감춘다 — feedback.js 주석). 여기서는 합쳐서 하나로 준다.
+   *
+   * 아직 한 번도 측정 안 된 오개념도 unknown(0.30) = 0%로 분모에 넣는다. 측정된 것만 세면
+   * 3개 중 3개 숙달인지 8개 중 3개 숙달인지 구분되지 않는다.
+   *
+   * @returns {{mastered: number, total: number, ratio: number}}
    */
   async fetchUnitMastery(uid, unitName) {
-    if (!window.BKT || !uid || !unitName) return { rows: [], mastered: 0, total: 0, ratio: 0, measured: 0 };
+    if (!window.BKT || !uid || !unitName) return { mastered: 0, total: 0, ratio: 0 };
     const [knowledge, all] = await Promise.all([
       this.fetchKnowledgeState(uid),
       MisconceptionDB._loadAll(),
     ]);
-    const names = window.DIMENSION_NAMES || {};
 
-    const rows = all
-      .filter(m => m.subUnit === unitName)
-      .map(m => {
-        const rec = knowledge[m.id];
-        const pL = typeof rec?.pL === 'number' ? rec.pL : window.BKT.PRIOR.unknown;
-        return {
-          id: m.id,
-          name: m.name_ko || m.id,
-          dimension: names[m.dimensionCode] || m.dimensionCode || '',
-          pL,
-          pct: Math.round(window.BKT.progressRatio(pL) * 100),
-          mastered: window.BKT.isMastered(pL),
-          attempts: rec?.attempts || 0,
-        };
-      })
-      // 약한 것부터. 같은 값이면 이름순으로 고정해 새로고침마다 순서가 바뀌지 않게 한다.
-      .sort((a, b) => a.pL - b.pL || a.name.localeCompare(b.name));
+    const ids = all.filter(m => m.subUnit === unitName).map(m => m.id);
+    if (!ids.length) return { mastered: 0, total: 0, ratio: 0 };
 
-    const total = rows.length;
     return {
-      rows,
-      total,
-      mastered: rows.filter(r => r.mastered).length,
-      measured: rows.filter(r => r.attempts > 0).length,
-      ratio: total ? rows.reduce((s, r) => s + r.pct, 0) / (total * 100) : 0,
-    };
-  },
-
-  /**
-   * 마이페이지 메인 통계용 — 전체 오개념 중 교정한(숙달한) 개수 (설계 단계 9).
-   * 분모는 "측정을 시작한 오개념"이다. 전체 128개를 분모로 쓰면 어느 학생이든 한 자릿수 %가
-   * 나와서 아무 정보도 주지 못한다.
-   */
-  async fetchMasteryStats(uid) {
-    if (!window.BKT || !uid) return { corrected: 0, measured: 0 };
-    const knowledge = await this.fetchKnowledgeState(uid);
-    const entries = Object.values(knowledge).filter(k => typeof k?.pL === 'number');
-    return {
-      corrected: entries.filter(k => window.BKT.isMastered(k.pL)).length,
-      measured: entries.length,
+      total: ids.length,
+      mastered: ids.filter(id => window.BKT.isMastered(this._pL(knowledge, id))).length,
+      // 🔑 문제 화면의 진행도와 같은 함수를 쓴다. 두 화면이 같은 상태를 다른 숫자로 말하면 안 된다.
+      ratio: this._masteryRatio(ids, knowledge),
     };
   },
 

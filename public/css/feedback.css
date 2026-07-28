@@ -175,12 +175,10 @@
 }
 
 /* ── Stats Grid ── */
-/* 카드 3개(총 학습 횟수 / 평균 점수 / 교정한 오개념). 좁은 화면에서 라벨이 눌리지 않도록
-   좌우 여백과 칸 사이를 줄이고, 값 글자도 한 단계 작게 잡는다. */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
   padding: 0 20px 18px;
 }
 
@@ -188,12 +186,12 @@
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px 6px;
+  padding: 14px 10px;
   text-align: center;
 }
 .stat-val {
   font-family: var(--font-mono);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--accent2);
   margin-bottom: 3px;
@@ -326,8 +324,8 @@
 .improve-delta .val { color: var(--green); font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
 .improve-delta .lbl { font-size: 10.5px; color: var(--green); opacity: 0.85; }
 
-/* 개념별 이해도 (설계 단계 9) */
-.mastery-summary { margin-bottom: 14px; }
+/* 소단원 이해도 (설계 단계 9) */
+.mastery-summary { margin-bottom: 0; }
 .ms-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 .ms-label { font-size: 13px; color: var(--text2); }
 .ms-percent { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent2); }
@@ -341,23 +339,7 @@
   transition: width 0.4s ease;
 }
 .ms-sub { margin-top: 7px; font-size: 11.5px; color: var(--text3); }
-
-.ms-row { padding: 10px 0; border-top: 0.5px solid var(--border); }
-.ms-row:first-of-type { border-top: none; }
-.ms-row-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-.ms-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text2); line-height: 1.35; }
-.ms-val {
-  flex-shrink: 0; font-family: var(--font-mono);
-  font-size: 12.5px; font-weight: 600; color: var(--text3);
-}
-.ms-track { height: 4px; border-radius: 100px; background: var(--surface2); overflow: hidden; }
-.ms-track-fill { height: 100%; border-radius: 100px; background: var(--accent2); transition: width 0.4s ease; }
-/* 숙달한 개념은 초록 + 체크. 색만으로 구분되지 않도록 값 자리에 ✓를 함께 넣는다. */
-.ms-row.done .ms-name { color: var(--text3); }
-.ms-row.done .ms-val { color: var(--green); font-size: 14px; }
-.ms-row.done .ms-track-fill { background: var(--green); }
-
-.mastery-note { margin: 12px 0 0; font-size: 11.5px; color: var(--text3); line-height: 1.5; }
+.mastery-note { margin: 14px 0 0; font-size: 11.5px; color: var(--text3); line-height: 1.5; }
 
 /* 반복 오개념 */
 .mc-row {

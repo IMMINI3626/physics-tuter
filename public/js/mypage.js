@@ -15,14 +15,13 @@ const MypageScreen = {
 
     try {
       const uid = AppState.user.uid;
-      const [stats, allProgress, recentSessions, mastery] = await Promise.all([
+      const [stats, allProgress, recentSessions] = await Promise.all([
         LearningService.fetchStats(uid),
         LearningService.fetchAllUnitProgress(uid),
         LearningService.fetchRecentSessions(uid, 20),
-        LearningService.fetchMasteryStats(uid),
       ]);
 
-      this._renderStats(stats, mastery);
+      this._renderStats(stats);
       this._renderWeakUnits(recentSessions);
       this._renderChapterList(allProgress);
     } catch (e) {
@@ -31,16 +30,10 @@ const MypageScreen = {
     }
   },
 
-  _renderStats(stats, mastery) {
+  _renderStats(stats) {
     const el = (id) => document.getElementById(id);
     if (el('mp-total'))    el('mp-total').textContent    = stats.total;
     if (el('mp-avgscore')) el('mp-avgscore').textContent = stats.avgScore;
-    // 교정한 오개념 = 이해도가 숙달 기준을 넘은 개수. 분모는 측정을 시작한 개수(설계 단계 9).
-    if (el('mp-corrected')) {
-      el('mp-corrected').textContent = mastery && mastery.measured
-        ? `${mastery.corrected}/${mastery.measured}`
-        : '—';
-    }
   },
 
   /* 마이페이지 메인에서, 소단원 상세 화면에 들어가지 않아도 어디가 취약한지 바로 보여주는
@@ -298,8 +291,7 @@ const MypageScreen = {
   _renderMastery(mastery) {
     const card = document.getElementById('d-mastery-card');
     const summaryEl = document.getElementById('d-mastery-summary');
-    const listEl = document.getElementById('d-mastery-list');
-    if (!card || !summaryEl || !listEl) return;
+    if (!card || !summaryEl) return;
 
     // 오개념 데이터가 없는 소단원(있으면 안 되지만 데이터 누락 대비)은 카드를 숨긴다
     if (!mastery || !mastery.total) {
@@ -316,17 +308,6 @@ const MypageScreen = {
       <div class="ms-bar"><div class="ms-fill" style="width:${pct}%"></div></div>
       <div class="ms-sub">확인 끝난 개념 ${mastery.mastered} / ${mastery.total}</div>
     `;
-
-    listEl.innerHTML = mastery.rows.map(r => `
-      <div class="ms-row${r.mastered ? ' done' : ''}">
-        <div class="ms-row-top">
-          <span class="ms-name">${escapeHtml(r.name)}</span>
-          <span class="ms-val">${r.mastered ? '✓' : `${r.pct}%`}</span>
-        </div>
-        <div class="ms-track"><div class="ms-track-fill" style="width:${r.pct}%"></div></div>
-      </div>
-    `).join('');
-
     card.style.display = '';
   },
 
