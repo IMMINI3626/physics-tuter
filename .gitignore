@@ -13,6 +13,9 @@ firebase-debug.*.log*
 # Firebase config
 functions/serviceAccountKey.json
 
+# test_api.js가 실행할 때마다 새로 만드는 검증 리포트 (산출물이라 추적하지 않는다)
+functions/report.html
+
 # Uncomment this if you'd like others to create their own Firebase project.
 # For a team working on the same Firebase project(s), it is recommended to leave
 # it commented so all members can deploy to the same project(s) in .firebaserc.

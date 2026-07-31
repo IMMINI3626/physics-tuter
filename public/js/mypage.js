@@ -107,7 +107,7 @@ const MypageScreen = {
         ${unmatchedNames.map((name) => {
           const p = allProgress[name];
           return `
-          <button class="subunit-row" data-etc-name="${this._escapeAttr(name)}" onclick="MypageScreen._onSubunitClick(this)">
+          <button class="subunit-row" data-etc-name="${escapeHtml(name)}" onclick="MypageScreen._onSubunitClick(this)">
             <span class="subunit-name">${escapeHtml(name)}</span>
             ${this._levelDots(p)}
             ${this._levelBadge(p)}
@@ -118,10 +118,6 @@ const MypageScreen = {
     ` : '';
 
     container.innerHTML = chapterCards + etcCard;
-  },
-
-  _escapeAttr(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   },
 
   _onSubunitClick(btnEl) {
@@ -373,25 +369,56 @@ const MypageScreen = {
     return score >= 90 ? 'good' : score >= 70 ? 'mid' : 'bad';
   },
 
-  /* 이력 한 줄(원본 단독, 또는 펼친 상태의 1차/2차 등 개별 시도) 렌더링 */
+  /* 이력 한 줄(원본 단독, 또는 펼친 상태의 1차/2차 등 개별 시도) 렌더링.
+     🔑 세션 값(id·score·retryOf·level)을 onclick 문자열에 보간하지 않는다. 이 값들은 사용자가
+        쓴 Firestore 문서에서 오므로 따옴표 하나만 섞여도 핸들러가 깨진다. 값은 data-*에 담고
+        클릭은 컨테이너 한 곳에서 위임으로 받는다 — 문제풀기 탭(quiz-library.js)이 같은 이유로
+        이미 이 방식을 쓴다. 숫자로 써야 하는 값은 Number()로 한 번 걸러 클래스명에 섞이지
+        않게 한다. */
   _renderHistAttemptRow(s, ordinalLabel) {
     // level은 이 기능을 만들기 전에 저장된 과거 세션엔 없을 수 있음 — 그런 경우는 배지 없이 표시
-    const levelBadge = s.level ? `<span class="level-badge l${s.level}">L${s.level}</span>` : '';
-    const ordinal = ordinalLabel ? `<span class="hist-ordinal">${ordinalLabel}</span>` : '';
+    const level = Number(s.level) || 0;
+    const score = Number(s.score) || 0;
+    const levelBadge = level ? `<span class="level-badge l${level}">L${level}</span>` : '';
+    const ordinal = ordinalLabel ? `<span class="hist-ordinal">${escapeHtml(ordinalLabel)}</span>` : '';
     const rootId = s.retryOf || s.id;
 
     return `
       <div class="hist-row">
         ${ordinal}
-        <span class="hist-date">${this._fmtHistDate(s.createdAt)}</span>
-        <span class="hist-score ${this._histScoreCls(s.score)}">${s.score}점</span>
+        <span class="hist-date">${escapeHtml(this._fmtHistDate(s.createdAt))}</span>
+        <span class="hist-score ${this._histScoreCls(score)}">${score}점</span>
         <span class="hist-level">${levelBadge}</span>
-        <button class="hist-view-btn" onclick="event.stopPropagation(); viewSessionLog('${s.id}', MypageScreen._currentSubUnit, ${s.score}, 'mypage-detail', '${rootId}')">
+        <button class="hist-view-btn"
+                data-session-id="${escapeHtml(s.id)}"
+                data-root-id="${escapeHtml(rootId)}"
+                data-score="${score}">
           문제 보기
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     `;
+  },
+
+  /* 이력 목록의 클릭을 #d-history 한 곳에서 위임으로 처리.
+     행마다 리스너를 달면 페이지를 넘길 때(innerHTML 재작성) 매번 다시 달아야 하고, 컨테이너에
+     매번 달면 리스너가 중복 누적된다. 그래서 한 번만 달고 플래그로 막는다. */
+  _bindHistoryEvents() {
+    const el = document.getElementById('d-history');
+    if (!el || el._histBound) return;
+    el._histBound = true;
+
+    el.addEventListener('click', (e) => {
+      const viewBtn = e.target.closest('.hist-view-btn');
+      if (viewBtn) {
+        e.stopPropagation();   // 그룹 헤더의 펼치기/접기가 같이 발동하지 않도록
+        const { sessionId, rootId, score } = viewBtn.dataset;
+        window.viewSessionLog(sessionId, this._currentSubUnit, Number(score), 'mypage-detail', rootId);
+        return;
+      }
+      const header = e.target.closest('.hist-group-header');
+      if (header) this._toggleHistGroup(header.dataset.group);
+    });
   },
 
   _toggleHistGroup(groupId) {
@@ -433,9 +460,9 @@ const MypageScreen = {
 
       return `
         <div class="hist-item">
-          <div class="hist-row hist-group-header" onclick="MypageScreen._toggleHistGroup('${groupId}')">
-            <span class="hist-date">${this._fmtHistDate(latest.createdAt)}</span>
-            <span class="hist-score ${this._histScoreCls(latest.score)}">${latest.score}점</span>
+          <div class="hist-row hist-group-header" data-group="${groupId}">
+            <span class="hist-date">${escapeHtml(this._fmtHistDate(latest.createdAt))}</span>
+            <span class="hist-score ${this._histScoreCls(Number(latest.score) || 0)}">${Number(latest.score) || 0}점</span>
             <span class="hist-retry-badge">재풀이 횟수: ${retryCount}</span>
             <svg class="hist-toggle-chev" id="chev-${groupId}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
@@ -444,6 +471,8 @@ const MypageScreen = {
       `;
     }).join('');
 
+    this._bindHistoryEvents();
+    // 페이지네이션 버튼은 내부에서 만든 정수만 보간하므로 인라인 핸들러를 그대로 둔다
     if (pagEl) pagEl.innerHTML = this._buildPagination(page, totalPages);
   },
 

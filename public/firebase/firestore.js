@@ -670,8 +670,15 @@ const MisconceptionDB = {
     }
     if (!picked.length) return [];
 
-    // 규칙 3: 틀린 문장/옳은 문장을 절반씩 배정 (홀수면 틀린 문장이 하나 많게)
-    const wantWrong = Math.ceil(picked.length / 2);
+    /* 규칙 3: 틀린 문장/옳은 문장을 섞는다 — 한쪽으로만 채우면 찍기로 다 맞는다.
+       🔑 개수는 매번 랜덤이어야 한다. 예전엔 ceil(5/2) = 3으로 고정이라 어느 소단원, 몇 번을
+          봐도 항상 "거짓 3 / 참 2"였다. 그러면 전부 X로 찍기만 해도 5문항 중 3개가 맞고
+          약점은 언제나 정확히 2개로 나온다(실측: 14개 소단원 × 1000회 전부 3:2).
+          찍어서 맞힌 문항도 applyDiagnostic(true) = 0.52를 받아 숙달까지 정답 2번만 남으므로,
+          초기 이해도가 실제보다 부풀어 오른다 — BKT 초기값 0.70을 폐기한 이유와 같은 문제다.
+          generateQuestions가 틀린 문장 개수를 매번 랜덤으로 뽑는 것과 같은 취지로 맞춘다. */
+    const half = picked.length / 2;
+    const wantWrong = Math.random() < 0.5 ? Math.floor(half) : Math.ceil(half);
     const wanted = shuffle(picked.map((_, i) => i < wantWrong));
 
     const snap = await getDocs(query(

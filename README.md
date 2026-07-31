@@ -34,7 +34,7 @@
 ### 무엇에 기반하는가
 
 오개념 목록은 임의로 만든 게 아니라 물리교육에서 널리 쓰이는 표준 진단검사
-(FCI, FMCE)와 국내 물리교육 학위논문에 근거한다. 총 87개 오개념을 17개 개념 영역으로
+(FCI, FMCE)와 국내 물리교육 학위논문에 근거한다. 총 128개 오개념을 20개 개념 영역으로
 묶어 관리한다.
 
 ### 기술 구성
@@ -184,14 +184,21 @@ firebase emulators:start
 ### 정적 데이터 (seed.js로 시딩, 읽기 전용)
 
 ```
-/units/{unitId}                    대단원 (힘과 운동, 에너지 등)
-/misconception_dimensions/{id}     개념 영역 17개 (임페투스, 중력·저항 등)
-/misconceptions/{id}               개별 오개념 87개 (dimensionCode로 영역에 연결)
-/misconception_sentences/{id}      오개념별 참·거짓 예시 문장 166개
+/units/{unitId}                    대단원 4개 (힘과 운동, 에너지 등)
+/misconception_dimensions/{id}     개념 영역 20개 (임페투스, 중력·저항 등)
+/misconceptions/{id}               개별 오개념 128개 (dimensionCode로 영역에 연결)
+/misconception_sentences/{id}      오개념별 참·거짓 예시 문장 342개
 /question_patterns/{id}            실제 기출 유형 추상화 116개 (문제 생성 참고용)
-/fci_fmce_items/{id}               표준 진단검사 문항 73개 (효과 검증·진단용)
-/item_misconception_map/{id}       진단 문항의 오답과 오개념 연결 130개
-/scoring_keywords/{id}             채점 키워드 54개
+```
+
+아래 세 컬렉션도 `seed.js`가 채우지만 **현재 코드에서 읽는 곳이 없다.** 표준 진단검사를
+효과 검증에 쓰려던 자리인데 아직 연결하지 않았다. 지우지 않고 두는 이유는 Phase 3의
+파라미터 검증에 쓸 예정이기 때문이다.
+
+```
+/fci_fmce_items/{id}               표준 진단검사 문항 73개      (미사용)
+/item_misconception_map/{id}       진단 문항 오답↔오개념 130개  (미사용)
+/scoring_keywords/{id}             채점 키워드 54개             (미사용)
 ```
 
 ### 사용자 학습 데이터

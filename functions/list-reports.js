@@ -53,12 +53,27 @@ function tally(rows, key, label) {
 
 async function main() {
   const unitFilter = valueOf('--unit');
-  let q = db.collection('question_reports').orderBy('createdAt', 'desc');
-  if (unitFilter) q = db.collection('question_reports').where('unit', '==', unitFilter);
-  if (!has('--all') && !has('--summary')) q = q.limit(50);
+  const cap = (!has('--all') && !has('--summary')) ? 50 : null;
+
+  /* 🔑 예전엔 --unit을 주면 쿼리를 통째로 새로 만들면서 orderBy를 잃었다. 그래서 단원을
+     지정하면 "최근 50건"이 아니라 임의의 50건이 나왔다(논문 표본이 틀어지는 문제).
+     where + orderBy를 함께 쓰면 복합 인덱스를 요구하므로, 필터가 있을 때는 정렬·자르기를
+     메모리에서 한다 — public/firebase/firestore.js의 fetchSessionsByUnit과 같은 이유다.
+     신고 건수는 사람이 검토할 규모라 전량을 읽어도 부담이 없다. */
+  let q = db.collection('question_reports');
+  if (unitFilter) {
+    q = q.where('unit', '==', unitFilter);
+  } else {
+    q = q.orderBy('createdAt', 'desc');
+    if (cap) q = q.limit(cap);
+  }
 
   const snap = await q.get();
-  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  let rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (unitFilter) {
+    rows.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    if (cap) rows = rows.slice(0, cap);
+  }
 
   if (!rows.length) {
     console.log('신고가 없습니다.');

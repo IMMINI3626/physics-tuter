@@ -105,6 +105,25 @@ async function authorize(request, label) {
 }
 
 /**
+ * 오개념 마스터(128개)를 인스턴스가 살아있는 동안 재사용합니다.
+ *
+ * seed.js로만 바뀌는 정적 데이터인데, 예전에는 extractKeywords가 호출마다 컬렉션 전체를
+ * 다시 읽고 generateQuestions가 또 소단원 쿼리를 따로 냈다. 사진 한 장에 128건 읽기가
+ * 그대로 붙는다. 프롬프트에 실어 보낼 목록이라 매번 최신일 필요도 없다.
+ *
+ * 시딩을 다시 했다면 인스턴스가 교체될 때까지(보통 수 분) 옛 목록이 쓰일 수 있다. 문제
+ * 생성은 이 목록에서 "고르는" 작업이라 그 지연은 감당 가능하다. 즉시 반영이 필요하면
+ * 함수를 재배포하면 된다.
+ */
+let misconceptionCache = null;
+async function loadMisconceptions() {
+  if (misconceptionCache) return misconceptionCache;
+  const snap = await db.collection('misconceptions').get();
+  misconceptionCache = snap.docs.map(d => d.data());
+  return misconceptionCache;
+}
+
+/**
  * 이미지 페이로드 검증. 없거나 지나치게 크면 AI를 부르기 전에 끊는다.
  * (큰 요청은 그대로 Gemini 입력 토큰 비용이 되므로 여기서 막는 게 요점이다)
  */
@@ -153,30 +172,49 @@ function getGeminiModel(temperature = 0, opts = {}) {
 }
 
 /**
- * 생성된 판별 문장의 참·거짓 라벨을 독립된 호출로 검증합니다 (단계 8-5).
+ * 생성된 판별 문장을 독립된 호출로 검수합니다 (단계 8-5).
+ *
+ * 두 가지를 함께 판정한다.
+ *   1) isFalse   — 참·거짓 라벨이 맞는가. 생성 호출이 isWrong을 반대로 다는 사고가 실제로 났다.
+ *   2) needsCalc — 수를 대입해 계산해야 판별되는 문장인가. Level 1은 "계산 없이 옳고 그름만"
+ *      판별하는 단계인데, 프롬프트로 금지하는 것만으로는 지켜지지 않았다("1kg의 물체가 5m
+ *      높이에 있을 때의 위치에너지는 49 J이다" 같은 Level 2용 문장이 실제로 Level 1에 나왔다).
+ *      그 문장은 라벨이 맞아서 1)을 그냥 통과했고, 그래서 아무것도 막지 못했다.
  *
  * 왜 별도 호출인가 — 문장을 만드는 호출은 오개념 겨냥, 개수 맞추기, 소재 다양화, 공식 문장
- * 혼합을 동시에 처리한다. 그 와중에 isWrong을 반대로 다는 사고가 실제로 났다. 이 호출은
- * "이 문장이 물리적으로 거짓인가"만 본다. 문장 외의 맥락(오개념 목록, 겨냥 지시, 학생 답변)은
- * 일부러 주지 않는다 — 힌트를 주면 생성 호출의 판단을 그대로 따라가 검증이 되지 않는다.
+ * 혼합을 동시에 처리한다. 이 호출은 문장만 보고 판정한다. 문장 외의 맥락(오개념 목록, 겨냥
+ * 지시, 학생 답변)은 일부러 주지 않는다 — 힌트를 주면 생성 호출의 판단을 그대로 따라가
+ * 검수가 되지 않는다.
  *
- * @returns {boolean[] | null} 문장별 "거짓인가" 판정. 형식이 깨지면 null(검증 생략).
+ * @returns {Array<{isFalse: boolean|null, ambiguous: boolean, needsCalc: boolean}> | null}
+ *          형식이 깨지면 null(검수 생략).
  */
-async function verifyStatementLabels(unit, questions) {
+async function verifyStatements(unit, questions) {
   const list = questions.map((q, i) => `${i + 1}. ${q.text}`).join('\n');
   const prompt = `
-당신은 고등학교 물리 교사입니다. 아래 문장들이 물리적으로 참인지 거짓인지만 판정하세요.
+당신은 고등학교 물리 교사입니다. 아래 문장들을 두 가지 기준으로 판정하세요.
 단원: "${unit}"
 
 ${list}
 
-판정 기준
+[판정 1: isFalse — 이 문장이 물리적으로 거짓인가]
 - 고등학교 교육과정 수준에서 판단합니다.
 - 표기 관례(부호, 벡터 화살표, 기호 이름)만 다르고 물리적 내용이 맞으면 **참**입니다.
 - 교과서에 따라 다르게 쓸 수 있어 참·거짓을 단정할 수 없는 문장은 "ambiguous"로 표시하세요.
 
+[판정 2: needsCalc — 참·거짓을 가리려면 수를 대입해 계산해야 하는가]
+- 공식에 수를 넣어 값을 구해봐야 맞는지 알 수 있으면 true입니다.
+    "1kg의 물체가 5m 높이에 있을 때의 위치에너지는 49 J이다"     → true (mgh를 계산해야 함)
+    "질량 2kg에 5N을 가하면 가속도는 2.5 m/s²이다"              → true (F=ma를 계산해야 함)
+- 공식의 "형태"가 맞는지만 보면 되는 문장은 false입니다. 계산이 아니라 암기·이해의 문제입니다.
+    "운동에너지를 구하는 공식은 E = mv²이다"                    → false (½이 빠진 걸 보면 됨)
+    "운동량의 단위는 kg·m/s이다"                               → false
+- 수치가 나오더라도 그것이 상수·정의값이라 계산이 필요 없으면 false입니다.
+    "빛의 속도는 약 3×10⁸ m/s이다"                             → false
+- 판단 기준은 "수치가 들어있는가"가 아니라 "수를 대입해 계산해야 하는가"입니다.
+
 JSON만 출력:
-{"results":[{"n":1,"isFalse":true},{"n":2,"isFalse":false},{"n":3,"ambiguous":true}]}
+{"results":[{"n":1,"isFalse":true,"needsCalc":false},{"n":2,"isFalse":false,"needsCalc":true},{"n":3,"ambiguous":true,"needsCalc":false}]}
 `;
   try {
     const model = getGeminiModel(0, { thinkingBudget: 256, outputTokens: 512 });
@@ -185,13 +223,17 @@ JSON만 출력:
     if (!Array.isArray(rows) || rows.length !== questions.length) return null;
     return questions.map((_, i) => {
       const row = rows.find(r => Number(r?.n) === i + 1);
-      if (!row) return null;
-      if (row.ambiguous === true) return 'ambiguous';
-      return typeof row.isFalse === 'boolean' ? row.isFalse : null;
+      // 판정이 빠진 문항은 "문제 없음"으로 둔다 — 검수 누락으로 정상 문항을 버리지 않기 위함
+      if (!row) return { isFalse: null, ambiguous: false, needsCalc: false };
+      return {
+        isFalse:   typeof row.isFalse === 'boolean' ? row.isFalse : null,
+        ambiguous: row.ambiguous === true,
+        needsCalc: row.needsCalc === true,
+      };
     });
   } catch (err) {
-    // 검증이 실패했다고 문제 생성을 막지는 않는다. 검증은 품질 장치이지 필수 경로가 아니다.
-    console.warn(`[verifyStatementLabels] 검증 호출 실패, 생략함: ${err.message}`);
+    // 검수가 실패했다고 문제 생성을 막지는 않는다. 검수는 품질 장치이지 필수 경로가 아니다.
+    console.warn(`[verifyStatements] 검수 호출 실패, 생략함: ${err.message}`);
     return null;
   }
 }
@@ -314,11 +356,11 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
   try {
     // 1. 오개념 DB 전체 불러오기 (14개 소단원 전부 수록 — 역학/비역학 구분 없음).
     //    소단원명을 함께 넘겨야 AI가 "이 사진의 단원"과 "그 단원의 오개념"을 일관되게 고른다.
-    const misRef = await db.collection('misconceptions').get();
-    const dbMisconceptions = misRef.docs.map(doc => ({
-      id: doc.data().id,
-      subUnit: doc.data().subUnit,
-      description: doc.data().description
+    //    (loadMisconceptions가 인스턴스 단위로 캐시한다 — 호출마다 128건을 다시 읽지 않는다)
+    const dbMisconceptions = (await loadMisconceptions()).map(m => ({
+      id: m.id,
+      subUnit: m.subUnit,
+      description: m.description,
     }));
 
     // 이미지 → 소단원 분류 + 오개념 id 매핑. 정해진 목록에서 고르는 분류 작업이라
@@ -393,11 +435,8 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
   }
 
   try {
-    // 소단원 기반 오개념 전체 조회 (subUnit 필터링)
-    const subUnitSnap = await db.collection('misconceptions')
-      .where('subUnit', '==', unit)
-      .get();
-    const subUnitMisconceptions = subUnitSnap.docs.map(d => d.data());
+    // 소단원 기반 오개념 조회 (캐시된 마스터에서 걸러낸다 — 쿼리 한 번을 아낀다)
+    const subUnitMisconceptions = (await loadMisconceptions()).filter(m => m.subUnit === unit);
 
     // 소단원 오개념이 있으면 그걸 사용, 없으면 Gemini가 골라준 misconceptions 사용
     const activeMisconceptions = subUnitMisconceptions.length > 0
@@ -408,11 +447,17 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     const validIds = activeMisconceptions.map(mc => mc.id).filter(Boolean);
     // 문항 오개념 태깅 검증용 — AI가 붙인 targetMisconceptionId가 실제 목록 안의 값인지 확인
     const validIdSet = new Set(validIds);
-    const dbQueries = validIds.map(id =>
-      db.collection('misconception_sentences').where('misconceptionId', '==', id).get()
-    );
-
-    const querySnapshots = await Promise.all(dbQueries);
+    /* 🔑 예전엔 오개념 id마다 쿼리를 하나씩 날려서, 소단원 하나에 최대 22번이 됐다
+       (뉴턴 운동 법칙 22개). in 연산자는 한 번에 30개까지 받으므로 지금 데이터에서는
+       어느 소단원이든 쿼리 1회로 끝난다. */
+    const ID_CHUNK = 30;
+    const idChunks = [];
+    for (let i = 0; i < validIds.length; i += ID_CHUNK) {
+      idChunks.push(validIds.slice(i, i + ID_CHUNK));
+    }
+    const querySnapshots = await Promise.all(idChunks.map(chunk =>
+      db.collection('misconception_sentences').where('misconceptionId', 'in', chunk).get()
+    ));
     const contextSentences = querySnapshots.flatMap(snap => snap.docs.map(doc => doc.data()));
 
     // 🆕 소단원 기반 실제 기출 유형 패턴 조회 (완자 물리학Ⅰ 유형 추상화 DB, 원문 미포함)
@@ -612,6 +657,24 @@ JSON만 출력하세요:
 
     // 🆕 Level 1: 정성적 문장 + 공식 판별 문장 혼합 출제 지시
     const level1FormulaInstruction = `
+[Level 1 절대 금지 - 계산이 필요한 문장]
+Level 1은 계산 없이 옳고 그름만 판별하는 단계입니다. 수를 대입해 값을 구해봐야 참·거짓을
+가릴 수 있는 문장은 **단 하나도** 만들지 마세요. 아래는 전부 금지입니다.
+
+- "실험실 바닥을 기준면으로 했을 때, 1kg의 물체가 5m 높이에 있을 때의 위치에너지는 49 J이다"
+  → mgh에 수를 넣어 계산해야 판별됩니다. 금지.
+- "질량 2kg인 물체에 5N의 힘을 가하면 가속도는 2.5 m/s²이다"
+  → F=ma에 수를 넣어 계산해야 판별됩니다. 금지.
+- "10m/s로 달리는 2kg 공의 운동에너지는 100 J이다"
+  → 금지. 이런 수치 판별 문장은 Level 2에서 다룹니다.
+
+반대로, 아래처럼 **공식의 형태**만 보면 되는 문장은 계산이 아니므로 허용됩니다.
+- "운동에너지를 구하는 공식은 E = mv²이다" → ½이 빠진 것을 눈으로 보면 됩니다. 허용.
+- "운동량의 단위는 kg·m/s이다" → 허용.
+- "빛의 속도는 약 3×10⁸ m/s이다" → 상수를 아는지 묻는 것이므로 허용.
+
+판단 기준은 "수치가 들어있는가"가 아니라 **"수를 대입해 계산해야 하는가"**입니다.
+
 [Level 1 추가 규칙 - 공식 판별 문장 혼합]
 생성하는 5개의 문장 중 일부는 "공식이 맞는지 틀린지 판별하는 문장"으로 구성해야 합니다.
 아래 두 가지 조합 중 하나를 랜덤으로 선택하여 생성하세요:
@@ -624,7 +687,6 @@ JSON만 출력하세요:
   - "운동량의 단위는 kg·m/s 입니다" (맞음)
 
 공식 판별 문장도 일반 문장과 동일하게 isWrong: true/false로 표시하고, 같은 5문항 배열 안에 섞어서 출력하세요.
-계산을 직접 수행해야 하는 문제는 절대 포함하지 마세요. (Level 1은 계산 없이 옳고 그름만 판별하는 단계입니다)
 
 [공식 판별 문장에서 금지 - 매우 중요]
 참·거짓이 교과서 표기 관례에 따라 달라지는 문장은 만들지 마세요. 채점하는 사람마다 답이
@@ -765,38 +827,56 @@ JSON만 출력하세요 (다른 텍스트 금지):
         throw new Error('힌트 누락');
       }
 
-      /* 🔑 라벨 검증 (단계 8-5) — 학생에게 보내기 전에 독립된 호출로 참·거짓을 다시 판정한다.
+      /* 🔑 문항 검수 (단계 8-5) — 학생에게 보내기 전에 독립된 호출로 다시 판정한다.
          예전에는 이 대조를 채점할 때 했다. 그래서 라벨이 어긋난 문항을 학생이 이미 다 푼 뒤에야
          발견했고, 결과 화면에 "채점에서 뺀 문항"이라는 이상한 카드가 남았다. 지금은 어긋나면
-         그 세트를 통째로 버리고 다시 만든다 — 학생은 검증을 통과한 문장만 본다.
+         그 세트를 통째로 버리고 다시 만든다 — 학생은 검수를 통과한 문장만 본다.
          참·거짓을 단정할 수 없는 문장(ambiguous)도 같은 이유로 버린다. 문제로 성립하지 않는다. */
-      const verdicts = await verifyStatementLabels(unit, questions);
+      const verdicts = await verifyStatements(unit, questions);
       if (verdicts) {
-        const bad = questions
-          .map((q, i) => ({ q, i, v: verdicts[i] }))
-          .filter(({ q, v }) => v === 'ambiguous' || (typeof v === 'boolean' && v !== q.isWrong));
+        const rows = questions.map((q, i) => ({ q, i, v: verdicts[i] }));
+
+        /* (1) Level 1에 새어든 계산 문장.
+           Level 1은 계산 없이 판별하는 단계라 프롬프트에서 금지하지만, 지시만으로는 지켜지지
+           않았다("...위치에너지는 49 J이다"가 실제로 나왔다). 그 문장은 라벨이 맞으니까 아래 (2)를
+           그냥 통과해서 아무것도 막지 못했다 — 그래서 난이도도 검수 항목으로 넣는다.
+           Level 2 Mode A는 계산 판별 문장을 일부러 요구하므로 검사하지 않는다. */
+        const calcLeaks = level === 1 ? rows.filter(({ v }) => v.needsCalc) : [];
+        if (calcLeaks.length) {
+          const where = calcLeaks.map(({ i }) => `${i + 1}번`).join(', ');
+          if (attempt < MAX_AI_ATTEMPTS) {
+            throw new Error(`Level 1에 계산 문장 ${calcLeaks.length}건 — ${where}`);
+          }
+          // 마지막 시도에서는 통과시킨다. 계산 문장은 라벨이 틀린 게 아니라 난이도가 어긋난
+          // 것이어서, 학생에게 "문제 생성 실패"를 띄우는 쪽이 더 나쁘다. 빈도는 로그로 본다.
+          console.warn(`[generateQuestions] Level 1 계산 문장 ${calcLeaks.length}건 — unit: ${unit}, ${where} (마지막 시도라 그대로 사용)`);
+        }
+
+        /* (2) 참·거짓 라벨 대조 */
+        const bad = rows.filter(({ q, v }) =>
+          v.ambiguous || (typeof v.isFalse === 'boolean' && v.isFalse !== !!q.isWrong));
         if (bad.length) {
           const detail = bad.map(({ q, i, v }) =>
-            `${i + 1}번(생성:${q.isWrong ? '거짓' : '참'} 검증:${v === 'ambiguous' ? '모호' : (v ? '거짓' : '참')})`
+            `${i + 1}번(생성:${q.isWrong ? '거짓' : '참'} 검수:${v.ambiguous ? '모호' : (v.isFalse ? '거짓' : '참')})`
           ).join(', ');
-          if (attempt < MAX_AI_ATTEMPTS) throw new Error(`라벨 검증 불일치 ${bad.length}건 — ${detail}`);
-          // 마지막 시도: 문제 생성 실패를 띄우느니 검증 결과를 라벨로 채택한다. 판정만 하는
+          if (attempt < MAX_AI_ATTEMPTS) throw new Error(`라벨 검수 불일치 ${bad.length}건 — ${detail}`);
+          // 마지막 시도: 문제 생성 실패를 띄우느니 검수 결과를 라벨로 채택한다. 판정만 하는
           // 호출이 여러 일을 겸하는 생성 호출보다 라벨에 관해서는 더 믿을 만하다.
           // 모호한 문장은 손댈 근거가 없으므로 생성 라벨을 그대로 둔다.
-          const flips = bad.filter(({ v }) => typeof v === 'boolean');
+          const flips = bad.filter(({ v }) => !v.ambiguous && typeof v.isFalse === 'boolean');
           // 다 채택했을 때 틀린 문장이 0개가 되면 채점이 성립하지 않는다. 그럴 땐 채택하지 않고
           // 원래 라벨로 내보낸다(채점 단계의 대조 로그가 다시 잡아준다).
           const wrongAfter = questions.filter(q => {
             const f = flips.find(b => b.q === q);
-            return f ? f.v : q.isWrong;
+            return f ? f.v.isFalse : q.isWrong;
           }).length;
           if (wrongAfter > 0) {
             flips.forEach(({ q, v }) => {
-              q.isWrong = v;
-              if (!v) q.targetMisconceptionId = null;   // 옳은 문장에는 오개념 태그가 붙을 수 없다
+              q.isWrong = v.isFalse;
+              if (!v.isFalse) q.targetMisconceptionId = null;   // 옳은 문장에는 오개념 태그가 붙을 수 없다
             });
           }
-          console.warn(`[generateQuestions] 라벨 검증 불일치 — unit: ${unit}, level: ${level}, ${detail} (마지막 시도, 채택 ${wrongAfter > 0 ? '함' : '안 함'})`);
+          console.warn(`[generateQuestions] 라벨 검수 불일치 — unit: ${unit}, level: ${level}, ${detail} (마지막 시도, 채택 ${wrongAfter > 0 ? '함' : '안 함'})`);
         }
       }
 
@@ -1027,7 +1107,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
          예전에는 문제를 만든 판정과 채점하는 판정이 어긋나면 그 문항을 무효로 만들고 결과
          화면에 "채점에서 뺀 문항"으로 띄웠다. 학생이 이미 다 푼 뒤에 시스템 사정을 통보하는
          셈이라 보기에 좋지 않았다. 지금은 생성 단계에서 독립 호출로 검증하고 어긋나면 그
-         세트를 버리고 다시 만든다(verifyStatementLabels). 그래서 학생은 검증을 통과한 문장만 본다.
+         세트를 버리고 다시 만든다(verifyStatements). 그래서 학생은 검수를 통과한 문장만 본다.
          그럼에도 세 번째 판정이 갈리는 경우가 남는데, 그때는 화면을 건드리지 않고
          이해도 관측에서만 빼고 로그를 남긴다 — 점수 한 문항보다 이해도 오염이 오래간다. */
       const rejudged = gradedItem?.statementIsWrong;
