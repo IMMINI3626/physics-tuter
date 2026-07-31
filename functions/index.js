@@ -482,35 +482,44 @@ ${patternText}
     const wrongExamples = contextSentences.filter(s => s.isWrong).map(s => s.sentence).join(' / ');
     const correctExamples = contextSentences.filter(s => !s.isWrong).map(s => s.sentence).join(' / ');
 
-    // 각 오개념에 id를 함께 노출한다. STEP1/2에서 틀린 문장을 만들 때, 그 문장이 겨냥한
-    // 오개념 id를 targetMisconceptionId로 태깅하게 하기 위함(BKT 관측의 근거).
+    /* 각 오개념에 id와 개념 영역(dimensionCode)을 함께 노출한다.
+       id는 태깅(BKT 관측의 근거)에, 영역은 "한 문장에 묶어도 되는 오개념"을 고르는 데 쓴다 —
+       영역이 다른 오개념을 한 문장에 묶으면 학생의 서술 하나로 둘 다 판정할 근거가 없다. */
     // 🆕 순환 출제(설계 4-8): 클라이언트가 "이해도 낮은 오개념"을 우선 겨냥 대상으로 보내온다.
-    //    목록 밖 id는 버리고, 최대 2개까지만 사용한다. 지정이 없으면 예전처럼 전체에서 자유 출제.
+    //    목록 밖 id는 버리고 최대 3개까지 쓴다. 지정이 없으면 예전처럼 전체에서 자유 출제.
     const priorityIds = [...new Set(
       (Array.isArray(targetMisconceptionIds) ? targetMisconceptionIds : []).filter(id => validIdSet.has(id))
-    )].slice(0, 2);
+    )].slice(0, 3);
 
-    // 오개념이 17개까지 갈 수 있어, 우선 대상을 목록 맨 앞으로 올려 프롬프트에서 눈에 띄게 한다
+    // 오개념이 22개까지 갈 수 있어, 우선 대상을 목록 맨 앞으로 올려 프롬프트에서 눈에 띄게 한다
     const orderedMisconceptions = priorityIds.length
       ? [...activeMisconceptions].sort(
           (a, b) => (priorityIds.includes(b.id) ? 1 : 0) - (priorityIds.includes(a.id) ? 1 : 0))
       : activeMisconceptions;
 
-    const mcText = orderedMisconceptions.map((mc, i) => `${i + 1}. [id: ${mc.id || '?'}] ${mc.description}`).join('\n');
+    const mcText = orderedMisconceptions
+      .map((mc, i) => `${i + 1}. [id: ${mc.id || '?'} | 영역: ${mc.dimensionCode || '?'}] ${mc.description}`)
+      .join('\n');
 
     const priorityInstruction = priorityIds.length ? `
 [우선 겨냥 오개념 - 매우 중요]
 아래 오개념은 이 학생이 아직 이해하지 못한 것으로 측정되었습니다. 이번 문제는 반드시 아래 오개념을 겨냥하세요.
 ${priorityIds.map(id => {
       const mc = activeMisconceptions.find(m => m.id === id);
-      return `- [id: ${id}] ${mc ? mc.description : ''}`;
+      return `- [id: ${id} | 영역: ${mc?.dimensionCode || '?'}] ${mc ? mc.description : ''}`;
     }).join('\n')}
-- 문장 5개를 만드는 경우: 틀린 문장(isWrong: true) 중 최소 1개는 위 오개념을 겨냥하고, 그 문장의 targetMisconceptionId에 해당 id를 적으세요.
-- 계산 문제를 만드는 경우: 위 오개념이 문제의 함정(자주 하는 실수)이 되도록 상황을 설계하고, targetMisconceptionId에 해당 id를 적으세요.
+- 문장 5개를 만드는 경우: 틀린 문장(isWrong: true)들이 위 오개념을 나눠 겨냥하도록 하고, 각 문장의 targetMisconceptionIds에 그 id를 적으세요.
+- 계산 문제를 만드는 경우: 위 오개념이 문제의 함정(자주 하는 실수)이 되도록 상황을 설계하고, targetMisconceptionId에 해당 id 하나를 적으세요.
 ` : '';
 
-    const wrongCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
-    const rightCount = 5 - wrongCount; // 4 or 3
+    /* 🔑 틀린 문장 개수는 1~3개 랜덤이다(예전 1~2개).
+       늘린 이유 — 태그가 붙는 건 틀린 문장뿐이라, 이 개수가 곧 한 세트에서 전진하는 오개념 수의
+       상한이다. 1~2개로는 오개념 22개짜리 소단원(뉴턴 운동 법칙)이 Level 1 승급까지 36세트가
+       걸렸다(설계 4-10 참고).
+       고정하지 않는 이유 — 개수를 알면 "그만큼 찍기"가 최적 전략이 된다. 진단검사에서 비율을
+       3:2로 고정했다가 겪은 문제와 같다(4-11 규칙 3 정정). 1~3이면 개수 자체를 읽을 수 없다. */
+    const wrongCount = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+    const rightCount = 5 - wrongCount; // 4, 3, or 2
 
     // 🆕 매번 다른 관점/상황으로 출제하도록 랜덤 컨텍스트 주입 (문제 다양성 확보)
     const ANGLES = [
@@ -758,7 +767,7 @@ ${levelInstruction}
 JSON만 출력하세요 (다른 텍스트 금지):
 {
   "questions": [
-    { "id": 1, "text": "문장 내용", "isWrong": true, "targetMisconceptionId": "위 오개념 목록의 id" },
+    { "id": 1, "text": "문장 내용", "isWrong": true, "targetMisconceptionIds": ["오개념 id", "같은 영역의 다른 id(선택)"] },
     { "id": 2, "text": "문장 내용", "isWrong": false }
   ],
   "hint1": "5개 문장 전체를 대상으로, 어떤 물리 개념/법칙을 중심으로 판단해야 하는지 방향만 제시. 어느 문장이 틀렸는지 절대 언급 금지. 1~2문장 경어체.",
@@ -766,11 +775,20 @@ JSON만 출력하세요 (다른 텍스트 금지):
 }
 
 [오개념 태깅 규칙 - 매우 중요]
-- isWrong:true 인 문장 중, 위 [학생들의 주요 오개념] 목록의 특정 오개념을 겨냥한 문장은
-  targetMisconceptionId에 그 오개념의 id(대괄호 [id: ...] 안의 값)를 정확히 그대로 적으세요.
+- isWrong:true 인 문장에는 그 문장이 겨냥한 오개념 id를 targetMisconceptionIds 배열에 적으세요.
+  id는 위 목록의 대괄호 [id: ...] 안의 값을 정확히 그대로 씁니다.
+- **한 문장에 오개념을 2개까지 담을 수 있습니다.** 단, 아래 조건을 모두 만족할 때만 2개를 적으세요.
+  · 두 오개념의 **영역(대괄호 안 "영역:" 값)이 같아야 합니다.** 영역이 다르면 반드시 1개만 적으세요.
+  · 그 문장이 두 오개념을 **실제로 동시에 건드려야** 합니다. 학생이 "이 문장이 왜 틀렸는지"를
+    서술하면, 그 서술 하나만 읽고 두 오개념을 각각 이해했는지 판정할 수 있어야 합니다.
+  · 억지로 2개를 채우지 마세요. 한 오개념만 겨냥한 문장이면 1개만 적는 것이 맞습니다.
+- 좋은 예: "무거운 물체가 같은 높이에서 더 빠르게 떨어진다"
+  → 무게가 낙하를 좌우한다는 생각과 질량이 낙하 가속도에 관여한다는 생각을 함께 건드리므로,
+    두 오개념이 같은 영역이면 2개를 적어도 됩니다.
+- 나쁜 예: 파동 오개념과 전기 오개념을 한 문장에 억지로 묶는 것 → 영역이 달라 금지입니다.
 - 공식이 맞는지 틀린지 판별하는 문장이나 계산 판별 문장처럼 특정 오개념과 직접 연결되지 않는
-  문장은 targetMisconceptionId를 넣지 마세요(생략).
-- isWrong:false(옳은 문장)에는 targetMisconceptionId를 넣지 마세요.
+  문장은 targetMisconceptionIds를 넣지 마세요(생략하거나 빈 배열).
+- isWrong:false(옳은 문장)에는 targetMisconceptionIds를 넣지 마세요.
 - 목록에 없는 id를 지어내지 마세요.
 
 [힌트 작성 규칙]
@@ -812,12 +830,34 @@ JSON만 출력하세요 (다른 텍스트 금지):
         }
         console.warn(`[generateQuestions] 틀린 문장 개수 불일치 — 요청 ${wrongCount}, 생성 ${actualWrong}, unit: ${unit}, level: ${level} (마지막 시도라 그대로 사용)`);
       }
-      // 오개념 태그(targetMisconceptionId) 정리: 틀린 문장이면서 실제 목록에 있는 id만 남기고
-      // 나머지(옳은 문장, 목록 밖 id, 공식/계산 판별 문장 등)는 제거한다. 태깅은 BKT 관측용
-      // 부가 정보라, 없거나 어긋나도 재시도하지 않고 조용히 비운다(생성 안정성 우선).
+      /* 오개념 태그 정리: 틀린 문장이면서 실제 목록에 있는 id만 남기고 나머지(옳은 문장,
+         목록 밖 id, 공식/계산 판별 문장 등)는 버린다. 태깅은 BKT 관측용 부가 정보라,
+         없거나 어긋나도 재시도하지 않고 조용히 비운다(생성 안정성 우선).
+
+         🔑 한 문장에 2개까지 허용하되 **영역(dimensionCode)이 같을 때만** 남긴다. 프롬프트로도
+            지시하지만 지켜지지 않을 수 있고, 영역이 다른 두 오개념을 한 서술로 판정하는 건
+            애초에 성립하지 않는다. 영역이 갈리면 첫 번째만 남긴다. */
+      const dimOf = {};
+      activeMisconceptions.forEach(m => { if (m.id) dimOf[m.id] = m.dimensionCode || null; });
+
       questions.forEach(q => {
-        const ok = q.isWrong && validIdSet.has(q.targetMisconceptionId);
-        q.targetMisconceptionId = ok ? q.targetMisconceptionId : null;
+        // 구버전 호환: 모델이 단수 필드로 답할 수도 있다
+        const raw = Array.isArray(q.targetMisconceptionIds)
+          ? q.targetMisconceptionIds
+          : (q.targetMisconceptionId ? [q.targetMisconceptionId] : []);
+        delete q.targetMisconceptionId;
+
+        if (!q.isWrong) { q.targetMisconceptionIds = []; return; }
+
+        const clean = [...new Set(raw.filter(id => validIdSet.has(id)))];
+        if (clean.length > 1) {
+          const dim = dimOf[clean[0]];
+          // 첫 id와 같은 영역인 것만 유지 (영역 정보가 없으면 보수적으로 1개만)
+          const same = dim ? clean.filter(id => dimOf[id] === dim) : [clean[0]];
+          q.targetMisconceptionIds = same.slice(0, 2);
+        } else {
+          q.targetMisconceptionIds = clean.slice(0, 1);
+        }
       });
       // 🔑 힌트도 반드시 있어야 한다. 예전엔 없으면 null로 통과시켜서, AI가 힌트를
       //    빼먹으면(특히 문제 배열만 반환한 경우) 화면에 하드코딩 기본 문구가 떴다.
@@ -873,7 +913,7 @@ JSON만 출력하세요 (다른 텍스트 금지):
           if (wrongAfter > 0) {
             flips.forEach(({ q, v }) => {
               q.isWrong = v.isFalse;
-              if (!v.isFalse) q.targetMisconceptionId = null;   // 옳은 문장에는 오개념 태그가 붙을 수 없다
+              if (!v.isFalse) q.targetMisconceptionIds = [];   // 옳은 문장에는 오개념 태그가 붙을 수 없다
             });
           }
           console.warn(`[generateQuestions] 라벨 검수 불일치 — unit: ${unit}, level: ${level}, ${detail} (마지막 시도, 채택 ${wrongAfter > 0 ? '함' : '안 함'})`);
@@ -1027,9 +1067,48 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
 - 학생의 답변: "${a.reason || a.answer || ''}" 
 `).join('\n') || "제출한 서술형 답변이 없습니다.";
 
-    const targetWrongCount = questions.filter(q => q.isWrong).length || 1; 
-    const maxScorePerItem = Math.round(100 / targetWrongCount); 
-    const partialScoreRange = targetWrongCount === 1 ? '20~60점' : '10~30점';
+    const targetWrongCount = questions.filter(q => q.isWrong).length || 1;
+    const maxScorePerItem = Math.round(100 / targetWrongCount);
+    /* 부분 점수는 문항 배점의 20~60%. 예전엔 '20~60점'/'10~30점'을 하드코딩했는데, 그 값이
+       바로 배점 100점/50점의 20~60%였다. 틀린 문장이 3개인 세트(배점 33점)가 생겼으므로
+       공식으로 바꾼다 — 1·2개일 때의 결과는 예전과 완전히 같다. */
+    const partialScoreRange =
+      `${Math.round(maxScorePerItem * 0.2)}~${Math.round(maxScorePerItem * 0.6)}점`;
+
+    /* 🆕 개념별 판정 (설계 4-12) — 한 문장에 오개념이 2개 태그될 수 있으므로, 학생의 서술
+       하나를 읽고 **오개념마다 따로** 이해 여부를 판정하게 한다. 정답 하나를 둘에 나눠주는 게
+       아니라 같은 서술을 두 기준으로 읽는 것이라, 증거를 부풀리지 않고 실제로 둘을 측정한다.
+       판정에 필요한 건 오개념의 설명이므로 캐시된 마스터에서 꺼내 프롬프트에 싣는다. */
+    const tagsOf = (q) => (Array.isArray(q.targetMisconceptionIds)
+      ? q.targetMisconceptionIds
+      : (q.targetMisconceptionId ? [q.targetMisconceptionId] : [])).filter(Boolean);
+
+    const descOf = {};
+    if (questions.some(q => tagsOf(q).length)) {
+      (await loadMisconceptions()).forEach(m => { if (m.id) descOf[m.id] = m.description; });
+    }
+    const conceptBlock = questions
+      .filter(q => tagsOf(q).length)
+      .map(q => `[문장 ${q.id}]\n` + tagsOf(q)
+        .map(id => `  - ${id}: ${descOf[id] || '(설명 없음)'}`).join('\n'))
+      .join('\n');
+
+    const conceptInstruction = conceptBlock ? `
+[개념별 판정 - conceptJudgments]
+아래는 각 문장이 겨냥한 오개념입니다. 학생이 그 문장에 쓴 서술을 읽고, **오개념 하나하나에 대해
+따로** 학생이 그것을 올바르게 이해했는지 판정하세요.
+
+${conceptBlock}
+
+판정 규칙
+- 학생의 서술이 그 오개념을 **명확히 교정하는 내용을 담고 있으면** understood: true입니다.
+- 서술이 한 오개념만 다루고 다른 하나는 언급조차 없으면, 언급 없는 쪽은 understood: false입니다.
+  **서술이 훌륭하다는 이유로 태그된 오개념 전부에 true를 주지 마세요.** 학생이 쓴 만큼만 인정합니다.
+- 답변을 아예 작성하지 않은 문장은 태그된 오개념 전부 understood: false입니다.
+- 표현이 교과서와 달라도 핵심 논리가 맞으면 true입니다(위 "유연한 채점"과 같은 기준).
+- 여기서 나온 판정은 학생의 점수에 직접 반영되지 않습니다. 개념별 이해도 추적에만 쓰이므로
+  점수를 의식하지 말고 서술에 실제로 담긴 내용만 보고 판정하세요.
+` : '';
 
     // 서술형 답변 5개를 루브릭에 따라 채점 + 해설 작성. 약간의 추론이 도움 → 소량 허용.
     // 해설 5개를 담아야 하므로 출력 상한은 넉넉히.
@@ -1065,7 +1144,7 @@ ${answerText}
 - 학생이 무엇을 골랐는지, 어떻게 썼는지는 이 판단에 영향을 주면 안 됩니다
 - 문제를 낸 쪽의 의도를 추측하지 말고, 문장만 읽고 물리 법칙으로 판단하세요
 이 값은 문제 생성 단계의 판정과 대조해 검수하는 데 쓰입니다.
-
+${conceptInstruction}
 JSON만 출력하세요 (다른 텍스트 금지):
 {
   "items": [
@@ -1074,10 +1153,12 @@ JSON만 출력하세요 (다른 텍스트 금지):
       "statementIsWrong": true/false,
       "isCorrectAnswer": true/false,
       "score": 0~${maxScorePerItem} 사이 이 문항 점수 (미답변이면 0),
-      "explanation": "학생 답변에 대한 직접적인 코멘트 + 상세한 물리 해설 (최소 2~3문장 이상)"
+      "explanation": "학생 답변에 대한 직접적인 코멘트 + 상세한 물리 해설 (최소 2~3문장 이상)",
+      "conceptJudgments": [{ "misconceptionId": "위 개념별 판정에 나온 id", "understood": true }]
     }
   ]
 }
+conceptJudgments는 위 [개념별 판정]에 그 문장이 나온 경우에만 넣으세요. 없으면 생략합니다.
 `;
 
     const graded = await withRetry('gradeAnswers', async () => {
@@ -1098,6 +1179,11 @@ JSON만 출력하세요 (다른 텍스트 금지):
 
     let rawTotalScore = 0;
     const mismatched = [];   // 라벨 대조가 갈린 문항 (로그·오류율 집계용)
+    /* 개념별 판정이 실제로 갈리는지 세는 카운터 (설계 4-12).
+       한 문장에 오개념 2개를 달고 "서술을 읽고 개념별로 따로 판정한다"는 게 이 방식의 전제인데,
+       AI가 서술이 좋으면 태그 전부에 true를 주는 식으로 뭉갤 수 있다. 그러면 증거가 부풀어
+       원래 우려대로 돌아간다. 판정이 갈린 비율이 0에 가까우면 이 전제가 깨졌다는 신호다. */
+    let multiTagItems = 0, splitJudgments = 0;
 
     const feedbackItems = questions.map(q => {
       const gradedItem = graded.items?.find(g => g.questionId === q.id);
@@ -1135,6 +1221,29 @@ JSON만 출력하세요 (다른 텍스트 금지):
         rawTotalScore -= Math.round(maxScorePerItem * 0.5);
       }
 
+      /* 🆕 개념별 판정 정리 (설계 4-12).
+         태그된 오개념마다 (id, 이해했는가) 한 건씩 만든다. 이것이 그대로 BKT 관측이 된다.
+         - 라벨 대조가 갈린 문항은 태그를 통째로 떼어 이해도에서 뺀다(화면에는 그대로 보인다).
+         - AI가 판정을 빼먹은 오개념은 문항 전체 판정(isCorrectAnswer)으로 채운다. 태그가 1개인
+           문항은 사실상 예전과 같은 동작이 된다.
+         - 답을 안 쓴 문항은 AI 판정을 믿지 않고 전부 false로 둔다 — 서술이 없으면 "이해했다"는
+           증거가 있을 수 없다. (안 푼 문제로 이해도가 오르던 예전 문제와 같은 이유) */
+      const tags = labelMismatch ? [] : tagsOf(q);
+      const aiJudgments = Array.isArray(gradedItem?.conceptJudgments) ? gradedItem.conceptJudgments : [];
+      const conceptJudgments = tags.map(id => {
+        if (!answered) return { misconceptionId: id, understood: false };
+        const row = aiJudgments.find(j => j?.misconceptionId === id);
+        return {
+          misconceptionId: id,
+          understood: typeof row?.understood === 'boolean' ? row.understood : isCorrectAnswer,
+        };
+      });
+      if (conceptJudgments.length > 1) {
+        multiTagItems++;
+        const vals = new Set(conceptJudgments.map(j => j.understood));
+        if (vals.size > 1) splitJudgments++;
+      }
+
       return {
         id:              q.id,
         text:            q.text,
@@ -1142,9 +1251,9 @@ JSON만 출력하세요 (다른 텍스트 금지):
         isCorrectAnswer,
         userReason:      answered?.reason || answered?.answer,
         explanation:     gradedItem?.explanation || '설명이 누락되었습니다.',
-        // 🆕 문항이 겨냥한 오개념(있으면) — 저장 후 BKT 관측으로 쓰임. 태그 없으면 null.
-        //    라벨 대조가 갈린 문항은 태그를 떼어 이해도에서 뺀다(화면에는 그대로 보인다).
-        targetMisconceptionId: labelMismatch ? null : (q.targetMisconceptionId ?? null),
+        // 문항이 겨냥한 오개념들 + 개념별 판정 — 저장 후 BKT 관측으로 쓰임
+        targetMisconceptionIds: tags,
+        conceptJudgments,
       };
     });
 
@@ -1178,6 +1287,13 @@ JSON만 출력하세요 (다른 텍스트 금지):
        통과한 문장에서 이게 얼마나 나오는지가 곧 문항 오류율이라, 논문의 실측치로 쓴다. */
     if (mismatched.length) {
       console.warn(`[gradeAnswers] 라벨 대조 불일치 ${mismatched.length}건 (이해도 관측에서만 제외) — unit: ${unit}`, mismatched);
+    }
+
+    /* 개념별 판정이 갈린 비율 (설계 4-12) — 이 방식이 실제로 작동하는지 보는 지표다.
+       다중 태그 문항인데 판정이 한 번도 갈리지 않는다면 AI가 서술을 개념별로 읽지 않고
+       뭉개고 있다는 뜻이고, 그러면 오개념 2개를 다는 근거가 사라진다. 논문 실측치로도 쓴다. */
+    if (multiTagItems) {
+      console.info(`[gradeAnswers] 개념별 판정 — 다중 태그 ${multiTagItems}문항 중 ${splitJudgments}건에서 판정이 갈림 (unit: ${unit}, level 정보 없음)`);
     }
 
     return {

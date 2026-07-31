@@ -232,8 +232,14 @@ const FeedbackScreen = {
     }
 
     if (items.length > 1) {
-      // STEP1/2 방식 — 문장 5개 그대로 복원
-      AppState.session.questions = items.map(it => ({ id: it.id, text: it.text, isWrong: it.isWrong }));
+      // STEP1/2 방식 — 문장 5개 그대로 복원 (오개념 태그까지 — 채점 프롬프트가 개념별 판정에
+      // 쓴다. 재도전은 isRetry=true라 이해도 갱신은 어차피 건너뛴다)
+      AppState.session.questions = items.map(it => ({
+        id: it.id,
+        text: it.text,
+        isWrong: it.isWrong,
+        targetMisconceptionIds: Array.isArray(it.targetMisconceptionIds) ? it.targetMisconceptionIds : [],
+      }));
       AppState.session.calcQuestion = null;
     } else {
       // 계산형(Level 2 방식B, Level 3) — 문제·정답·단위 그대로 복원

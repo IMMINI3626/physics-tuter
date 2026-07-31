@@ -54,9 +54,12 @@ const LearningService = {
         userReason:      item.userReason || null,
         // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
         explanation:     item.explanation || null,
-        // 🆕 BKT 관측용: 이 문항이 겨냥한 오개념 + 이 세션에서 힌트를 썼는지.
-        //    targetMisconceptionId가 있는 문항의 (isCorrectAnswer, usedHint)가 한 건의 관측이 된다.
-        targetMisconceptionId: item.targetMisconceptionId || null,
+        /* 🆕 BKT 관측용: 이 문항이 겨냥한 오개념들 + 개념별 판정 + 힌트 사용 여부.
+           문항 하나에 오개념이 2개까지 붙을 수 있고(설계 4-12), 서버가 학생 서술을 개념별로
+           판정해 conceptJudgments로 보낸다. 그 판정 하나하나가 관측이므로 그대로 남긴다.
+           과거 기록 "다시 풀기"에서 관측이 이어지도록 저장이 필요하다. */
+        targetMisconceptionIds: bktTagIds(item),
+        conceptJudgments: Array.isArray(item.conceptJudgments) ? item.conceptJudgments : [],
         usedHint:        (sessionData.hintUsed || 0) > 0,
         createdAt:       serverTimestamp(),
       };
@@ -216,8 +219,10 @@ const LearningService = {
         unitOptions: data.unitOptions,
         solutionSteps: data.solutionSteps,
         isLevel3: data.isLevel3,
-        // 🆕 오개념 태그 — "다시 풀기"로 복원해 다시 풀 때도 관측이 이어지도록 보존
-        targetMisconceptionId: data.targetMisconceptionId || null,
+        // 🆕 오개념 태그 — "다시 풀기"로 복원해 다시 풀 때도 관측이 이어지도록 보존.
+        //    2026-07 이전 기록은 단수 필드로 저장돼 있어서 bktTagIds가 둘 다 받아준다.
+        targetMisconceptionIds: bktTagIds(data),
+        conceptJudgments: Array.isArray(data.conceptJudgments) ? data.conceptJudgments : [],
       };
     });
   },
@@ -364,7 +369,7 @@ const LearningService = {
       isCorrectAnswer: typeof item.isCorrectAnswer === 'boolean' ? item.isCorrectAnswer : null,
       userReason: item.userReason || null,   // 학생이 쓴 답변
       explanation: item.explanation || '',   // 학생이 본 해설
-      targetMisconceptionId: item.targetMisconceptionId || null,
+      targetMisconceptionIds: bktTagIds(item),   // 이 문항이 겨냥한 오개념(최대 2개)
       reason,                                // REPORT_REASONS의 code
       detail: detail || '',                  // 기타를 골랐을 때만 채워진다
       createdAt: serverTimestamp(),
@@ -417,8 +422,12 @@ const LearningService = {
 
   /**
    * 채점 결과(feedbackData.items)의 태그된 관측을 BKT로 반영해 knowledgeState를 갱신한다.
-   * 태그(targetMisconceptionId) 없는 문항은 제외. 같은 오개념 문항이 여러 개면 한 오개념으로
-   * 묶어 순서대로 반영한 뒤 한 번만 저장(같은 문서 병렬 쓰기 레이스 방지).
+   * 태그 없는 문항은 제외. 같은 오개념 문항이 여러 개면 한 오개념으로 묶어 순서대로 반영한 뒤
+   * 한 번만 저장(같은 문서 병렬 쓰기 레이스 방지).
+   *
+   * 🆕 한 문항에 오개념이 2개까지 태그될 수 있다(설계 4-12). 그럴 때는 서버가 학생의 서술을
+   *    개념별로 따로 판정해 conceptJudgments로 보내고, 그 판정 하나하나가 관측이 된다.
+   *    태그가 1개인 문항은 예전과 동작이 같다.
    */
   async applyBktObservations(uid, items, usedHint) {
     const BKT = window.BKT;
@@ -426,7 +435,6 @@ const LearningService = {
 
     const byId = {};
     (items || []).forEach(it => {
-      if (!it.targetMisconceptionId) return;
       // 🔑 문항 검수에서 걸린 문항(문장의 참·거짓 판정이 엇갈린 것)은 관측으로 쓰지 않는다.
       //    서버가 태그를 떼어 보내지만, 과거 기록을 다시 읽는 경로를 위해 여기서도 막는다.
       if (it.isVoided) return;
@@ -434,8 +442,19 @@ const LearningService = {
       //    값이 없는 옛 기록만 "안 골랐으면 못 찾은 것"으로 보수적으로 처리한다.
       //    예전엔 `?? !it.isWrong` 이라, 손도 안 댄 틀린 문장이 정답 관측으로 들어가
       //    안 푼 문제로 이해도가 오르는 일이 있었다.
-      const isCorrect = typeof it.isCorrectAnswer === 'boolean' ? it.isCorrectAnswer : false;
-      (byId[it.targetMisconceptionId] ||= []).push(isCorrect);
+      const fallback = typeof it.isCorrectAnswer === 'boolean' ? it.isCorrectAnswer : false;
+
+      // 개념별 판정이 있으면 그것을, 없으면(옛 기록·계산형) 태그 목록 + 문항 판정으로
+      const judgments = Array.isArray(it.conceptJudgments) && it.conceptJudgments.length
+        ? it.conceptJudgments
+        : bktTagIds(it).map(id => ({ misconceptionId: id, understood: fallback }));
+
+      judgments.forEach(j => {
+        if (!j?.misconceptionId) return;
+        (byId[j.misconceptionId] ||= []).push(
+          typeof j.understood === 'boolean' ? j.understood : fallback
+        );
+      });
     });
 
     await Promise.all(Object.entries(byId).map(async ([id, corrects]) => {
@@ -480,12 +499,32 @@ const LearningService = {
    * 순환 출제(설계 4-8): 다음 문제가 겨냥할 오개념 id를 이해도 낮은 순으로 고른다.
    * 이미 숙달(P(L) ≥ 0.90)한 것은 제외. 전부 숙달했거나 대상이 없으면 빈 배열을 반환하고,
    * 서버는 예전처럼 전체 오개념에서 자유 출제한다.
+   *
+   * 🆕 가장 약한 오개념과 **같은 개념 영역(dimensionCode)**인 것을 우선 채운다 (설계 4-12).
+   *    한 문장에 오개념 2개를 담으려면 그 둘이 같은 영역이어야 하기 때문이다 — 영역이 다르면
+   *    학생의 서술 하나로 둘 다 판정할 근거가 없어서 서버가 어차피 1개로 잘라낸다.
+   *    같은 영역에 약한 것이 부족하면 남은 자리는 영역 무관하게 약한 순으로 채운다.
    */
-  async pickTargetMisconceptions(uid, unitName, level = 1, count = 2) {
+  async pickTargetMisconceptions(uid, unitName, level = 1, count = 3) {
     if (!window.BKT || !uid || !unitName) return [];
-    const { ids, knowledge } = await this._levelTargets(uid, unitName, level);
+    const [{ ids, knowledge }, dimMap] = await Promise.all([
+      this._levelTargets(uid, unitName, level),
+      MisconceptionDB.getDimensionMap(),
+    ]);
     const items = ids.map(id => ({ id, pL: this._pL(knowledge, id) }));
-    return window.BKT.pickWeakest(items, count).map(it => it.id);
+    const weak = window.BKT.pickWeakest(items);   // 숙달 안 된 것, P(L) 오름차순 전체
+    if (!weak.length) return [];
+
+    const primaryDim = dimMap[weak[0].id];
+    const sameDim = primaryDim ? weak.filter(it => dimMap[it.id] === primaryDim) : [weak[0]];
+    const picked = sameDim.slice(0, count).map(it => it.id);
+
+    // 같은 영역만으로 count를 못 채우면 나머지는 약한 순으로
+    for (const it of weak) {
+      if (picked.length >= count) break;
+      if (!picked.includes(it.id)) picked.push(it.id);
+    }
+    return picked;
   },
 
   /**
@@ -706,6 +745,14 @@ const MisconceptionDB = {
     return shuffle(items);
   },
 };
+
+/* 문항에 태그된 오개념 id 목록.
+   지금은 배열(targetMisconceptionIds)로 오고, 계산형과 2026-07 이전 기록은 단수
+   (targetMisconceptionId)로 저장돼 있다. 읽는 쪽에서 둘 다 받는다. */
+function bktTagIds(item) {
+  if (Array.isArray(item?.targetMisconceptionIds)) return item.targetMisconceptionIds.filter(Boolean);
+  return item?.targetMisconceptionId ? [item.targetMisconceptionId] : [];
+}
 
 /* 제자리 셔플(Fisher-Yates). 배열을 그대로 반환해 체이닝에 쓴다. */
 function shuffle(arr) {

@@ -296,7 +296,9 @@ const QuizScreen = {
         correctAnswer: calcQuestion.correctAnswer,
         unit: calcQuestion.unit,
         unitOptions: calcQuestion.unitOptions,
-        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,   // BKT 관측용
+        // BKT 관측용. 계산형은 태그가 1개다 — 답이 숫자뿐이라 개념별로 나눠 판정할 근거가
+        // 없기 때문(문장형만 서술을 읽고 2개까지 판정한다, 설계 4-12).
+        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,
       }],
     };
 
@@ -543,7 +545,9 @@ const Level3Screen = {
         correctAnswer: calcQuestion.correctAnswer,
         unit: calcQuestion.unit,
         unitOptions: calcQuestion.unitOptions,
-        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,   // BKT 관측용
+        // BKT 관측용. 계산형은 태그가 1개다 — 답이 숫자뿐이라 개념별로 나눠 판정할 근거가
+        // 없기 때문(문장형만 서술을 읽고 2개까지 판정한다, 설계 4-12).
+        targetMisconceptionId: calcQuestion.targetMisconceptionId ?? null,
         isLevel3: true,
       }],
     };
