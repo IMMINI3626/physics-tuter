@@ -43,5 +43,13 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // 5. AI 호출 사용량 (functions/index.js의 authorize)
+    //    uid별 일일 호출 수를 세는 곳이라, 클라이언트가 건드리면 상한 자체가 무의미해진다.
+    //    Functions는 관리자 SDK로 접근하므로 이 규칙의 영향을 받지 않는다.
+    //    (규칙이 없어도 기본 거부지만, "일부러 닫아둔 것"임을 남기려고 명시한다)
+    match /ai_usage/{docId} {
+      allow read, write: if false;
+    }
+
   }
 }

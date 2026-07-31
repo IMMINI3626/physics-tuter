@@ -180,7 +180,7 @@ const QuizScreen = {
       Router.go('feedback');
     } catch (err) {
       console.error('Grading failed:', err);
-      Toast.show('채점하는 데 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '채점하는 데 실패했어요. 다시 시도해주세요.'));
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '제출하고 채점받기'; }
     }
@@ -468,7 +468,7 @@ const Level3Screen = {
       this._showReview(recognizedProcessText, recognizedAnswerText);
     } catch (err) {
       console.error('L3 제출 실패:', err);
-      Toast.show('채점에 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '채점에 실패했어요. 다시 시도해주세요.'));
       submitBtn.disabled = false;
       submitBtn.textContent = '제출하기';
     }
@@ -509,7 +509,7 @@ const Level3Screen = {
       await this._finalize(editedProcess, editedAnswer, score, feedback);
     } catch (err) {
       console.error('풀이 과정 채점 실패:', err);
-      Toast.show('풀이 과정 채점에 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '풀이 과정 채점에 실패했어요. 다시 시도해주세요.'));
       if (btnEl) { btnEl.disabled = false; btnEl.textContent = '이 내용으로 채점받기'; }
     }
   },

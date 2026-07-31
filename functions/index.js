@@ -32,9 +32,90 @@ const FUNC_OPTIONS = {
 /* AI 호출 최대 시도 횟수 (최초 1회 + 재시도 2회) */
 const MAX_AI_ATTEMPTS = 3;
 
+/* uid 하나가 하루에 쓸 수 있는 AI 호출 수.
+   익명(게스트)은 체험 수준으로만, 로그인 사용자는 정상 학습에 지장 없는 선으로 잡는다.
+   문제 한 세트당 호출은 생성 1 + 채점 1 = 2회(Level 3는 풀이 인식이 더 붙어 3~4회)이므로
+   게스트 40 ≈ 15세트, 로그인 400 ≈ 150세트다. */
+const DAILY_AI_LIMIT = { guest: 40, member: 400 };
+
+/* base64 이미지 페이로드 상한.
+   리사이즈는 클라이언트(public/js/home.js)에서 하지만 그건 브라우저의 선의에 의존한다.
+   1600px JPEG(q0.8)는 base64로 보통 300~700KB라, 2MB면 정상 사진은 전부 통과한다. */
+const MAX_IMAGE_BASE64_BYTES = 2 * 1024 * 1024;
+
 /* ------------------------------------------------------------
    유틸리티 함수 모음
    ------------------------------------------------------------ */
+
+/**
+ * 호출 자격 검사 — 모든 AI 함수의 첫 줄에서 부른다.
+ *
+ * 왜 필요한가: 예전에는 5개 함수 모두 request.auth를 보지 않았다. 함수 URL은 배포된 프론트
+ * 번들에 그대로 들어있으므로, 주소만 알면 누구나 Gemini 호출을 대신 시킬 수 있었고 요금은
+ * 이 프로젝트에 청구됐다. (functions/test_api.js가 Authorization 헤더 없이 실제 응답을
+ * 받아오는 것이 그 증거다 — 그 스크립트는 지금부터 토큰 없이는 동작하지 않는다.)
+ *
+ * 익명 로그인도 통과시킨다. 비로그인 무료 체험을 유지하기로 한 결정이고, 익명 사용자도
+ * uid는 있으므로 서버가 셀 수 있다. 대신 익명 토큰은 누구나 무한정 발급받을 수 있어서
+ * 자격 검사만으로는 남용을 막지 못한다 — 그래서 uid 단위 일일 상한을 함께 건다.
+ *
+ * 🔑 반드시 각 함수의 try 블록 "밖에서" 부를 것. 안에서 부르면 아래 catch가
+ *    unauthenticated/resource-exhausted를 'internal'로 덮어써서, 클라이언트가
+ *    "다시 시도하면 되는 오류"와 "다시 해도 막히는 오류"를 구분할 수 없게 된다.
+ */
+async function authorize(request, label) {
+  const auth = request.auth;
+  if (!auth?.uid) {
+    throw new HttpsError('unauthenticated', '로그인이 필요합니다');
+  }
+
+  const guest = auth.token?.firebase?.sign_in_provider === 'anonymous';
+  const limit = guest ? DAILY_AI_LIMIT.guest : DAILY_AI_LIMIT.member;
+
+  // 날짜 경계는 KST 기준 — 사용자가 체감하는 "오늘"과 맞춘다 (UTC면 오전 9시에 초기화됨)
+  const day = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const ref = db.collection('ai_usage').doc(`${auth.uid}_${day}`);
+
+  // 트랜잭션으로 세야 동시 호출에서 증가분이 씹히지 않는다.
+  const allowed = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const prev = snap.exists ? (snap.data().count || 0) : 0;
+    if (prev >= limit) return false;
+    tx.set(ref, {
+      uid: auth.uid,
+      day,
+      guest,
+      count: prev + 1,
+      lastCall: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return true;
+  });
+
+  if (!allowed) {
+    console.warn(`[${label}] 일일 상한 초과 — uid: ${auth.uid}, guest: ${guest}, 상한: ${limit}`);
+    throw new HttpsError(
+      'resource-exhausted',
+      guest
+        ? '무료 체험 횟수를 모두 썼어요. 로그인하면 계속 학습할 수 있어요.'
+        : '오늘 사용할 수 있는 횟수를 모두 썼어요. 내일 다시 이용해주세요.'
+    );
+  }
+
+  return auth;
+}
+
+/**
+ * 이미지 페이로드 검증. 없거나 지나치게 크면 AI를 부르기 전에 끊는다.
+ * (큰 요청은 그대로 Gemini 입력 토큰 비용이 되므로 여기서 막는 게 요점이다)
+ */
+function validateImagePayload(imageBase64) {
+  if (!imageBase64 || typeof imageBase64 !== 'string') {
+    throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
+  }
+  if (imageBase64.length > MAX_IMAGE_BASE64_BYTES) {
+    throw new HttpsError('invalid-argument', '이미지가 너무 커요. 다시 촬영해주세요.');
+  }
+}
 
 /**
  * 설정된 API 키를 사용하여 Gemini 모델 인스턴스를 반환합니다.
@@ -226,8 +307,9 @@ function validateCalcQuestion(q, label) {
    Function 1: extractKeywords (하이브리드 DB 연동 버전)
 ──────────────────────────────────────── */
 exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
+  await authorize(request, 'extractKeywords');
   const { imageBase64 } = request.data;
-  if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
+  validateImagePayload(imageBase64);
 
   try {
     // 1. 오개념 DB 전체 불러오기 (14개 소단원 전부 수록 — 역학/비역학 구분 없음).
@@ -304,6 +386,7 @@ exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
    Function 2: generateQuestions (DB 참고 문장 활용 + 레벨 분기)
 ──────────────────────────────────────── */
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
+  await authorize(request, 'generateQuestions');
   const { misconceptions, unit, level = 1, mode = null, targetMisconceptionIds = [] } = request.data;
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
@@ -735,8 +818,9 @@ JSON만 출력하세요 (다른 텍스트 금지):
    Function 3-1: recognizeSolutionImage (Level 3 풀이 손글씨/사진 → 텍스트)
 ──────────────────────────────────────── */
 exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
+  await authorize(request, 'recognizeSolutionImage');
   const { imageBase64 } = request.data;
-  if (!imageBase64) throw new HttpsError('invalid-argument', '이미지 데이터가 없습니다');
+  validateImagePayload(imageBase64);
 
   try {
     // 손글씨 → 텍스트 그대로 옮겨 적기(OCR). 판단·채점 없음 → thinking 0.
@@ -771,6 +855,7 @@ JSON만 출력하세요:
    Function 3-2: gradeSolutionProcess (Level 3 풀이 과정 채점)
 ──────────────────────────────────────── */
 exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
+  await authorize(request, 'gradeSolutionProcess');
   const { questionText, correctAnswer, unit, solutionSteps, processText, answerText } = request.data;
   if (!questionText || (!processText && !answerText)) {
     throw new HttpsError('invalid-argument', '문제 또는 풀이/답안 정보가 없습니다');
@@ -849,6 +934,7 @@ JSON만 출력하세요:
    Function 3-3: gradeAnswers
 ──────────────────────────────────────── */
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
+  await authorize(request, 'gradeAnswers');
   const { answers, questions, unit } = request.data;
   if (!answers || !questions) {
     throw new HttpsError('invalid-argument', '답변 또는 문제 정보가 없습니다');

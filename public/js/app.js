@@ -80,6 +80,23 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+/* Cloud Functions 호출 오류를 사용자 문구로 바꾼다.
+   서버가 자격(unauthenticated)이나 일일 상한(resource-exhausted)으로 거절한 경우
+   "다시 시도해주세요"는 거짓말이 된다 — 다시 눌러도 똑같이 막히기 때문이다. 그 두 경우만
+   따로 안내하고, 나머지(파싱 실패·타임아웃 등 진짜 일시적 오류)는 호출부의 기존 문구를 쓴다.
+   callable SDK는 코드를 'functions/resource-exhausted' 형태로 주므로 includes로 본다. */
+function apiErrorMessage(err, fallback) {
+  const code = String(err?.code || '');
+  if (code.includes('unauthenticated')) {
+    return '세션이 만료됐어요. 새로고침하고 다시 시도해주세요.';
+  }
+  if (code.includes('resource-exhausted')) {
+    // 서버가 게스트/로그인에 맞는 문구를 담아 보내므로 그대로 보여준다
+    return err?.message || '오늘 사용할 수 있는 횟수를 모두 썼어요.';
+  }
+  return fallback;
+}
+
 /* ────────────────────────────────────────
    Global App State
 ──────────────────────────────────────── */
@@ -394,3 +411,4 @@ window.getChapter  = getChapter;
 window.escapeHtml  = escapeHtml;
 window.DIMENSION_NAMES = DIMENSION_NAMES;
 window.applyHintPenalty = applyHintPenalty;
+window.apiErrorMessage  = apiErrorMessage;

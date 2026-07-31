@@ -523,7 +523,7 @@ const MypageScreen = {
       applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
-      Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '문제를 생성하는 데 실패했어요. 다시 시도해주세요.'));
     } finally {
       if (btnEl) { btnEl.disabled = false; }
       this._updateRetryButton();

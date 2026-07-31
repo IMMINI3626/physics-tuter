@@ -1,5 +1,20 @@
 // functions/test_api.js
 
+/* ⚠️ 이 스크립트는 지금 그대로는 동작하지 않는다 (2026-07 자격 검사 도입).
+   gradeAnswers를 포함한 5개 함수가 request.auth를 확인하도록 바뀌어서, 아래 callApi처럼
+   Authorization 헤더 없이 부르면 401 unauthenticated로 거절된다.
+   — 이 스크립트가 예전에 인증 없이 정상 응답을 받아왔다는 사실 자체가 함수가 공개돼 있었다는
+     증거였고, 그게 자격 검사를 넣은 이유다.
+
+   다시 돌리려면 ID 토큰을 붙여야 한다.
+     1) 브라우저에서 앱에 로그인한 뒤 콘솔에서:
+          await firebase.auth().currentUser.getIdToken()
+        (또는 이 프로젝트 기준: 개발자 도구 콘솔에서 앱의 auth 객체로 getIdToken() 호출)
+     2) 아래 fetch의 headers에 추가:
+          "Authorization": `Bearer ${ID_TOKEN}`
+   토큰은 1시간 후 만료되므로 검증을 다시 돌릴 때마다 새로 받아야 한다.
+   호출 25회는 일일 상한(로그인 400회) 안에 들어간다. */
+
 // 💡 (중요) 파일 생성에 필요한 부품들! (절대 지우면 안 됨)
 const fs = require('fs');
 const path = require('path');

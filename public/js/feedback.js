@@ -496,7 +496,7 @@ const FeedbackScreen = {
       applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
-      Toast.show('문제 생성에 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '문제 생성에 실패했어요. 다시 시도해주세요.'));
       if (btnEl) {
         btnEl.disabled = false;
         btnEl.textContent = '다음 문제 풀기';
@@ -530,6 +530,19 @@ const FeedbackScreen = {
        옮겼기 때문에, 어긋난 문장은 학생에게 도달하기 전에 걸러져 다시 만들어진다.
        예전에 저장된 세션에는 isVoided가 남아 있으므로 그것만 조용히 걸러낸다. */
     const valid = items.filter(i => !i.isVoided);
+
+    /* 🔑 계산형(Level 2 방식B, Level 3)은 아래 4그룹 분류에 넣으면 안 된다.
+       분류가 쓰는 isWrong의 뜻이 문제 유형마다 다르기 때문이다.
+         - 문장형(STEP1/2): isWrong = "이 문장이 물리적으로 거짓인가"  → 거짓 문장 찾기가 임무
+         - 계산형:          isWrong = "학생이 틀렸는가"                → quiz.js에서 !isCorrect로 채움
+       그래서 계산을 맞히면 isWrong=false가 되고, 분류는 그걸 "옳은 문장을 잘못 골랐다"로 읽어
+       만점 답안을 "오답 체크" 칸에 넣었다(점수 링은 100점인데 카드 제목은 오답 체크).
+       칸 이름을 바꾸는 대신 여기서 갈라낸다 — 이미 저장된 과거 기록도 같은 뜻으로 들어있어서
+       필드 의미를 지금 바꾸면 그 기록들이 전부 반대로 해석된다. */
+    if (this._isCalcResult(valid)) {
+      container.innerHTML = this._renderCalcCard(valid[0]);
+      return;
+    }
 
     // userReason이 있으면 체크한 것으로 판단
     const checkedItems = valid.filter(i => i.userReason !== undefined && i.userReason !== null);
@@ -618,6 +631,35 @@ const FeedbackScreen = {
     }
 
     container.innerHTML = html;
+  },
+
+  /* 계산형 단일 문항 결과인지. 문항이 하나이고 정답 수치(correctAnswer)가 붙어 있으면
+     계산형이다 — 문장형 문항에는 이 필드가 없다. 과거 기록(fetchSessionLogs)도 이 필드를
+     그대로 복원하므로 방금 푼 결과와 복기 화면이 같은 판정을 받는다.
+     (_canRetryHistory와 같은 기준을 쓴다 — 두 곳이 어긋나면 "다시 풀기는 되는데 카드는
+      엉뚱하게 그려지는" 상태가 생긴다) */
+  _isCalcResult(items) {
+    return items.length === 1 && items[0]?.correctAnswer !== undefined;
+  },
+
+  /* 계산형 결과 카드 — 정답/오답 한 칸으로만 그린다.
+     문장 5개짜리와 달리 "오개념은 찾았지만 이유가 틀림" 같은 중간 상태가 없다. */
+  _renderCalcCard(item) {
+    const ok = item.isCorrectAnswer === true;
+    return `
+      <div class="fb-section-title">${ok ? '정답' : '오답'}</div>
+      <div class="feedback-card">
+        <div class="fb-card-header">
+          <span class="fb-stmt">${escapeHtml(item.text)}</span>
+        </div>
+        <div class="fb-explanation">
+          <div class="fb-exp-label user">📝 내가 쓴 답</div>
+          <div class="fb-user-ans">${escapeHtml(item.userReason || '(입력 없음)')}</div>
+          <div class="fb-exp-label ideal">${ok ? '✅ 피드백' : '💡 올바른 풀이'}</div>
+          <div class="fb-correct-ans">${escapeHtml(item.explanation)}</div>
+        </div>
+        ${this._reportBtn(item)}
+      </div>`;
   },
 
   /* ────────────────────────────────────────

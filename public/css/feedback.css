@@ -134,6 +134,9 @@
   font-size: 13px;
   color: var(--green);
   line-height: 1.55;
+  /* Level 3 해설은 "[내가 쓴 답] ... \n [풀이 과정 · N점] ..." 두 줄로 만들어진다
+     (quiz.js _finalize). pre-wrap이 없으면 HTML이 줄바꿈을 삼켜 한 줄로 붙어 나온다. */
+  white-space: pre-wrap;
 }
 
 

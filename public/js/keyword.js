@@ -74,7 +74,7 @@ const KeywordScreen = {
       this._showResult(result);
     } catch (err) {
       console.error('Keyword extraction failed:', err);
-      Toast.show('사진을 다시 인식하지 못했어요. 다시 업로드해주세요.');
+      Toast.show(apiErrorMessage(err, '사진을 다시 인식하지 못했어요. 다시 업로드해주세요.'));
       Router.go('home');
     }
   },
@@ -145,7 +145,7 @@ const KeywordScreen = {
       applyQuizResult(result);
     } catch (err) {
       console.error('Question generation failed:', err);
-      Toast.show('문제를 생성하는 데 실패했어요. 다시 시도해주세요.');
+      Toast.show(apiErrorMessage(err, '문제를 생성하는 데 실패했어요. 다시 시도해주세요.'));
     } finally {
       if (btn) {
         btn.disabled = false;

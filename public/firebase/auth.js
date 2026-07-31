@@ -3,10 +3,48 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { auth } from './config.js';
+
+/* ────────────────────────────────────────
+   익명 세션 (비로그인 무료 체험용)
+
+   Cloud Functions가 request.auth로 호출자를 확인하게 바뀌었다(요금 남용 차단). 그래서
+   비로그인 사용자도 "이름 없는 uid" 하나는 갖고 있어야 사진 분석·문제 생성이 성립한다.
+
+   🔑 익명 사용자는 앱 입장에서 여전히 "비로그인"이다. AppState.isLoggedIn을 true로 만들면
+      마이페이지·학습 기록 저장·이해도 갱신·문항 신고가 전부 열려버리는데, 익명 계정은
+      브라우저를 지우면 사라지므로 그 기록을 되찾을 방법이 없다. 토큰만 쓰고 로그인
+      여부 판정에는 쓰지 않는다.
+──────────────────────────────────────── */
+let sessionPromise = null;
+
+/**
+ * Functions를 부르기 전에 인증 세션이 있는지 보장한다.
+ * 이미 (익명이든 실제 로그인이든) 세션이 있으면 즉시 반환하고, 없으면 익명 로그인을 한 번만
+ * 발급한다. 첫 화면 진입 직후처럼 발급이 아직 안 끝난 시점에 호출이 겹쳐도
+ * 같은 promise를 공유해서 익명 계정이 여러 개 생기지 않는다.
+ *
+ * 발급이 실패해도 예외를 던지지 않는다 — 호출을 그대로 진행시키면 서버가
+ * unauthenticated로 거절하고, 화면은 그 코드에 맞는 안내를 띄운다(app.js apiErrorMessage).
+ */
+function ensureSession() {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  if (!sessionPromise) {
+    sessionPromise = signInAnonymously(auth)
+      .then(cred => cred.user)
+      .catch(err => {
+        // 가장 흔한 원인: Firebase Console에서 '익명' 로그인 제공업체가 꺼져 있음
+        console.warn('익명 세션 발급 실패:', err?.code || err);
+        return null;
+      })
+      .finally(() => { sessionPromise = null; });   // 실패했으면 다음 호출에서 다시 시도
+  }
+  return sessionPromise;
+}
 
 const AuthService = {
   async loginWithGoogle() {
@@ -51,7 +89,8 @@ const AuthService = {
 
   watchAuthState() {
     onAuthStateChanged(auth, (user) => {
-      if (user) {
+      // 🔑 익명 사용자는 "비로그인"으로 취급한다 (위 익명 세션 주석 참고)
+      if (user && !user.isAnonymous) {
         window.AppState.isLoggedIn = true;
         window.AppState.user = {
           uid:         user.uid,
@@ -64,6 +103,9 @@ const AuthService = {
         window.AppState.isLoggedIn = false;
         window.AppState.user = null;
         this._onLogout();
+        // 세션이 아예 없을 때만 익명으로 하나 발급 (로그아웃 직후도 이 경로로 들어온다).
+        // user가 이미 익명이면 재발급하지 않는다 — 그러면 무한 루프가 된다.
+        if (!user) ensureSession();
       }
     });
   },
@@ -261,4 +303,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-export { AuthService };
+export { AuthService, ensureSession };
