@@ -781,6 +781,7 @@ async function buildGradingContext(questions, answers) {
 function scoreFeedbackItems({ questions, answers, graded, maxScorePerItem }) {
   let rawScore = 0;
   const mismatched = [];        // 라벨이 갈린 문항 (로그·문항 오류율 집계용)
+  const scoredUnanswered = [];  // 미답변인데 AI가 점수를 준 문항 (버려진 점수 — 로그용, S-10)
   /* 개념별 판정이 실제로 갈리는지 세는 카운터 (설계 4-12). AI가 서술이 좋으면 태그 전부에
      true를 주는 식으로 뭉갤 수 있고, 그러면 증거가 부풀어 다중 태그의 근거가 사라진다.
      갈린 비율이 0에 가까우면 그 전제가 깨졌다는 신호다. */
@@ -807,8 +808,16 @@ function scoreFeedbackItems({ questions, answers, graded, maxScorePerItem }) {
 
     if (labelMismatch) {
       // 판정이 갈린 문항 — 가점도 감점도 없다 (위 주석 / 단계 8-7)
-    } else if (isWrong) {
+    } else if (isWrong && answered) {
+      /* 🔑 `answered` 조건이 핵심이다. 학생이 쓰지 않은 문항에는 한 점도 주지 않는다.
+         프롬프트가 "미답변이면 0"을 지시하지만 그건 AI의 준수에 기댄 것이고, 어기면
+         막을 것이 없었다. 바로 위에서 isCorrectAnswer는 미답변을 명시적으로 걸러내는데
+         점수만 AI 값을 그대로 받아, 아무것도 안 쓴 학생이 100점 + "0개 정답"이라는
+         모순된 결과를 받을 수 있었다. 근거는 결정 기록 S-10. */
       rawScore += (gradedItem?.score || 0);
+    } else if (isWrong && gradedItem?.score > 0) {
+      // 미답변인데 점수가 붙어 왔다 — 버리되, 얼마나 자주 있는지는 남긴다 (S-10)
+      scoredUnanswered.push({ id: q.id, score: gradedItem.score });
     } else if (answered) {
       /* 옳은 문장을 오개념이라고 고른 경우(헛다리) 감점 — 무지성 체크 방지용.
          🔑 고정 -20이 아니라 배점의 절반. 예전엔 틀린 문장 1개(배점 100)와 2개(배점 50)에
@@ -848,7 +857,7 @@ function scoreFeedbackItems({ questions, answers, graded, maxScorePerItem }) {
     };
   });
 
-  return { items, rawScore, mismatched, multiTagItems, splitJudgments };
+  return { items, rawScore, mismatched, scoredUnanswered, multiTagItems, splitJudgments };
 }
 
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
@@ -879,7 +888,7 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
       return parsed;
     });
 
-    const { items, rawScore, mismatched, multiTagItems, splitJudgments } =
+    const { items, rawScore, mismatched, scoredUnanswered, multiTagItems, splitJudgments } =
       scoreFeedbackItems({ questions, answers, graded, maxScorePerItem: ctx.maxScorePerItem });
 
     /* 🔑 "N개 중 M개 정답"은 학생이 실제로 고른 문항만 센다. 예전엔 미체크 문항까지 세어
@@ -906,6 +915,11 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
     }
     if (multiTagItems) {
       console.info(`[gradeAnswers] 개념별 판정 — 다중 태그 ${multiTagItems}문항 중 ${splitJudgments}건에서 판정이 갈림 (unit: ${unit}, level 정보 없음)`);
+    }
+    /* 미답변 문항에 AI가 점수를 준 건수 (S-10). 서버가 이미 버렸으므로 점수에는 영향이 없지만,
+       프롬프트의 "미답변이면 0" 지시를 모델이 얼마나 어기는지가 이 로그로만 관측된다. */
+    if (scoredUnanswered.length) {
+      console.warn(`[gradeAnswers] 미답변 문항 가점 차단 ${scoredUnanswered.length}건 — unit: ${unit}`, scoredUnanswered);
     }
 
     return {
