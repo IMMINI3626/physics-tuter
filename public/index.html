@@ -323,6 +323,7 @@
         class="l3-textarea"
         placeholder="풀이 과정을 입력하세요 (수식, 단위 등)"
         rows="5"
+        maxlength="2000"
       ></textarea>
     </div>
 
@@ -363,6 +364,7 @@
         id="l3-answer-text-input"
         class="l3-answer-text-input"
         placeholder="예: 7.07 m/s"
+        maxlength="60"
       />
     </div>
 
@@ -413,9 +415,9 @@
   <!-- AI가 인식한 풀이 과정/답 확인·수정 -->
   <div class="l3-process-area hidden" id="l3-review-area" style="margin-top:20px">
     <div class="l3-process-label"> 풀이과정 검토 <span style="color:var(--text3);font-weight:400">(자신이 작성한 답안과 다르다면 직접 고쳐주세요)</span></div>
-    <textarea id="l3-review-textarea" class="l3-textarea" rows="6"></textarea>
+    <textarea id="l3-review-textarea" class="l3-textarea" rows="6" maxlength="2000"></textarea>
     <div class="l3-process-label" style="margin-top:14px"> 작성한 답 확인</div>
-    <input type="text" id="l3-review-answer-input" class="l3-answer-text-input" />
+    <input type="text" id="l3-review-answer-input" class="l3-answer-text-input" maxlength="60" />
     <button class="primary-btn" style="margin-top:12px" onclick="Level3Screen.confirmGrade(this)">
       제출하기
     </button>

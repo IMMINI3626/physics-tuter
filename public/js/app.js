@@ -94,6 +94,12 @@ function apiErrorMessage(err, fallback) {
     // 서버가 게스트/로그인에 맞는 문구를 담아 보내므로 그대로 보여준다
     return err?.message || '오늘 사용할 수 있는 횟수를 모두 썼어요.';
   }
+  /* 🔑 입력이 상한을 넘었을 때(서버구현 S-11)도 서버 문구를 그대로 살린다.
+     "답변이 너무 길어요 (최대 2000자)"를 "다시 시도해주세요"로 뭉개면, 학생은 왜 안 되는지
+     모른 채 같은 답변으로 계속 재시도한다 — 다시 해도 절대 되지 않는 오류다. */
+  if (code.includes('invalid-argument')) {
+    return err?.message || fallback;
+  }
   return fallback;
 }
 

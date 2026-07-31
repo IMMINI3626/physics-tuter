@@ -37,9 +37,51 @@ service cloud.firestore {
     //    읽기를 막는 이유: 학생끼리 남의 신고 내용을 볼 이유가 없고, 신고에는 그 사람이 쓴
     //    답변까지 들어간다. 검토는 관리자 SDK(functions/list-reports.js)로 한다.
     //    수정·삭제도 막는다 — 신고 기록은 논문 집계에 쓰므로 사후에 바뀌면 안 된다.
+    //
+    //    🔑 내용 검증을 추가한 이유 (S-11): 예전에는 "로그인 + 자기 uid"만 봤다. 이 경로는
+    //    Functions를 거치지 않아 일일 호출 상한(ai_usage)도 안 걸리므로, 익명 토큰 하나로
+    //    아무 내용이나 무제한 크기로 쓸 수 있었다. 신고 기록은 논문 집계에 쓰는 데이터라
+    //    쓰레기가 섞이면 그대로 오염된다.
+    //
+    //    검사 항목: 필드 구성이 정확히 일치할 것(hasOnly + hasAll), 타입, 길이 상한,
+    //    reason은 정해진 코드 6종 중 하나, createdAt은 서버 시각.
+    //    ⚠️ public/firebase/firestore.js의 submitQuestionReport가 쓰는 필드와 1:1로 맞춰야
+    //       한다. 한쪽만 바꾸면 신고가 조용히 거부된다.
     match /question_reports/{reportId} {
-      allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid;
+      // 길이가 상한 이하인 문자열인가 (없으면 기본값 ''로 봐서 통과)
+      function str(d, k, max) {
+        return d.get(k, '') is string && d.get(k, '').size() <= max;
+      }
+      function validReport() {
+        let d = request.resource.data;
+        // 필수 7개는 반드시 있어야 하고, 나머지 7개는 있으면 검사한다.
+        // 선택 필드에 .get(기본값)을 쓰는 이유: 필드를 안 보내면 d.foo 접근이 규칙 오류가 돼
+        // 신고가 통째로 거부된다. 클라이언트가 나중에 필드 하나를 빼도 조용히 깨지지 않게 한다.
+        return d.keys().hasOnly(['uid', 'sessionId', 'unit', 'level', 'questionId',
+                                 'questionText', 'isWrong', 'isCorrectAnswer', 'userReason',
+                                 'explanation', 'targetMisconceptionIds', 'reason', 'detail',
+                                 'createdAt'])
+          && d.keys().hasAll(['uid', 'questionId', 'questionText', 'isWrong', 'reason',
+                              'targetMisconceptionIds', 'createdAt'])
+          && d.uid == request.auth.uid
+          && d.createdAt == request.time
+          && d.reason in ['label_should_be_correct', 'label_should_be_wrong', 'bad_explanation',
+                          'bad_grading', 'unclear', 'etc']
+          && d.questionId is number
+          && d.isWrong is bool
+          && d.targetMisconceptionIds is list
+          && d.targetMisconceptionIds.size() <= 5
+          && str(d, 'questionText', 1000)
+          && str(d, 'detail',        300)     // 입력칸 maxlength와 같은 값
+          && str(d, 'explanation',  4000)
+          && (d.get('userReason', '') == null || str(d, 'userReason', 2000))
+          && (d.get('unit', '')       == null || str(d, 'unit', 100))
+          && (d.get('sessionId', '')  == null || str(d, 'sessionId', 200))
+          && (d.get('level', 1) == null || (d.get('level', 1) is int
+                                            && d.get('level', 1) >= 1 && d.get('level', 1) <= 3))
+          && (d.get('isCorrectAnswer', false) == null || d.get('isCorrectAnswer', false) is bool);
+      }
+      allow create: if request.auth != null && validReport();
       allow read, update, delete: if false;
     }
 

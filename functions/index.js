@@ -126,6 +126,94 @@ function validateImagePayload(imageBase64) {
   }
 }
 
+/* ------------------------------------------------------------
+   요청 본문 검증 (S-11)
+
+   이미지는 예전부터 2MB로 막았는데 **텍스트는 상한이 아예 없었다.** 학생 서술·풀이 과정·문제
+   본문이 그대로 Gemini 입력 토큰이 되므로, 큰 문자열을 반복해 보내면 일일 호출 수 상한
+   (DAILY_AI_LIMIT)을 지키면서도 요금만 크게 올릴 수 있었다. 호출 "수"는 세면서 호출 "크기"는
+   안 센 것이 빈 구멍이었다.
+
+   형태 검증도 함께 한다. 예전에는 `if (!answers || !questions)`로 존재만 봐서, 배열이 아닌
+   값이 들어오면 그대로 통과한 뒤 questions.filter에서 터졌고 catch가 'internal'로 덮어써서
+   클라이언트는 원인을 알 수 없는 "채점 실패"만 봤다.
+
+   🔑 상한은 **실측 기준**이다. 처음엔 감으로 넉넉히 잡았다가 실제 데이터를 재보니 10~30배
+      과했다. seed.js 실측(오개념 설명 최대 76자, 참고 문장 최대 72자, 소단원명 최대 10자,
+      소단원당 오개념 최대 22개)과 화면에서 실제로 나온 값(판별 문장 62자, 학생 서술 50자,
+      L3 문제 본문 123자)을 근거로 그 3~20배에서 끊는다. 근거는 결정 기록 S-11.
+   ------------------------------------------------------------ */
+const LIMITS = {
+  unit:            40,   // 소단원명 (실측 최대 10자)
+  statement:      300,   // 판별 문장 하나 (실측 최대 72자, 화면 관측 62자)
+  reason:        1000,   // 학생이 쓴 서술 하나 (화면 관측 50자). 입력칸 maxlength와 같은 값
+  questionText:   600,   // 계산 문제 본문 (관측 123자)
+  processText:   2000,   // L3 풀이 과정. OCR 출력 상한(outputTokens 1024)보다 넉넉하게
+  answerText:      60,   // 직접 쓴 최종 답 ("√2/2" 같은 짧은 식)
+  step:           300,   // 모범 풀이 단계 하나
+  mcDesc:         200,   // 오개념 설명 하나 (실측 최대 76자)
+  id:              30,   // 오개념 id
+  items:            5,   // 한 세트의 문장·답변 개수 (5문장 고정)
+  steps:           10,   // 모범 풀이 단계 개수
+  misconceptions:  40,   // 클라이언트가 보내는 오개념 목록 (소단원 최대 22개)
+};
+
+/** 문자열 필드 검증. required=false면 비어 있어도 통과시키고 길이만 본다. */
+function checkText(value, max, label, required = false) {
+  if (value === undefined || value === null || value === '') {
+    if (required) throw new HttpsError('invalid-argument', `${label}이(가) 없습니다`);
+    return '';
+  }
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', `${label}의 형식이 올바르지 않습니다`);
+  }
+  if (value.length > max) {
+    // 길이는 학생에게도 의미 있는 정보라 그대로 알려준다 (잘라내면 채점이 이상해진다)
+    throw new HttpsError('invalid-argument', `${label}이(가) 너무 길어요 (최대 ${max}자)`);
+  }
+  return value;
+}
+
+/** 배열 필드 검증 — 배열인지와 개수만 본다. 원소 검증은 호출한 쪽에서 한다. */
+function checkArray(value, max, label) {
+  if (!Array.isArray(value)) {
+    throw new HttpsError('invalid-argument', `${label}의 형식이 올바르지 않습니다`);
+  }
+  if (value.length > max) {
+    throw new HttpsError('invalid-argument', `${label}이(가) 너무 많습니다 (최대 ${max}개)`);
+  }
+  return value;
+}
+
+/** 문항에 달린 오개념 태그 — 구버전의 단수 필드(targetMisconceptionId)도 읽는다. */
+const tagsOf = (q) => (Array.isArray(q.targetMisconceptionIds)
+  ? q.targetMisconceptionIds
+  : (q.targetMisconceptionId ? [q.targetMisconceptionId] : [])).filter(Boolean);
+
+/** 채점 요청(gradeAnswers)의 answers·questions 검증 */
+function validateGradePayload(answers, questions, unit) {
+  checkArray(answers, LIMITS.items, '답변');
+  checkArray(questions, LIMITS.items, '문항');
+  if (!questions.length) throw new HttpsError('invalid-argument', '문항 정보가 없습니다');
+  checkText(unit, LIMITS.unit, '단원명');
+
+  questions.forEach((q, i) => {
+    if (!q || typeof q !== 'object') {
+      throw new HttpsError('invalid-argument', `${i + 1}번 문항의 형식이 올바르지 않습니다`);
+    }
+    checkText(q.text, LIMITS.statement, `${i + 1}번 문장`);
+    checkArray(tagsOf(q), LIMITS.items, `${i + 1}번 문항의 오개념 태그`);
+  });
+
+  answers.forEach((a, i) => {
+    if (!a || typeof a !== 'object') {
+      throw new HttpsError('invalid-argument', `${i + 1}번 답변의 형식이 올바르지 않습니다`);
+    }
+    checkText(a.reason, LIMITS.reason, `${i + 1}번 답변`);
+    checkText(a.answer, LIMITS.reason, `${i + 1}번 답변`);
+  });
+}
+
 /**
  * Gemini 모델 인스턴스를 반환합니다. 작업별 예산 표와 근거는 docs/서버구현_결정기록.md S-4.
  *
@@ -580,6 +668,19 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
   }
+  /* 형태·길이 검증 (S-11). misconceptions는 소단원이 DB에 없을 때 그대로 프롬프트에 실리는
+     클라이언트 제어 값이라, 개수와 설명 길이를 반드시 본다. */
+  checkText(unit, LIMITS.unit, '단원명', true);
+  checkArray(misconceptions, LIMITS.misconceptions, '오개념 목록')
+    .forEach((m, i) => {
+      if (!m || typeof m !== 'object') {
+        throw new HttpsError('invalid-argument', `${i + 1}번 오개념의 형식이 올바르지 않습니다`);
+      }
+      checkText(m.id, LIMITS.id, `${i + 1}번 오개념 id`);
+      checkText(m.description, LIMITS.mcDesc, `${i + 1}번 오개념 설명`);
+    });
+  checkArray(targetMisconceptionIds, LIMITS.misconceptions, '겨냥 오개념 목록')
+    .forEach((id, i) => checkText(id, LIMITS.id, `${i + 1}번 겨냥 오개념 id`));
 
   try {
     const ctx = await loadUnitContext(unit, misconceptions, targetMisconceptionIds);
@@ -691,6 +792,15 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
   if (!questionText || (!processText && !answerText)) {
     throw new HttpsError('invalid-argument', '문제 또는 풀이/답안 정보가 없습니다');
   }
+  /* 형태·길이 검증 (S-11). processText는 손글씨 OCR 결과가 들어오는 자리라 상한이 가장 크다. */
+  checkText(questionText, LIMITS.questionText, '문제 본문', true);
+  checkText(processText,  LIMITS.processText,  '풀이 과정');
+  checkText(answerText,   LIMITS.answerText,   '작성한 답');
+  checkText(unit,         LIMITS.unit,         '단위');
+  if (solutionSteps !== undefined && solutionSteps !== null) {
+    checkArray(solutionSteps, LIMITS.steps, '모범 풀이 단계')
+      .forEach((s, i) => checkText(s, LIMITS.step, `모범 풀이 ${i + 1}단계`));
+  }
 
   try {
     // 다단계 풀이의 논리적 타당성을 평가하는 작업이라 추론이 실제로 필요 → thinking 허용.
@@ -727,11 +837,6 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
 /* ────────────────────────────────────────
    Function 3-3: gradeAnswers
 ──────────────────────────────────────── */
-/** 문항에 달린 오개념 태그 — 구버전의 단수 필드(targetMisconceptionId)도 읽는다. */
-const tagsOf = (q) => (Array.isArray(q.targetMisconceptionIds)
-  ? q.targetMisconceptionIds
-  : (q.targetMisconceptionId ? [q.targetMisconceptionId] : [])).filter(Boolean);
-
 /**
  * 채점 프롬프트에 실을 재료를 만듭니다 — 문제·답변 목록, 배점, 개념별 판정 블록.
  *
@@ -866,6 +971,7 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
   if (!answers || !questions) {
     throw new HttpsError('invalid-argument', '답변 또는 문제 정보가 없습니다');
   }
+  validateGradePayload(answers, questions, unit);   // 형태·길이 (S-11)
 
   try {
     const ctx = await buildGradingContext(questions, answers);

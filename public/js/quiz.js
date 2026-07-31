@@ -128,10 +128,13 @@ const QuizScreen = {
           <div class="step2-fields">
             <div>
               <div class="field-label">답변 작성</div>
+              <!-- 🔑 maxlength는 서버 상한(LIMITS.reason)과 같은 값이다. 서버에서만 막으면
+                   학생이 다 쓰고 제출한 뒤에야 거부당한다 — 여기서 미리 끊는다. -->
               <textarea
                 class="field-textarea"
                 id="reason-${q.id}"
                 rows="3"
+                maxlength="1000"
                 placeholder="해당 문장이 틀린 이유나 올바른 물리 개념을 자유롭게 적어보세요..."
               ></textarea>
             </div>
