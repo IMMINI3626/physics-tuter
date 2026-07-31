@@ -83,7 +83,8 @@ physics-tuter/
 │       └── api.js              Cloud Functions 호출 래퍼
 │
 ├── functions/                  백엔드 (Firebase Cloud Functions)
-│   ├── index.js                Gemini API 호출 5종(진단·문제 생성·채점 등)
+│   ├── index.js                Gemini API 호출 5종(진단·문제 생성·채점 등) + 후처리 로직
+│   ├── prompts.js              Gemini 프롬프트 템플릿 8종 (전부 순수 함수)
 │   ├── seed.js                 오개념 DB 시딩 스크립트
 │   └── package.json
 │
@@ -94,7 +95,8 @@ physics-tuter/
 ├── CHANGELOG.md                기능·버그 수정 상세 이력
 ├── Add_README.md               레벨 시스템·마이페이지 설계 기준, 미결 사항
 └── docs/
-    └── 오개념측정_BKT_설계.md   진행 중인 학습자 모델(BKT) 설계 문서
+    ├── 오개념측정_BKT_설계.md   진행 중인 학습자 모델(BKT) 설계 문서
+    └── 서버구현_결정기록.md     Cloud Functions 구현 결정과 근거 (인증·재시도·모델 예산 등)
 ```
 
 ---
