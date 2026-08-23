@@ -394,17 +394,24 @@ const Level3Screen = {
     }
   },
 
-  handlePhotoUpload(e) {
+  /* 🔑 홈 화면과 같은 압축(app.js compressImage)을 거친다. 예전엔 FileReader로 원본을 그대로
+     base64로 만들어서, 폰 사진(3~5MB)이 1.33배로 부풀어 서버 상한(2MB)에 걸렸다. 그때 뜨는
+     문구가 "다시 촬영해주세요"라 다시 찍어도 원본 크기라 몇 번을 해도 똑같이 실패했다.
+     EXIF 회전(세로로 찍은 사진이 누워서 전달되던 것)도 여기서 함께 해결된다. */
+  async handlePhotoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      this._photoBase64 = ev.target.result;
-      document.getElementById('l3-photo-img').src = this._photoBase64;
-      document.getElementById('l3-photo-preview').classList.remove('hidden');
-      document.getElementById('l3-canvas').classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
+    try {
+      this._photoBase64 = await compressImage(file);
+    } catch (err) {
+      console.error('사진 처리 실패:', err);
+      Toast.show('사진을 읽지 못했어요. 다른 사진으로 시도해주세요.');
+      e.target.value = '';   // 같은 파일을 다시 고를 수 있게 비운다 (안 비우면 change가 안 뜬다)
+      return;
+    }
+    document.getElementById('l3-photo-img').src = this._photoBase64;
+    document.getElementById('l3-photo-preview').classList.remove('hidden');
+    document.getElementById('l3-canvas').classList.add('hidden');
   },
 
   removePhoto() {

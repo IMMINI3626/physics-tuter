@@ -45,6 +45,9 @@ const DAILY_AI_LIMIT = { guest: 40, member: 400 };
 /* base64 이미지 상한. 정상 사진(1600px JPEG q0.8)은 300~700KB라 전부 통과한다 (S-7). */
 const MAX_IMAGE_BASE64_BYTES = 2 * 1024 * 1024;
 
+/* 클라이언트가 보낼 수 있는 이미지 형식. 목록 밖 값은 무시한다 (S-13). */
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+
 /* 위 상수들과 아래 헬퍼의 결정 근거는 docs/서버구현_결정기록.md의 S-번호 절에 있다. */
 
 /* ------------------------------------------------------------
@@ -777,6 +780,11 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
   await authorize(request, 'recognizeSolutionImage');
   const { imageBase64 } = request.data;
   validateImagePayload(imageBase64);
+  /* 손글씨 캔버스는 PNG, 업로드한 사진은 JPEG로 온다. 예전엔 image/png로 고정이라 사진일 때
+     형식과 라벨이 어긋난 채 Gemini로 갔다. 목록에 없는 값은 무시하고 예전 기본값을 쓴다 —
+     클라이언트가 보내는 문자열이라 그대로 믿고 실을 수 없다. */
+  const mimeType = ALLOWED_IMAGE_MIME.includes(request.data.mimeType)
+    ? request.data.mimeType : 'image/png';
 
   try {
     // 손글씨 → 텍스트 그대로 옮겨 적기(OCR). 판단·채점 없음 → thinking 0.
@@ -785,7 +793,7 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
     return await withRetry('recognizeSolutionImage', async () => {
       const result = await model.generateContent([
         prompt,
-        { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+        { inlineData: { mimeType, data: imageBase64 } },
       ]);
       const parsed = parseJSON(result.response.text());
       // 빈 문자열은 정상 결과일 수 있음(백지 제출) — 필드 자체가 없을 때만 재시도
@@ -1010,6 +1018,27 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
       if (!Array.isArray(parsed.items) || !parsed.items.length) {
         throw new Error('items 배열 누락');
       }
+      /* 🔑 문항별 값의 형태까지 본다 (S-13). score가 숫자가 아니면 총점이 NaN이 되고, 그
+         NaN이 그대로 Firestore에 저장돼 마이페이지 평균 점수와 점수 추이 그래프가 영구히
+         깨진다. 되돌릴 수 없는 오염이라 재시도로 받아내는 게 맞다.
+         gradeSolutionProcess는 예전부터 같은 검사를 했는데 채점 쪽만 빠져 있었다. */
+      parsed.items.forEach((it, i) => {
+        /* 숫자로 바꿔서 본다. 모델이 "1"·"33"처럼 문자열로 답하는 건 흔하고, 그것까지
+           실패시키면 재시도 3번을 다 쓰고 학생에게 "채점 실패"가 뜬다. */
+        const qid = Number(it.questionId);
+        if (!Number.isFinite(qid)) throw new Error(`${i + 1}번 채점 항목 questionId가 숫자가 아님`);
+        it.questionId = qid;   // 아래 문항 대조가 === 로 맞추므로 여기서 형을 맞춰둔다
+
+        const sc = Number(it.score ?? 0);   // 없거나 null이면 0점 (미답변 문항의 정상 값)
+        if (!Number.isFinite(sc)) {
+          throw new Error(`${i + 1}번 채점 항목 score가 숫자가 아님 (${JSON.stringify(it.score)})`);
+        }
+        it.score = sc;
+
+        // 해설 하나 때문에 채점 전체를 실패시키진 않는다. 버리면 기본 문구로 떨어진다.
+        if (typeof it.explanation !== 'string') delete it.explanation;
+      });
+
       /* 학생이 실제로 답한 문항이 채점 결과에 빠져 있으면 그 문항이 0점 처리돼버린다 —
          누락은 재시도로 받아내는 게 맞다. */
       const gradedIds = new Set(parsed.items.map(it => it.questionId));
@@ -1033,8 +1062,14 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
       ...correctAnswered.map(i => ({ text: `${i.text.slice(0, 12)}... 이해`, type: 'correct' })),
     ].slice(0, 4);
 
+    /* 마지막 방어선 (S-13). 위 검증을 통과하면 여기까지 NaN이 올 일이 없지만, 한 번 새면
+       Firestore에 저장돼 되돌릴 수 없으므로 저장 직전에 한 번 더 막는다. */
+    const safeRaw = Number.isFinite(rawScore) ? rawScore : 0;
+    if (safeRaw !== rawScore) {
+      console.error(`[gradeAnswers] rawScore가 숫자가 아님 (${rawScore}) — 0으로 처리. unit: ${unit}`);
+    }
     // 헛다리 감점 때문에 음수가 될 수 있어 0~100으로 자르고 5점 단위로 맞춘다
-    const finalScore = Math.round(Math.max(0, Math.min(rawScore, 100)) / 5) * 5;
+    const finalScore = Math.round(Math.max(0, Math.min(safeRaw, 100)) / 5) * 5;
 
     /* 두 로그 모두 화면에는 띄우지 않고 논문 실측치로 쓴다.
        - 라벨 대조 불일치 건수 = 생성 단계 검증(8-5)을 통과하고도 남은 문항 오류율

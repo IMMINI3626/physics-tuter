@@ -30,11 +30,15 @@ const ApiService = {
     return data;
   },
 
+  /* 🔑 실제 형식을 함께 보낸다. 손글씨 캔버스는 PNG, 업로드한 사진은 JPEG인데 서버가
+     image/png로 고정해서 보내고 있었다 — JPEG 바이트에 PNG 라벨이 붙은 채로 Gemini에
+     전달됐다. data: 접두사에 형식이 이미 들어있으므로 그걸 읽어 넘긴다. */
   async recognizeSolutionImage(imageBase64) {
     await ensureSession();
+    const matched = /^data:([^;]+);base64,/.exec(imageBase64);
     const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
     const fn = httpsCallable(functions, 'recognizeSolutionImage');
-    const { data } = await fn({ imageBase64: base64Data });
+    const { data } = await fn({ imageBase64: base64Data, mimeType: matched ? matched[1] : 'image/png' });
     return data.text;
   },
 

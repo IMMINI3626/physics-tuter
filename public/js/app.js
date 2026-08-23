@@ -104,6 +104,68 @@ function apiErrorMessage(err, fallback) {
 }
 
 /* ────────────────────────────────────────
+   업로드 사진 축소 — 홈 화면(교과서 사진)과 Level 3(손으로 푼 풀이 사진)이 함께 쓴다.
+
+   원본 폰 사진(4000×3000, 5MB+)을 base64로 만들면 약 1.33배로 부풀어 callable 함수의
+   요청 크기 한도(서버 2MB)에 걸린다. 걸리면 사용자에겐 "이미지가 너무 커요. 다시 촬영해
+   주세요"만 보이는데, 다시 찍어도 원본 크기라 몇 번을 해도 똑같이 실패한다.
+   1600px는 교과서 글씨와 연필 필기를 Gemini가 읽어내는 데 충분한 해상도.
+
+   🔑 예전엔 이 함수가 home.js 안에 있어서 Level 3 사진 업로드가 압축을 통째로 건너뛰었다.
+      두 곳이 같은 함수를 쓰도록 여기로 옮겼다.
+──────────────────────────────────────── */
+const IMAGE_MAX_EDGE = 1600;
+const IMAGE_JPEG_QUALITY = 0.8;
+
+/* 긴 변이 IMAGE_MAX_EDGE를 넘으면 비율을 유지한 채 축소하고 JPEG로 재인코딩.
+   이미 작은 사진도 JPEG로 통일해서 보낸다 (PNG 스크린샷이 오히려 더 큰 경우가 많음).
+   @returns {Promise<string>} "data:image/jpeg;base64,..." */
+async function compressImage(file) {
+  const source = await decodeImage(file);
+  const srcW = source.width  || source.naturalWidth;
+  const srcH = source.height || source.naturalHeight;
+  if (!srcW || !srcH) throw new Error('이미지 크기를 읽을 수 없습니다');
+
+  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(srcW, srcH));
+  const w = Math.max(1, Math.round(srcW * scale));
+  const h = Math.max(1, Math.round(srcH * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  // 사진 배경이 투명한 PNG일 때 JPEG로 바꾸면 검게 깔리므로 흰 바탕을 먼저 칠함
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(source, 0, 0, w, h);
+  source.close?.();   // ImageBitmap이면 메모리 해제
+
+  return canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+}
+
+/* 🔑 EXIF 회전 정보 처리가 핵심 — 폰으로 세로로 찍은 사진은 실제 픽셀은 가로로 저장되고
+   "90도 돌려서 보여줘"라는 EXIF 태그가 따로 붙는다. 이걸 무시하고 캔버스에 그리면
+   교과서 사진이 옆으로 누운 채 Gemini에 전달되어 인식률이 크게 떨어진다.
+   createImageBitmap의 imageOrientation:'from-image'가 이 회전을 적용해준다. */
+async function decodeImage(file) {
+  if (window.createImageBitmap) {
+    try {
+      return await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (e) {
+      // 구형 브라우저는 options 인자를 지원하지 않음 — <img> 경로로 폴백
+      console.warn('createImageBitmap 실패, img 폴백:', e);
+    }
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 디코딩 실패')); };
+    img.src = url;
+  });
+}
+
+/* ────────────────────────────────────────
    Global App State
 ──────────────────────────────────────── */
 const AppState = {
@@ -418,3 +480,4 @@ window.escapeHtml  = escapeHtml;
 window.DIMENSION_NAMES = DIMENSION_NAMES;
 window.applyHintPenalty = applyHintPenalty;
 window.apiErrorMessage  = apiErrorMessage;
+window.compressImage    = compressImage;
