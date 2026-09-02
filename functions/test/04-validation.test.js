@@ -75,6 +75,74 @@ test('로그인 사용자도 일일 상한(400회)은 있다', async () => {
   resetUsage();
 });
 
+/* ── 거절된 요청은 사용량을 깎지 않는다 (S-15) ──────────
+   예전엔 자격 검사와 사용량 세기가 한 덩어리라 요청 검증보다 앞에 있었다. 그래서 잘못된
+   요청도 하루 횟수를 깎았고, 학생은 아무것도 못 해보고 무료 체험을 잃을 수 있었다. */
+
+/** uid의 오늘 사용량을 읽는다 (가짜 Firestore에서 직접). */
+function usageOf(uid) {
+  const day = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return H.usageOf(`ai_usage/${uid}_${day}`);
+}
+
+test('길이 초과로 거절되면 사용량이 안 깎인다', async () => {
+  resetUsage();
+  presetUsage('u_len', 5);
+  resetQueue();
+  await throws(() => fn.gradeAnswers.run({
+    data: { answers: okAnswers, questions: okQuestions, unit: '가'.repeat(41) },
+    auth: auth('u_len'),
+  }), '너무 길어요');
+  assert.strictEqual(usageOf('u_len'), 5, '거절된 요청이 사용량을 깎았다');
+  resetUsage();
+});
+
+test('형식 오류로 거절되면 사용량이 안 깎인다', async () => {
+  resetUsage();
+  presetUsage('u_form', 5);
+  resetQueue();
+  await throws(() => fn.gradeAnswers.run({
+    data: { answers: okAnswers, questions: '배열아님', unit: UNIT },
+    auth: auth('u_form'),
+  }), '형식이 올바르지 않습니다');
+  assert.strictEqual(usageOf('u_form'), 5);
+  resetUsage();
+});
+
+test('이미지가 너무 커서 거절되면 사용량이 안 깎인다', async () => {
+  resetUsage();
+  presetUsage('u_img', 5);
+  resetQueue();
+  await throws(() => fn.recognizeSolutionImage.run({
+    data: { imageBase64: 'A'.repeat(2 * 1024 * 1024 + 1) },
+    auth: auth('u_img'),
+  }), '이미지가 너무 커요');
+  assert.strictEqual(usageOf('u_img'), 5);
+  resetUsage();
+});
+
+test('정상 요청은 사용량이 1 올라간다', async () => {
+  resetUsage();
+  presetUsage('u_ok', 5);
+  resetQueue();
+  replyTimes({ items: [{ questionId: 1, score: 0, isCorrectAnswer: false, explanation: 'ok' }] }, 1);
+  await fn.gradeAnswers.run({
+    data: { answers: okAnswers, questions: okQuestions, unit: UNIT },
+    auth: auth('u_ok'),
+  });
+  assert.strictEqual(usageOf('u_ok'), 6, '정상 요청이 안 세어졌다');
+  resetUsage();
+});
+
+test('토큰이 없으면 검증보다 먼저 거절한다 — 자격이 맨 앞이다', async () => {
+  /* 데이터도 틀리고 토큰도 없을 때, "로그인이 필요합니다"가 나와야 한다.
+     검증 오류가 먼저 나오면 토큰 없는 쪽에 우리 검증 규칙을 알려주는 셈이다. */
+  await blockedBeforeAI(
+    () => fn.gradeAnswers.run({ data: { answers: okAnswers, questions: '배열아님', unit: UNIT } }),
+    '로그인이 필요합니다', '자격 우선'
+  );
+});
+
 /* ── 이미지 (S-7 / S-13) ─────────────────────────────── */
 
 test('이미지가 없으면 AI를 부르지 않는다', async () => {

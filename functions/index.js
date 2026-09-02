@@ -54,19 +54,28 @@ const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
    유틸리티 함수 모음
    ------------------------------------------------------------ */
 
-/**
- * 호출 자격 검사 + uid 단위 일일 상한 — 모든 AI 함수의 첫 줄에서 부른다.
- * 익명 로그인도 통과시킨다(무료 체험 유지). 근거는 docs/서버구현_결정기록.md S-1.
- *
- * 🔑 반드시 각 함수의 try 블록 "밖에서" 부를 것. 안에서 부르면 그 함수의 catch가
- *    unauthenticated/resource-exhausted를 'internal'로 덮어써서, 클라이언트가
- *    "다시 시도하면 되는 오류"와 "다시 해도 막히는 오류"를 구분할 수 없게 된다.
- */
-async function authorize(request, label) {
+/* 자격 검사는 두 단계로 나눠져 있다 (S-1, S-15). 각 함수는 이 순서로 부른다.
+       requireAuth  →  요청 검증  →  countUsage
+   합친 하나였을 때는 검증보다 앞에 둘 수밖에 없었고, 그래서 거절할 요청도 하루 사용량을
+   깎았다. 나누면 "토큰 없는 요청은 즉시 거절"과 "센 것만 사용량 차감"을 둘 다 얻는다. */
+
+/** 로그인 확인만 한다(공짜). 익명 로그인도 통과 — 비로그인 무료 체험을 유지하기 위해서다. */
+function requireAuth(request) {
   const auth = request.auth;
   if (!auth?.uid) {
     throw new HttpsError('unauthenticated', '로그인이 필요합니다');
   }
+  return auth;
+}
+
+/**
+ * uid 단위 일일 상한을 세고 1 올린다. **요청 검증을 통과한 뒤에** 부를 것 (S-15).
+ *
+ * 🔑 try 블록 "밖"에서 부를 것. 안에서 부르면 그 함수의 catch가 resource-exhausted를
+ *    'internal'로 덮어써서, "다시 시도하면 되는 오류"와 아닌 것을 구분할 수 없게 된다.
+ */
+async function countUsage(request, label) {
+  const auth = requireAuth(request);   // 순서를 빠뜨려도 자격 없이는 못 세게 한 겹 더 둔다
 
   const guest = auth.token?.firebase?.sign_in_provider === 'anonymous';
   const limit = guest ? DAILY_AI_LIMIT.guest : DAILY_AI_LIMIT.member;
@@ -398,9 +407,10 @@ function validateCalcQuestion(q, label) {
    Function 1: extractKeywords (하이브리드 DB 연동 버전)
 ──────────────────────────────────────── */
 exports.extractKeywords = onCall(FUNC_OPTIONS, async (request) => {
-  await authorize(request, 'extractKeywords');
+  requireAuth(request);                    // 자격 먼저
   const { imageBase64 } = request.data;
-  validateImagePayload(imageBase64);
+  validateImagePayload(imageBase64);       // 검증 다음
+  await countUsage(request, 'extractKeywords');   // 통과한 것만 사용량 차감 (S-15)
 
   try {
     // 1. 오개념 DB 전체 불러오기 (14개 소단원 전부 수록 — 역학/비역학 구분 없음).
@@ -681,7 +691,7 @@ async function reviewStatementSet(questions, { unit, level, attempt }) {
 }
 
 exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
-  await authorize(request, 'generateQuestions');
+  requireAuth(request);
   const { misconceptions, unit, level = 1, mode = null, targetMisconceptionIds = [] } = request.data;
   if (!misconceptions || !unit) {
     throw new HttpsError('invalid-argument', '오개념 또는 단원 정보가 없습니다');
@@ -699,6 +709,8 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
     });
   checkArray(targetMisconceptionIds, LIMITS.misconceptions, '겨냥 오개념 목록')
     .forEach((id, i) => checkText(id, LIMITS.id, `${i + 1}번 겨냥 오개념 id`));
+  // 검증을 통과한 요청만 사용량을 센다 (S-15)
+  await countUsage(request, 'generateQuestions');
 
   try {
     const ctx = await loadUnitContext(unit, misconceptions, targetMisconceptionIds);
@@ -777,9 +789,10 @@ exports.generateQuestions = onCall(FUNC_OPTIONS, async (request) => {
    Function 3-1: recognizeSolutionImage (Level 3 풀이 손글씨/사진 → 텍스트)
 ──────────────────────────────────────── */
 exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
-  await authorize(request, 'recognizeSolutionImage');
+  requireAuth(request);
   const { imageBase64 } = request.data;
   validateImagePayload(imageBase64);
+  await countUsage(request, 'recognizeSolutionImage');   // 통과한 것만 차감 (S-15)
   /* 손글씨 캔버스는 PNG, 업로드한 사진은 JPEG로 온다. 예전엔 image/png로 고정이라 사진일 때
      형식과 라벨이 어긋난 채 Gemini로 갔다. 목록에 없는 값은 무시하고 예전 기본값을 쓴다 —
      클라이언트가 보내는 문자열이라 그대로 믿고 실을 수 없다. */
@@ -810,7 +823,7 @@ exports.recognizeSolutionImage = onCall(FUNC_OPTIONS, async (request) => {
    Function 3-2: gradeSolutionProcess (Level 3 풀이 과정 채점)
 ──────────────────────────────────────── */
 exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
-  await authorize(request, 'gradeSolutionProcess');
+  requireAuth(request);
   const { questionText, correctAnswer, unit, solutionSteps, processText, answerText } = request.data;
   if (!questionText || (!processText && !answerText)) {
     throw new HttpsError('invalid-argument', '문제 또는 풀이/답안 정보가 없습니다');
@@ -826,6 +839,8 @@ exports.gradeSolutionProcess = onCall(FUNC_OPTIONS, async (request) => {
     checkArray(solutionSteps, LIMITS.steps, '모범 풀이 단계')
       .forEach((s, i) => checkText(s, LIMITS.step, `모범 풀이 ${i + 1}단계`));
   }
+  // 검증을 통과한 요청만 사용량을 센다 (S-15)
+  await countUsage(request, 'gradeSolutionProcess');
 
   try {
     // 다단계 풀이의 논리적 타당성을 평가하는 작업이라 추론이 실제로 필요 → thinking 허용.
@@ -998,12 +1013,14 @@ function scoreFeedbackItems({ questions, answers, graded, maxScorePerItem }) {
 }
 
 exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
-  await authorize(request, 'gradeAnswers');
+  requireAuth(request);
   const { answers, questions, unit } = request.data;
   if (!answers || !questions) {
     throw new HttpsError('invalid-argument', '답변 또는 문제 정보가 없습니다');
   }
   validateGradePayload(answers, questions, unit);   // 형태·길이 (S-11)
+  // 검증을 통과한 요청만 사용량을 센다 (S-15)
+  await countUsage(request, 'gradeAnswers');
 
   try {
     const ctx = await buildGradingContext(questions, answers);

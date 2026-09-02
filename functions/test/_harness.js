@@ -96,6 +96,11 @@ function resetUsage() {
   Object.keys(usage).forEach(k => delete usage[k]);
 }
 
+/** ai_usage 문서의 현재 count. 거절된 요청이 사용량을 깎지 않는지 볼 때 쓴다 (S-15). */
+function usageOf(key) {
+  return usage[key]?.count ?? 0;
+}
+
 /* ── 모듈 가로채기 ───────────────────────────────────────── */
 let stubbed = false;
 
@@ -253,7 +258,7 @@ function countOf(haystack, needle) {
 }
 
 module.exports = {
-  stub, seed, reply, replyTimes, resetQueue, resetUsage, presetUsage,
+  stub, seed, reply, replyTimes, resetQueue, resetUsage, presetUsage, usageOf,
   freezeRandom, thawRandom,
   test, setFile, runAll, auth, throws, countOf, assert, logsWith,
   get prompts() { return prompts; },

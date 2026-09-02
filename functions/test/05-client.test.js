@@ -198,6 +198,62 @@ test('힌트를 안 쓰면 점수가 그대로다', () => {
   assert.strictEqual(data.score, 75);
 });
 
+/* ── 신고 맥락과 태그 복원 (S-16) ─────────────────────
+   둘 다 화면에서는 정상으로 보이고 저장된 데이터만 틀리는 종류라, 눈으로는 못 잡는다. */
+
+const FEEDBACK = fs.readFileSync(path.join(PUBLIC, 'js', 'feedback.js'), 'utf8');
+
+test('신고가 지금 세션이 아니라 이 화면의 단원을 쓴다', () => {
+  const start = FEEDBACK.indexOf('submitQuestionReport({');
+  const body = FEEDBACK.slice(start, FEEDBACK.indexOf('});', start));
+  assert.ok(body.includes('unit: this._reportUnit'),
+    '신고에 AppState.session의 단원이 붙는다 — 과거 기록을 열어 신고하면 엉뚱한 단원이 된다');
+  assert.ok(body.includes('level: this._reportLevel'), '레벨도 같은 문제가 있다');
+  assert.ok(!body.includes('AppState.session.detectedUnit'), '세션 값을 아직 읽고 있다');
+});
+
+test('과거 기록을 열면 그 기록의 단원·레벨·세션이 신고에 붙는다', () => {
+  const start = FEEDBACK.indexOf('this._reportUnit');
+  const block = FEEDBACK.slice(start, start + 500);
+  assert.ok(/isHistory \?\s*\(data\.unit/.test(block), '과거 기록의 단원을 안 쓴다');
+  assert.ok(/isHistory \?\s*\(data\.level/.test(block), '과거 기록의 레벨을 안 쓴다');
+  assert.ok(/isHistory \?\s*\(data\.sessionId/.test(block), '과거 기록의 세션 id를 안 쓴다');
+});
+
+test('마이페이지가 신고에 필요한 값을 실어 보낸다', () => {
+  const mypage = fs.readFileSync(path.join(PUBLIC, 'js', 'mypage.js'), 'utf8');
+  const start = mypage.indexOf('const historyData = {');
+  const block = mypage.slice(start, mypage.indexOf('};', start));
+  ['unit:', 'level:', 'sessionId'].forEach(k => {
+    assert.ok(block.includes(k), `historyData에 ${k}가 없다 — 신고 맥락이 비게 된다`);
+  });
+});
+
+test('신고를 보내기 전에 세션 저장을 기다린다', () => {
+  const start = FEEDBACK.indexOf('async submitReport()');
+  const body = FEEDBACK.slice(start, FEEDBACK.indexOf('submitQuestionReport', start));
+  assert.ok(/await this\._sessionSaved/.test(body),
+    '저장을 안 기다린다 — 채점 직후 바로 신고하면 sessionId가 null로 나간다');
+});
+
+test('세션 저장 promise를 실제로 들고 있다', () => {
+  assert.ok(/this\._sessionSaved = window\.LearningService\.saveSession/.test(FEEDBACK),
+    'saveSession 결과를 안 붙잡아 둔다 — 기다릴 대상이 없다');
+});
+
+test('다시 풀기가 계산형 오개념 태그를 복원한다', () => {
+  const start = FEEDBACK.indexOf('AppState.session.calcQuestion = {');
+  const body = FEEDBACK.slice(start, FEEDBACK.indexOf('};', start));
+  assert.ok(body.includes('targetMisconceptionId'),
+    '계산형 복원에 오개념 태그가 빠졌다 — 재도전 기록의 오개념이 null로 저장된다');
+});
+
+test('문장형 다시 풀기도 태그를 복원한다', () => {
+  const start = FEEDBACK.indexOf('AppState.session.questions = items.map');
+  const body = FEEDBACK.slice(start, FEEDBACK.indexOf('}));', start));
+  assert.ok(body.includes('targetMisconceptionIds'), '문장형 복원에서 태그가 사라졌다');
+});
+
 /* ── 소단원 ↔ 대단원 매핑 ────────────────────────────── */
 
 test('소단원 14개가 모두 대단원에 연결된다', () => {

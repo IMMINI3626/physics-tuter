@@ -32,7 +32,15 @@ const FeedbackScreen = {
   // isHistory 파라미터 추가, returnTo로 돌아갈 화면 지정 (기본값: mypage)
   async render(data, isHistory = false, returnTo = 'mypage') {
     this._reportedIds = new Set();
-    this._reportSessionId = null;
+
+    /* 🔑 신고에 붙일 맥락을 "이 화면이 무엇인지" 기준으로 여기서 정한다 (S-16).
+       예전엔 신고 시점에 AppState.session에서 읽어서, 과거 기록을 열어 신고하면 지금 풀던
+       단원·레벨이 붙었다. 신고 기록은 논문의 단원별 오류율 집계에 쓰는 데이터다. */
+    this._reportUnit  = isHistory ? (data.unit || null)  : (window.AppState.session.detectedUnit || null);
+    this._reportLevel = isHistory ? (data.level || null) : (window.AppState.session.currentLevel || null);
+    this._reportSessionId = isHistory ? (data.sessionId || null) : null;
+    this._sessionSaved = null;   // 새 문제일 때만 채워진다 (아래 saveSession)
+
     this._renderScore(data.score, data.title, data.subtitle);
     this._renderFeedbackList(data.items);
     this._bktApplied = null;   // 직전 문제의 갱신 promise가 남아있지 않도록 초기화
@@ -40,7 +48,9 @@ const FeedbackScreen = {
     // isHistory가 아닐 때(방금 막 푼 새 문제일 때)만 DB에 저장
     if (!isHistory && window.AppState.isLoggedIn && window.AppState.user) {
       const uid = window.AppState.user.uid;
-      window.LearningService.saveSession(data).then(newId => {
+      /* 🔑 promise를 들고 있는다. 저장이 끝나야 sessionId가 채워지는데, 결과 화면이 뜨자마자
+         신고를 누르면 그 전이라 신고가 세션에 연결되지 않았다. 신고 직전에 이걸 기다린다. */
+      this._sessionSaved = window.LearningService.saveSession(data).then(newId => {
         // 재도전이 아니라 새 문제였다면, 이 문제가 앞으로의 재도전들이 묶일 "원본"이 됨
         if (!window.AppState.session.isRetry) {
           window.AppState.session._rootSessionId = newId;
@@ -252,6 +262,11 @@ const FeedbackScreen = {
         unitOptions: it.unitOptions,
         solutionSteps: it.solutionSteps || [],
         isLevel3: !!it.isLevel3,
+        /* 🔑 태그를 같이 복원한다. 빠져 있어서 재도전 기록의 오개념 칸이 null로 저장됐다.
+           이해도(BKT)는 isRetry라 어차피 건너뛰지만, 논문 집계에서 그 기록만 연결이 끊긴다.
+           계산형은 태그가 1개다(설계 4-12) — 옛 기록의 단수 필드도 함께 읽는다. */
+        targetMisconceptionId:
+          it.targetMisconceptionId ?? (it.targetMisconceptionIds || [])[0] ?? null,
       };
     }
     routeToQuizScreen();
@@ -747,12 +762,16 @@ const FeedbackScreen = {
       : '';
 
     try {
+      // 세션 저장이 아직이면 기다린다 — 안 그러면 sessionId가 null로 나간다 (S-16)
+      await this._sessionSaved?.catch(() => {});
+
       await window.LearningService.submitQuestionReport({
         item,
         reason: this._reportReason,
         detail,
-        unit: window.AppState.session.detectedUnit || null,
-        level: window.AppState.session.currentLevel || null,
+        // 🔑 지금 세션이 아니라 render에서 정해둔 "이 화면의" 맥락을 쓴다 (S-16)
+        unit: this._reportUnit,
+        level: this._reportLevel,
         sessionId: this._reportSessionId || null,
       });
       this._reportedIds.add(item.id);

@@ -188,11 +188,13 @@ const LearningService = {
   },
 
   // 과거 세션에 저장된 힌트 조회 ("다시 풀기"로 복원 시 사용). 없으면 null.
-  async getSessionHints(uid, sessionId) {
+  /* 세션 문서에서 화면이 필요로 하는 값들. 힌트는 "다시 풀기" 복원에, level은 문항 신고에
+     쓴다 — 신고에 지금 세션의 레벨이 붙으면 엉뚱한 레벨로 집계된다 (S-16). */
+  async getSessionMeta(uid, sessionId) {
     const snap = await getDoc(doc(db, 'users', uid, 'sessions', sessionId));
-    if (!snap.exists()) return { hint1: null, hint2: null };
+    if (!snap.exists()) return { hint1: null, hint2: null, level: null };
     const d = snap.data();
-    return { hint1: d.hint1 || null, hint2: d.hint2 || null };
+    return { hint1: d.hint1 || null, hint2: d.hint2 || null, level: d.level || null };
   },
 
   async fetchSessionLogs(uid, sessionId) {
