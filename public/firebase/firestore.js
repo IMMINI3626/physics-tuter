@@ -360,17 +360,25 @@ const LearningService = {
     const uid = window.AppState?.user?.uid;
     if (!uid || !item || !reason) throw new Error('신고 정보가 부족합니다');
 
+    /* 🔑 규칙 상한에 맞춰 자른다. 규칙은 조건 하나만 어긋나도 문서를 통째로 거부하고,
+       화면에는 "전송에 실패했어요"만 뜬다 — 학생은 이유를 알 수 없다.
+       지금 경로의 최대 길이는 상한과 정확히 같아서 여유가 0이다. 여기가 위험한 이유는
+       (1) 길이 상한이 생기기 전(2026-08 이전)에 저장된 옛 기록은 이미 넘을 수 있고
+       (2) AI가 쓰는 해설은 길이를 우리가 정하지 않는다.
+       상한 값은 firestore.rules와 짝이다 — 한쪽만 바꾸면 시험(06-consistency)이 잡는다. */
+    const cut = (v, max) => (typeof v === 'string' ? v.slice(0, max) : v);
+
     await addDoc(collection(db, 'question_reports'), {
       uid,
       sessionId: sessionId || null,
       unit: unit || null,
       level: level || null,
       questionId: item.id,
-      questionText: item.text || '',
+      questionText: cut(item.text || '', 1000),
       isWrong: !!item.isWrong,               // 시스템이 정한 참·거짓
       isCorrectAnswer: typeof item.isCorrectAnswer === 'boolean' ? item.isCorrectAnswer : null,
-      userReason: item.userReason || null,   // 학생이 쓴 답변
-      explanation: item.explanation || '',   // 학생이 본 해설
+      userReason: cut(item.userReason ?? null, 2000),   // 학생이 쓴 답변 (L3는 풀이 전체)
+      explanation: cut(item.explanation || '', 4000),   // 학생이 본 해설 (AI가 쓴 글)
       targetMisconceptionIds: bktTagIds(item),   // 이 문항이 겨냥한 오개념(최대 2개)
       reason,                                // REPORT_REASONS의 code
       detail: detail || '',                  // 기타를 골랐을 때만 채워진다

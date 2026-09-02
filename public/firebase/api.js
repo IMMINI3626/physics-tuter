@@ -23,10 +23,12 @@ const ApiService = {
     return data;
   },
 
-  async gradeAnswers(answers, questions, unit) {
+  /* level은 채점 결과를 바꾸지 않는다 — 측정 로그에만 쓴다(설계 4-12 실측치를 레벨별로
+     나누기 위함). 안 보내도 채점은 그대로 되므로 옛 클라이언트도 깨지지 않는다. */
+  async gradeAnswers(answers, questions, unit, level = null) {
     await ensureSession();
     const fn = httpsCallable(functions, 'gradeAnswers');
-    const { data } = await fn({ answers, questions, unit });
+    const { data } = await fn({ answers, questions, unit, level });
     return data;
   },
 

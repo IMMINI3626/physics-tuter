@@ -60,6 +60,27 @@ test('신고 사유 코드가 규칙과 화면에서 같다', () => {
   }
 });
 
+/* 신고 규칙의 길이 상한 ↔ 서버 입력 상한.
+   신고에 실리는 userReason은 L3에서 "풀이 과정 전체"다. 서버가 받아주는 길이(processText)가
+   신고 규칙 상한보다 커지면, 그 길이로 채점받은 학생은 신고를 못 하게 된다 — 화면에는
+   "전송에 실패했어요"만 뜬다. 지금 두 값이 우연히 같아서 여유가 0이라 특히 위험하다. */
+test('신고 규칙이 서버가 받아주는 풀이 길이를 담을 수 있다', () => {
+  const ruleMax = Number(RULES.match(/'userReason',\s*(\d+)/)[1]);
+  const serverMax = Number(INDEX_JS.match(/processText:\s*(\d+)/)[1]);
+  assert.ok(ruleMax >= serverMax,
+    `서버는 풀이를 ${serverMax}자까지 받는데 신고 규칙은 ${ruleMax}자까지만 받는다 — ` +
+    `그 사이 길이로 채점받은 학생은 신고를 못 한다`);
+});
+
+test('클라이언트가 신고 값을 규칙 상한에 맞춰 자른다', () => {
+  const start = FIRESTORE_JS.indexOf('submitQuestionReport');
+  const body = FIRESTORE_JS.slice(start, FIRESTORE_JS.indexOf('});', start));
+  assert.ok(/userReason:\s*cut\(/.test(body),
+    '옛 기록의 긴 서술이 그대로 나가면 규칙이 신고를 통째로 거부한다');
+  assert.ok(/explanation:\s*cut\(/.test(body),
+    'AI가 쓴 해설은 길이를 우리가 정하지 않는다 — 잘라야 한다');
+});
+
 test('기타 사유 입력칸 길이가 규칙 상한과 같다', () => {
   assert.ok(RULES.includes("str(d, 'detail',        300)") || /'detail',\s*300/.test(RULES),
     '규칙의 detail 상한이 300이 아니다');

@@ -1019,6 +1019,9 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
     throw new HttpsError('invalid-argument', '답변 또는 문제 정보가 없습니다');
   }
   validateGradePayload(answers, questions, unit);   // 형태·길이 (S-11)
+  /* 채점에는 안 쓰고 측정 로그에만 쓴다 (S-18). 값이 이상하면 거부하지 않고 버린다 —
+     로그 하나 때문에 채점을 실패시키면 손해가 더 크다. */
+  const level = [1, 2, 3].includes(Number(request.data.level)) ? Number(request.data.level) : null;
   // 검증을 통과한 요청만 사용량을 센다 (S-15)
   await countUsage(request, 'gradeAnswers');
 
@@ -1092,16 +1095,18 @@ exports.gradeAnswers = onCall(FUNC_OPTIONS, async (request) => {
        - 라벨 대조 불일치 건수 = 생성 단계 검증(8-5)을 통과하고도 남은 문항 오류율
        - 개념별 판정이 갈린 비율 = 다중 태그(4-12)가 실제로 작동하는지의 지표. 다중 태그
          문항인데 한 번도 갈리지 않으면 AI가 서술을 개념별로 읽지 않고 뭉개는 것이다. */
+    // 세 로그가 공유하는 꼬리표. 레벨별로 나눠 집계하려면 모든 줄에 있어야 한다 (S-18)
+    const where = `unit: ${unit}, level: ${level ?? '알 수 없음'}`;
     if (mismatched.length) {
-      console.warn(`[gradeAnswers] 라벨 대조 불일치 ${mismatched.length}건 (이해도 관측에서만 제외) — unit: ${unit}`, mismatched);
+      console.warn(`[gradeAnswers] 라벨 대조 불일치 ${mismatched.length}건 (이해도 관측에서만 제외) — ${where}`, mismatched);
     }
     if (multiTagItems) {
-      console.info(`[gradeAnswers] 개념별 판정 — 다중 태그 ${multiTagItems}문항 중 ${splitJudgments}건에서 판정이 갈림 (unit: ${unit}, level 정보 없음)`);
+      console.info(`[gradeAnswers] 개념별 판정 — 다중 태그 ${multiTagItems}문항 중 ${splitJudgments}건에서 판정이 갈림 (${where})`);
     }
     /* 미답변 문항에 AI가 점수를 준 건수 (S-10). 서버가 이미 버렸으므로 점수에는 영향이 없지만,
        프롬프트의 "미답변이면 0" 지시를 모델이 얼마나 어기는지가 이 로그로만 관측된다. */
     if (scoredUnanswered.length) {
-      console.warn(`[gradeAnswers] 미답변 문항 가점 차단 ${scoredUnanswered.length}건 — unit: ${unit}`, scoredUnanswered);
+      console.warn(`[gradeAnswers] 미답변 문항 가점 차단 ${scoredUnanswered.length}건 — ${where}`, scoredUnanswered);
     }
 
     return {

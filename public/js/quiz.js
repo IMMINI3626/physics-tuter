@@ -174,7 +174,8 @@ const QuizScreen = {
       const result = await ApiService.gradeAnswers(
         answers,
         questions,
-        AppState.session.detectedUnit
+        AppState.session.detectedUnit,
+        AppState.session.currentLevel   // 측정 로그를 레벨별로 나누기 위함 (S-18)
       );
       applyHintPenalty(result);   // 힌트 사용분 감점 (모든 유형 공용)
       AppState.session.score = result.score;
