@@ -1,6 +1,6 @@
 /* ============================================================
    PhysiClinic — Firebase Cloud Functions
-   Node.js 20 / Firebase Functions v2
+   Node.js 22 / Firebase Functions v2
 
    Gemini API 서버 사이드 안전 호출 & Firestore RAG 연동
    프롬프트는 prompts.js, 구현 결정 근거는 docs/서버구현_결정기록.md

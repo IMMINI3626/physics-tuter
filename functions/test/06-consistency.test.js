@@ -129,3 +129,35 @@ test('package.json에 시험 명령이 있다', () => {
   assert.ok(pkg.scripts?.test, 'npm test가 없다');
   assert.ok(pkg.scripts.test.includes('test/run.js'));
 });
+
+/* ── Node 런타임 ─────────────────────────────────────────
+   런타임이 firebase.json과 package.json 두 곳에 적혀 있다. 어긋나면 배포는 되는데 실제로는
+   다른 버전에서 돌아간다. 그리고 폐기된 런타임은 그날부터 배포 자체가 막힌다. */
+
+const RUNTIME_DECOMMISSION = {   // firebase-tools의 supported/types.js 값
+  nodejs18: '2025-01-30', nodejs20: '2026-10-30',
+  nodejs22: '2028-10-31', nodejs24: '2028-10-31',
+};
+
+test('firebase.json과 package.json의 Node 버전이 같다', () => {
+  const runtime = JSON.parse(read('firebase.json')).functions.runtime;   // 예: nodejs22
+  const engine = JSON.parse(read('functions', 'package.json')).engines.node;   // 예: 22
+  assert.strictEqual(runtime, `nodejs${engine}`,
+    `런타임이 어긋났다 (firebase.json ${runtime} / package.json ${engine})`);
+});
+
+test('package-lock.json도 같은 Node 버전을 가리킨다', () => {
+  const lock = JSON.parse(read('functions', 'package-lock.json'));
+  const engine = JSON.parse(read('functions', 'package.json')).engines.node;
+  assert.strictEqual(lock.packages[''].engines.node, engine,
+    'lock 파일이 옛 버전을 들고 있다 — npm install 때 경고가 난다');
+});
+
+test('폐기됐거나 곧 폐기될 런타임을 쓰지 않는다', () => {
+  const runtime = JSON.parse(read('firebase.json')).functions.runtime;
+  const end = RUNTIME_DECOMMISSION[runtime];
+  assert.ok(end, `모르는 런타임이다: ${runtime}`);
+  const daysLeft = Math.round((new Date(end) - Date.now()) / 86400000);
+  assert.ok(daysLeft > 90,
+    `${runtime}이 ${end}에 폐기된다 (${daysLeft}일 남음). 그날 이후 배포가 막힌다`);
+});
