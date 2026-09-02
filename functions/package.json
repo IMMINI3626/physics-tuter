@@ -2,6 +2,8 @@
   "name": "physi-clinic-functions",
   "description": "PhysiClinic Firebase Cloud Functions",
   "scripts": {
+    "test": "node test/run.js",
+    "test:update": "node test/run.js --update",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"

@@ -40,7 +40,8 @@
       "list-reports.js",
       "fix-unitprogress-counts.js",
       "test_api.js",
-      "report.html"
+      "report.html",
+      "test"
     ]
   },
   "emulators": {

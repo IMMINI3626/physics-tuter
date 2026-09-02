@@ -1,0 +1,54 @@
+{
+  "verifyStatements": {
+    "hash": "5d0e592cfdb090bb",
+    "length": 1808
+  },
+  "extractKeywords": {
+    "hash": "b95308ed21bd71ab",
+    "length": 1014
+  },
+  "recognizeSolution": {
+    "hash": "97a85a8ecfaf5a6c",
+    "length": 326
+  },
+  "statementSet(Level1)": {
+    "hash": "990d15394f4441d9",
+    "length": 4952
+  },
+  "statementSet(Level2A)": {
+    "hash": "4d7a6ce39873211e",
+    "length": 3616
+  },
+  "calcQuestion(L3)": {
+    "hash": "11cbfecbf2beb26a",
+    "length": 2281
+  },
+  "calcQuestion(L2B)": {
+    "hash": "65ea5e1294d8a77b",
+    "length": 1549
+  },
+  "gradeSolutionProcess(답 있음)": {
+    "hash": "3c7a90c95a8e4a9c",
+    "length": 1425
+  },
+  "gradeSolutionProcess(답 없음)": {
+    "hash": "f9f1dbe2669bc78d",
+    "length": 1281
+  },
+  "gradeAnswers(개념 판정 있음)": {
+    "hash": "460f5062355b957c",
+    "length": 2719
+  },
+  "gradeAnswers(개념 판정 없음)": {
+    "hash": "40c272c9f3d33ba9",
+    "length": 2151
+  },
+  "patternBlock": {
+    "hash": "268d53dad3be6aa9",
+    "length": 205
+  },
+  "priorityBlock": {
+    "hash": "041ec778cc781296",
+    "length": 349
+  }
+}
