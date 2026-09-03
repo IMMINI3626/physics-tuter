@@ -150,21 +150,17 @@ const QuizScreen = {
     const questions = AppState.session.questions;
     const checkedQuestions = questions.filter(q => checked.has(q.id));
 
-    // 🔑 답변 수집: 통합된 reason 값만 수집합니다.
+    /* 문항 번호와 서술만 보낸다. 문장 본문은 questions로 이미 가므로 answers에 또 실을 필요가
+       없다 — 예전엔 questionText도 같이 보냈고 서버는 쓰지 않았다. */
     const answers = checkedQuestions.map(q => ({
       questionId: q.id,
-      questionText: q.text,
       reason: document.getElementById(`reason-${q.id}`)?.value.trim() || '',
     }));
 
-    // 입력 여부 체크
-    const hasInput = answers.some(a => a.reason);
-    if (!hasInput) {
+    if (!answers.some(a => a.reason)) {
       Toast.show('최소 하나의 답변을 입력해주세요');
       return;
     }
-
-    AppState.session.step2Answers = answers;
 
     const btn = document.getElementById('btn-submit');
     if (btn) { btn.disabled = true; btn.textContent = '채점 중...'; }
@@ -178,8 +174,6 @@ const QuizScreen = {
         AppState.session.currentLevel   // 측정 로그를 레벨별로 나누기 위함 (S-18)
       );
       applyHintPenalty(result);   // 힌트 사용분 감점 (모든 유형 공용)
-      AppState.session.score = result.score;
-      AppState.session.feedbackData = result;
       await FeedbackScreen.render(result);
       Router.go('feedback');
     } catch (err) {
@@ -307,8 +301,6 @@ const QuizScreen = {
     };
 
     applyHintPenalty(feedbackData);   // 힌트 사용분 감점
-    AppState.session.score = feedbackData.score;
-    AppState.session.feedbackData = feedbackData;
     FeedbackScreen.render(feedbackData);
     Router.go('feedback');
   },
@@ -564,8 +556,6 @@ const Level3Screen = {
     };
 
     applyHintPenalty(feedbackData);   // 힌트 사용분 감점
-    AppState.session.score = feedbackData.score;
-    AppState.session.feedbackData = feedbackData;
     this._resetReviewUI();
     await FeedbackScreen.render(feedbackData);
     Router.go('feedback');

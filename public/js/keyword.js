@@ -42,7 +42,6 @@ const KeywordScreen = {
       if (result.unit !== prevUnit) {
         // 소단원이 바뀐 경우에만 초기화 후 Firestore에서 실제 진행 상태 불러오기
         AppState.session.currentLevel = 1;
-        AppState.session.correctCount = 0;
         // Level 2 모드 반복 방지 상태도 단원 전환 시 함께 초기화
         AppState._lastQuizMode = null;
         AppState._consecutiveModeCount = 0;
@@ -50,17 +49,12 @@ const KeywordScreen = {
         localStorage.removeItem('pc_consecutive_mode_count');
       }
 
-      // 로그인 상태라면 항상 Firestore의 실제 카운터/레벨로 동기화
+      // 로그인 상태라면 항상 Firestore의 실제 레벨로 동기화
       if (AppState.isLoggedIn && AppState.user) {
         try {
           const uid = AppState.user.uid;
-          const [progress, count] = await Promise.all([
-            LearningService.getUnitProgress(uid, result.unit),
-            LearningService.getCorrectCount(uid, result.unit),
-          ]);
-
+          const progress = await LearningService.getUnitProgress(uid, result.unit);
           AppState.session.currentLevel = progress.level || 1;
-          AppState.session.correctCount = count;
 
           // 진단된 오개념을 소단원 풀에 누적 + 초기 이해도(weak) 세팅 (BKT)
           await LearningService.addDiagnosedMisconceptions(
@@ -123,8 +117,6 @@ const KeywordScreen = {
     try {
       const level = AppState.session.currentLevel;
       const mode = pickQuizMode(level);
-      AppState.session.quizMode = mode;
-
       const targets = await pickTargetMisconceptionIds(AppState.session.detectedUnit, level);
 
       const result = await ApiService.generateQuestions(
@@ -137,9 +129,6 @@ const KeywordScreen = {
 
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
-      if (result.misconceptionCount) {
-        AppState.session.misconceptionCount = result.misconceptionCount;
-      }
 
       // 결과에 맞춰(문장형/계산형/Level3) 알맞은 문제 화면으로 이동
       applyQuizResult(result);

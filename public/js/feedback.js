@@ -211,7 +211,6 @@ const FeedbackScreen = {
 
     AppState.session.detectedUnit = this._historyUnit || AppState.session.detectedUnit;
     AppState.session.checkedStatements = new Set();
-    AppState.session.step2Answers = [];
     // 저장해둔 힌트 복원 (없으면 화면에서 기본 문구로 떨어짐 — 옛 기록엔 없을 수 있음)
     AppState.session.hint1 = this._historyHint1 || null;
     AppState.session.hint2 = this._historyHint2 || null;
@@ -235,7 +234,6 @@ const FeedbackScreen = {
           window.AppState.user.uid, AppState.session.detectedUnit
         );
         AppState.session.currentLevel = progress.level || 1;
-        AppState.session.correctCount = progress.correctCount || 0;
       } catch (e) {
         console.warn('진행 상태 조회 실패, 기존 값 유지:', e);
       }
@@ -365,12 +363,10 @@ const FeedbackScreen = {
     const result = await window.LearningService.incrementCorrectCount(
       uid, session.detectedUnit, target
     );
-    session.correctCount = result.count;
     session.masteryProgress = {
       mastered: result.count, total: target, legacy: true,
       ratio: Math.min(1, result.count / target),   // 폴백 경로는 누적 정답 비율이 곧 진행률
     };
-    if (result.isPromoted) session.correctCount = 0;
     return result.isPromoted;
   },
 
@@ -480,7 +476,6 @@ const FeedbackScreen = {
   retrySame() {
     AppState.session.isRetry = true;
     AppState.session.checkedStatements = new Set();
-    AppState.session.step2Answers = [];
     routeToQuizScreen();
   },
 
@@ -494,7 +489,6 @@ const FeedbackScreen = {
     try {
       const level = AppState.session.currentLevel;
       const mode = pickQuizMode(level);
-      AppState.session.quizMode = mode;
 
       const targets = await pickTargetMisconceptionIds(AppState.session.detectedUnit, level);
 
@@ -509,12 +503,8 @@ const FeedbackScreen = {
       AppState.session.isHistoryRetry = false;
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
-      if (result.misconceptionCount) {
-        AppState.session.misconceptionCount = result.misconceptionCount;
-      }
       AppState.session.checkedStatements = new Set();
-      AppState.session.step2Answers = [];
-      applyQuizResult(result);
+        applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
       Toast.show(apiErrorMessage(err, '문제 생성에 실패했어요. 다시 시도해주세요.'));
@@ -790,26 +780,19 @@ const FeedbackScreen = {
   /* 다음 학습 */
   continueNext() {
     AppState.session = {
-      uploadedImageBase64: null,
       extractedKeywords: [],
       detectedUnit: null,
       misconceptions: [],
       questions: [],
       checkedStatements: new Set(),
-      step2Answers: [],
       hintUsed: 0,
-      score: null,
-      feedbackData: null,
       currentLevel: 1,
-      correctCount: 0,
-      misconceptionCount: 0,
       isRetry: false,
       isHistoryRetry: false,
       _rootSessionId: null,
       _quizBackTarget: null,
       hint1: null,
       hint2: null,
-      quizMode: null,
       calcQuestion: null,
     };
     this._clearLevelArea();

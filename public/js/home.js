@@ -71,7 +71,6 @@ const HomeScreen = {
       return;
     }
 
-    AppState.session.uploadedImageBase64 = base64;
     KeywordScreen.start(base64);
   },
 

@@ -173,28 +173,24 @@ const AppState = {
   isLoggedIn: false,
   user: null,
 
-  // 현재 세션 데이터
+  /* 현재 세션 데이터.
+     🔑 여기에 필드를 추가하기 전에 **읽는 곳이 있는지** 먼저 확인할 것. 아무도 안 읽는데
+     계속 채우기만 하던 필드 7개(step2Answers·uploadedImageBase64·quizMode·
+     misconceptionCount·correctCount·score·feedbackData)를 2026-09에 지웠다. 값을 넣는
+     코드는 오류가 안 나므로 몇 달이고 남는다. 시험(05-client)이 재발을 막는다. */
   session: {
-    uploadedImageBase64: null,
     extractedKeywords: [],
     detectedUnit: null,
     misconceptions: [],
     questions: [],           // 생성된 5개 문장
     checkedStatements: new Set(),
-    step2Answers: [],        // [{ reason, correctLaw }]
     hintUsed: 0,
-    score: null,
-    feedbackData: null,
 
-    // 🆕 레벨 시스템
     currentLevel: 1,         // 현재 풀고 있는 레벨 (1/2/3)
-    correctCount: 0,         // 같은 소단원 내 누적 정답 수
-    misconceptionCount: 0,   // 현재 소단원의 오개념 총 개수 (승급 목표치 계산용)
-    isRetry: false,          // 다시 풀어보기(같은 문제 재시도) 여부 — true면 이해도 갱신·승급 판정 안 함
+    isRetry: false,          // 다시 풀어보기 — true면 이해도 갱신·승급 판정을 건너뛴다
     hint1: null,             // 문제 세트 전체에 대한 1차 힌트
     hint2: null,             // 문제 세트 전체에 대한 2차 힌트
-    quizMode: null,          // Level 2 출제 방식: 'A'(STEP1/2 혼합) | 'B'(계산 단답형)
-    calcQuestion: null,      // Level 2 Mode B 계산 문제 객체
+    calcQuestion: null,      // 계산형(L2 방식B / L3) 문제 객체
   },
 
   // 비로그인 시 문제 풀이 횟수

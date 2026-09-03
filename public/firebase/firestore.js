@@ -257,15 +257,9 @@ const LearningService = {
     return { count: newCount, isPromoted };
   },
 
-  /**
-   * 소단원의 현재 승급 카운터 조회 (폴백 소단원 표시용)
-   */
-  async getCorrectCount(uid, unitName) {
-    const ref = doc(db, 'users', uid, 'unitProgress', unitName);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return 0;
-    return snap.data().correctCount || 0;
-  },
+  /* getCorrectCount는 2026-09에 지웠다. 사진을 올릴 때마다 이 값을 읽어 세션에 넣었는데
+     읽는 곳이 한 군데도 없었다 — 사진 한 장에 Firestore 읽기 1회가 그냥 버려졌다.
+     승급 카운터가 필요하면 getUnitProgress()가 같은 문서를 이미 읽어 온다. */
 
   /**
    * 소단원의 현재 레벨/완료 상태 조회 (없으면 기본값 level 1 반환)

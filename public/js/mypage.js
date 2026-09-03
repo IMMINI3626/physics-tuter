@@ -2,7 +2,6 @@ const MypageScreen = {
   _currentChapter: null,
   _currentSubUnit: null,
   _currentLevel: 1,
-  _currentCorrectCount: 0,
   _currentSessionCount: 0,
   _currentCompleted: false,
   _currentSessions: [],
@@ -166,7 +165,6 @@ const MypageScreen = {
       ]);
 
       this._currentLevel = progress.level || 1;
-      this._currentCorrectCount = progress.correctCount || 0;
       this._currentSessionCount = sessions.length;
       this._currentCompleted = !!progress.completed;
 
@@ -531,14 +529,11 @@ const MypageScreen = {
       // 사진 없이 들어온 경로 — 다른 단원에서 남은 키워드가 [단원 정보]에 뜨지 않도록 비운다
       AppState.session.extractedKeywords = [];
       AppState.session.currentLevel = level;
-      AppState.session.correctCount = this._currentCorrectCount;
       AppState.session.isRetry = false;
       AppState.session.isHistoryRetry = false;
       AppState.session._rootSessionId = null;
       AppState.session.checkedStatements = new Set();
-      AppState.session.step2Answers = [];
       AppState.session.hintUsed = 0;
-      AppState.session.quizMode = mode;
       // 마이페이지 상세에서 온 거라 문제 화면 상단 뒤로가기는 "분석 결과"가 아니라 "학습 현황"으로
       setQuizBackTarget('mypage-detail');
 
@@ -547,7 +542,6 @@ const MypageScreen = {
 
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
-      if (result.misconceptionCount) AppState.session.misconceptionCount = result.misconceptionCount;
 
       applyQuizResult(result);
     } catch (err) {

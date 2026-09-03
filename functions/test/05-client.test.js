@@ -254,6 +254,34 @@ test('문장형 다시 풀기도 태그를 복원한다', () => {
   assert.ok(body.includes('targetMisconceptionIds'), '문장형 복원에서 태그가 사라졌다');
 });
 
+/* ── 죽은 값이 다시 생기지 않게 (S-19) ────────────────
+   "아무도 안 읽는데 계속 채우는 값"은 오류가 안 나서 오래 남는다. 지운 것들이 되돌아오면
+   여기서 잡는다. 값을 넣는 코드가 늘어나는 건 쉽고, 읽는 곳이 없다는 건 눈에 안 띈다. */
+
+test('세션에 아무도 안 읽는 값을 넣지 않는다', () => {
+  const dead = ['step2Answers', 'uploadedImageBase64', 'quizMode', 'misconceptionCount',
+                'correctCount', 'score', 'feedbackData'];
+  const clientFiles = SCRIPTS.map(rel => [rel, fs.readFileSync(path.join(PUBLIC, rel), 'utf8')]);
+  const found = [];
+  clientFiles.forEach(([rel, code]) => {
+    dead.forEach(name => {
+      if (new RegExp(`session\\.${name}\\s*=`).test(code)) found.push(`${rel} → session.${name}`);
+    });
+  });
+  assert.deepStrictEqual(found, [], `읽는 곳이 없는 값을 다시 채우고 있다:\n${found.join('\n')}`);
+});
+
+test('채점 요청에 문장 본문을 중복해서 싣지 않는다', () => {
+  const quiz = fs.readFileSync(path.join(PUBLIC, 'js', 'quiz.js'), 'utf8');
+  /* ⚠️ `checkedQuestions.map`은 화면을 그리는 곳에도 있다. 짧은 조각으로 자리를 잡으면
+     엉뚱한 구간을 읽는다 — 실제로 한 번 헛짚었다. 대입문 전체로 자리를 잡는다. */
+  const start = quiz.indexOf('const answers = checkedQuestions.map');
+  assert.ok(start !== -1, '답변을 모으는 코드를 못 찾았다');
+  const body = quiz.slice(start, quiz.indexOf('}));', start));
+  assert.ok(!body.includes('questionText'),
+    '문장 본문은 questions로 이미 간다 — answers에 또 실으면 서버는 그냥 버린다');
+});
+
 /* ── 소단원 ↔ 대단원 매핑 ────────────────────────────── */
 
 test('소단원 14개가 모두 대단원에 연결된다', () => {
