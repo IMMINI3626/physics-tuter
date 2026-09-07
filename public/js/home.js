@@ -6,6 +6,7 @@ const HomeScreen = {
   init() {
     this._bindUploadZone();
     this._bindUploadButtons();
+    this._bindPaste();
     GuestGuard._updateUI();
   },
 
@@ -47,6 +48,24 @@ const HomeScreen = {
 
   _openCamera() {
     document.getElementById('camera-input')?.click();
+  },
+
+  /* PC 웹에서는 화면을 캡처해도 파일로 저장했다가 다시 파일 선택창을 열어야 해서 번거롭다.
+     클립보드에 이미지가 있으면(캡처 직후 Ctrl+C나 "복사" 상태) Ctrl+V로 바로 업로드되게 한다.
+     홈 화면일 때만 반응한다 — 다른 화면(답변 입력칸, 신고 사유 등)에서 텍스트를 붙여넣는
+     동작을 가로채면 안 되기 때문이다. */
+  _bindPaste() {
+    document.addEventListener('paste', (e) => {
+      if (window.Router?.current !== 'home') return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageItem = [...items].find(it => it.kind === 'file' && it.type.startsWith('image/'));
+      if (!imageItem) return;   // 이미지가 없으면(일반 텍스트 등) 기본 동작을 그대로 둔다
+
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (file) this.handleFileSelect(file);
+    });
   },
 
   async handleFileSelect(file) {
