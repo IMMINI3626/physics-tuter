@@ -74,35 +74,10 @@
   border-bottom: 0.5px solid var(--border);
 }
 
-.fb-status {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-.fb-status.wrong   { background: rgba(248,113,113,0.14); }
-.fb-status.correct { background: rgba(52,211,153,0.14); }
-.fb-status svg {
-  width: 11px;
-  height: 11px;
-  fill: none;
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.fb-status.wrong svg   { stroke: var(--red); }
-.fb-status.correct svg { stroke: var(--green); }
-
 .fb-stmt {
   font-size: 13px;
   line-height: 1.5;
 }
-.fb-stmt.wrong   { color: var(--red); }
-.fb-stmt.correct { color: var(--text2); }
 
 .fb-explanation {
   padding: 13px 15px;

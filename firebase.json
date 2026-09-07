@@ -39,8 +39,6 @@
       "reset-knowledge.js",
       "list-reports.js",
       "fix-unitprogress-counts.js",
-      "test_api.js",
-      "report.html",
       "test"
     ]
   },

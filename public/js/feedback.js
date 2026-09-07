@@ -504,7 +504,7 @@ const FeedbackScreen = {
       AppState.session.hint1 = result.hint1;
       AppState.session.hint2 = result.hint2;
       AppState.session.checkedStatements = new Set();
-        applyQuizResult(result);
+      applyQuizResult(result);
     } catch (err) {
       console.error('문제 생성 실패:', err);
       Toast.show(apiErrorMessage(err, '문제 생성에 실패했어요. 다시 시도해주세요.'));

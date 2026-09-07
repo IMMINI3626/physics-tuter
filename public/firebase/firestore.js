@@ -52,7 +52,7 @@ const LearningService = {
         isCorrectAnswer: typeof item.isCorrectAnswer === 'boolean' ? item.isCorrectAnswer : null,
         isVoided:        !!item.isVoided,   // 문항 검수 불일치 — 논문용 오류율 집계에도 쓴다
         userReason:      item.userReason || null,
-        // 💡 추가된 부분: 이제부터 해설(explanation)도 DB에 저장합니다!
+        // 학생이 결과 화면에서 본 해설 그대로 저장 — 과거 기록을 열람할 때도 같은 설명을 보여주기 위함
         explanation:     item.explanation || null,
         /* 🆕 BKT 관측용: 이 문항이 겨냥한 오개념들 + 개념별 판정 + 힌트 사용 여부.
            문항 하나에 오개념이 2개까지 붙을 수 있고(설계 4-12), 서버가 학생 서술을 개념별로
@@ -203,8 +203,9 @@ const LearningService = {
       orderBy('createdAt', 'asc')
     );
     const snap = await getDocs(q);
-    
-    // 💡 수정된 부분: DB에 저장된 이름표를 UI가 읽을 수 있는 이름표로 변환해서 넘겨줍니다!
+
+    // 저장 시 쓰는 필드명(questionText/isWrongQ)과 화면이 기대하는 필드명(text/isWrong)이
+    // 달라서 여기서 맞춰준다
     return snap.docs.map(d => {
       const data = d.data();
       return {

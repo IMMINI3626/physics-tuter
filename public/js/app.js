@@ -225,8 +225,6 @@ function pickQuizMode(level) {
 const Router = {
   current: 'home',
 
-  
-
   // 화면 ID → nav 아이템 ID 매핑
   navMap: {
     home:       'nav-home',
